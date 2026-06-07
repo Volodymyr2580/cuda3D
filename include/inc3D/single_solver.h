@@ -78,7 +78,12 @@ __global__ void cuda_fd3d_v_pml_ns(const float *__restrict__ p1, float *vy, floa
 				float _dy2, float _dx2, float _dz2,
 				int n3, int n2, int n1, int npml, float dt,
 				float *ay_h, float *by_h, float *ax_h, float *bx_h, float *az_h, float *bz_h,
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+				const float *__restrict__ mem_dy, const float *__restrict__ mem_dx, const float *__restrict__ mem_dz,
+				float *mem_dy_next, float *mem_dx_next, float *mem_dz_next);
+#else
 				float *mem_dy, float *mem_dx, float *mem_dz);
+#endif
 
 __global__ void cuda_fd3d_p_pml_ns(float *p0, const float *__restrict__ p1, const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
 				float *cw2, float _dy2, float _dx2, float _dz2,
@@ -94,7 +99,12 @@ __global__ void cuda_fd3d_v_pml_tile_ns(const float *__restrict__ p1, float *vy,
 				float _dy2, float _dx2, float _dz2,
 				int n3, int n2, int n1, int npml, float dt,
 				float *ay_h, float *by_h, float *ax_h, float *bx_h, float *az_h, float *bz_h,
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+				const float *__restrict__ mem_dy, const float *__restrict__ mem_dx, const float *__restrict__ mem_dz,
+				float *mem_dy_next, float *mem_dx_next, float *mem_dz_next,
+#else
 				float *mem_dy, float *mem_dx, float *mem_dz,
+#endif
 				const PmlTile *__restrict__ tiles, int ntile);
 
 __global__ void cuda_fd3d_p_pml_tile_ns(float *p0, const float *__restrict__ p1, const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,

@@ -1,0 +1,47 @@
+{
+  "metrics": {
+    "zmem_pre": {
+      "run_log": "benchmarks/runs/perf_1gpu_6shots_wavestep_v2_zmem_ref_20260608_002557/run.log",
+      "wp": 2.444596,
+      "gradient": 2.55898
+    },
+    "zmem_pre_rep": {
+      "run_log": "benchmarks/runs/perf_1gpu_6shots_wavestep_v2_zmem_ref_repeat_20260608_002602/run.log",
+      "wp": 2.455479,
+      "gradient": 2.56544
+    },
+    "phase": {
+      "run_log": "benchmarks/runs/perf_1gpu_6shots_wavestep_v2_cpml_vmem_release_20260608_002937/run.log",
+      "wp": 2.36487,
+      "gradient": 2.48105
+    },
+    "phase_rep": {
+      "run_log": "benchmarks/runs/perf_1gpu_6shots_wavestep_v2_cpml_vmem_release_repeat_20260608_002943/run.log",
+      "wp": 2.366573,
+      "gradient": 2.487687
+    },
+    "zmem_post": {
+      "run_log": "benchmarks/runs/perf_1gpu_6shots_wavestep_v2_zmem_post_ab_20260608_003136/run.log",
+      "wp": 2.431655,
+      "gradient": 2.545308
+    },
+    "zmem_post_rep": {
+      "run_log": "benchmarks/runs/perf_1gpu_6shots_wavestep_v2_zmem_post_ab_repeat_20260608_003142/run.log",
+      "wp": 2.439698,
+      "gradient": 2.552431
+    }
+  },
+  "phase_mean_wp": 2.3657215,
+  "phase_mean_gradient": 2.4843685000000004,
+  "zmem_pre_mean_wp": 2.4500375,
+  "zmem_pre_mean_gradient": 2.5622100000000003,
+  "zmem_post_mean_wp": 2.4356765,
+  "zmem_post_mean_gradient": 2.5488695,
+  "zmem_all_mean_wp": 2.442857,
+  "zmem_all_mean_gradient": 2.55553975,
+  "speedup_vs_pre_wp": 1.0356407125690832,
+  "speedup_vs_post_wp": 1.029570260066538,
+  "speedup_vs_all_zmem_wp": 1.0326054863178105,
+  "speedup_vs_all_zmem_gradient": 1.0286476221220804,
+  "phase1_gate": "continue"
+}

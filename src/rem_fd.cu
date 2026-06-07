@@ -4,6 +4,14 @@
 #error "CUDA3D_PML_ZMEM_IN_P requires CUDA3D_PML_RECOMPUTE_Z"
 #endif
 
+#if defined(CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL) && !defined(CUDA3D_PML_ZMEM_IN_P)
+#error "CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL currently requires the stable CUDA3D_PML_ZMEM_IN_P path"
+#endif
+
+#if defined(CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL) && !defined(CUDA3D_CPML_VMEM_DISABLE_MPI)
+#error "CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL phase 1 is single-rank only; define CUDA3D_CPML_VMEM_DISABLE_MPI to acknowledge this gate"
+#endif
+
 #ifdef CUDA3D_PML_DEBUG_DUMP
 #include <sys/stat.h>
 #endif
@@ -123,6 +131,36 @@ static void check_zmem_new_written(float *d_memory_dz_next, size_t count,
   if (unwritten != 0) {
     printf("ERROR ZMEM_IN_P unwritten entries: rank=%d shot=%d it=%d count=%zu first=%zu\n",
 	   mytid, snum, it, unwritten, first_unwritten);
+    exit(0);
+  }
+}
+#endif
+
+#if defined(CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL) && defined(CUDA3D_CPML_VMEM_DEBUG_FILL)
+static void check_cpml_vmem_next_written(const char *name, float *d_memory_next,
+					 size_t count, int mytid, int snum, int it) {
+  float *host = (float*)malloc(count * sizeof(float));
+  if (host == NULL) {
+    printf("ERROR allocating CPML VMEM debug host buffer for %s\n", name);
+    exit(0);
+  }
+
+  cudaMemcpy(host, d_memory_next, count * sizeof(float), cudaMemcpyDeviceToHost);
+  check_gpu_error_2("copy CPML VMEM debug buffer");
+
+  size_t non_finite = 0;
+  size_t first_non_finite = 0;
+  for (size_t i = 0; i < count; ++i) {
+    if (!isfinite(host[i])) {
+      if (non_finite == 0) first_non_finite = i;
+      ++non_finite;
+    }
+  }
+  free(host);
+
+  if (non_finite != 0) {
+    printf("ERROR CPML VMEM unwritten entries: name=%s rank=%d shot=%d it=%d count=%zu first=%zu\n",
+	   name, mytid, snum, it, non_finite, first_non_finite);
     exit(0);
   }
 }
@@ -401,6 +439,9 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   float *d_sw000, *d_sw001, *d_sw010, *d_sw011, *d_sw100, *d_sw101, *d_sw110, *d_sw111;
   float *d_rw000, *d_rw001, *d_rw010, *d_rw011, *d_rw100, *d_rw101, *d_rw110, *d_rw111;
   float *d_memory_dy, *d_memory_dx, *d_memory_dz;
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+  float *d_memory_dy_next = NULL, *d_memory_dx_next = NULL;
+#endif
 #ifdef CUDA3D_PML_ZMEM_IN_P
   float *d_memory_dz_next = NULL;
 #endif
@@ -440,10 +481,12 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   nxyz=nbx*nbz*nby;
   byte=sizeof(float)*nxyz;
   nxyzpad=nypad*nxpad*nzpad;
-#ifdef CUDA3D_PML_ZMEM_IN_P
   const size_t mem_z_count = (size_t)nby * (size_t)nbx * (size_t)2 * (size_t)nbd;
+  const size_t mem_x_count = (size_t)nby * (size_t)2 * (size_t)nbd * (size_t)nbz;
+  const size_t mem_y_count = (size_t)2 * (size_t)nbd * (size_t)nbx * (size_t)nbz;
   const size_t mem_z_bytes = mem_z_count * sizeof(float);
-#endif
+  const size_t mem_x_bytes = mem_x_count * sizeof(float);
+  const size_t mem_y_bytes = mem_y_count * sizeof(float);
   //  if(mytid==3)
   //    printf("id=%d nzpad, nxpad, nzpad= %d, %d, %d, shot#=%d, ns=%d, nr=%d, nsize=%zu\n", 
   //	   mytid, nypad, nxpad, nzpad, snum, ns, nr, nxyzpad);
@@ -534,6 +577,10 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   cudaMalloc((void**)&d_memory_dy, 2*nbd*nbx*nbz*sizeof(float));
   cudaMalloc((void**)&d_memory_dx, nby*2*nbd*nbz*sizeof(float));
   cudaMalloc((void**)&d_memory_dz, nby*nbx*2*nbd*sizeof(float));
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+  cudaMalloc((void**)&d_memory_dy_next, mem_y_bytes);
+  cudaMalloc((void**)&d_memory_dx_next, mem_x_bytes);
+#endif
 #ifdef CUDA3D_PML_ZMEM_IN_P
   cudaMalloc((void**)&d_memory_dz_next, mem_z_bytes);
 #endif
@@ -544,6 +591,10 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   cudaMemset(d_memory_dy, 0., 2*nbd*nbx*nbz*sizeof(float));
   cudaMemset(d_memory_dx, 0., nby*2*nbd*nbz*sizeof(float));
   cudaMemset(d_memory_dz, 0., nby*nbx*2*nbd*sizeof(float));
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+  cudaMemset(d_memory_dy_next, 0, mem_y_bytes);
+  cudaMemset(d_memory_dx_next, 0, mem_x_bytes);
+#endif
 #ifdef CUDA3D_PML_ZMEM_IN_P
   cudaMemset(d_memory_dz_next, 0, mem_z_bytes);
 #endif
@@ -704,19 +755,32 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
     if(it%500==0 && mytid==0)
       printf("FP it=%d\n", it);
     // this is 2nd order time
+#if defined(CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL) && defined(CUDA3D_CPML_VMEM_DEBUG_FILL)
+    cudaMemset(d_memory_dy_next, 0xff, mem_y_bytes);
+    cudaMemset(d_memory_dx_next, 0xff, mem_x_bytes);
+    cudaMemset(d_memory_dz_next, 0xff, mem_z_bytes);
+    check_gpu_error_loop("fill CPML VMEM next");
+#endif
 #ifdef CUDA3D_PML_TILE_LIST_V
     cuda_fd3d_v_pml_tile_ns<<<dimg_v, dimb_v>>>(d_p1, d_vy, d_vx, d_vz,
 				    tdy, tdx, tdz,
 				    nby, nbx, nbz, nbd, dt,
 				    d_ay_h, d_by_h, d_ax_h, d_bx_h, d_az_h, d_bz_h,
 				    d_memory_dy, d_memory_dx, d_memory_dz,
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+				    d_memory_dy_next, d_memory_dx_next, d_memory_dz_next,
+#endif
 				    d_v_pml_tiles, n_v_pml_tiles);
 #else
     cuda_fd3d_v_pml_ns<<<dimg_v, dimb_v>>>(d_p1, d_vy, d_vx, d_vz,
 				    tdy, tdx, tdz,
 				    nby, nbx, nbz, nbd, dt,
 				    d_ay_h, d_by_h, d_ax_h, d_bx_h, d_az_h, d_bz_h,
-				    d_memory_dy, d_memory_dx, d_memory_dz);
+				    d_memory_dy, d_memory_dx, d_memory_dz
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+				    , d_memory_dy_next, d_memory_dx_next, d_memory_dz_next
+#endif
+				    );
 #endif
     check_gpu_error_loop("compute V");
     cuda_fd3d_p_core_ns<<<dimg_p, dimb_p >>>(d_p0, d_p1, d_cw2,
@@ -766,6 +830,28 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 				     d_memory_dx, d_memory_dy);
 #endif
     check_gpu_error_loop("compute P pml");
+#if defined(CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL) && defined(CUDA3D_CPML_VMEM_DEBUG_FILL)
+    cudaDeviceSynchronize();
+    check_gpu_error_2("sync before CPML VMEM coverage check");
+    check_cpml_vmem_next_written("memory_dy_next", d_memory_dy_next, mem_y_count, mytid, snum, it);
+    check_cpml_vmem_next_written("memory_dx_next", d_memory_dx_next, mem_x_count, mytid, snum, it);
+    check_cpml_vmem_next_written("memory_dz_next", d_memory_dz_next, mem_z_count, mytid, snum, it);
+#endif
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+    {
+      float *tmp_dy = d_memory_dy;
+      d_memory_dy = d_memory_dy_next;
+      d_memory_dy_next = tmp_dy;
+
+      float *tmp_dx = d_memory_dx;
+      d_memory_dx = d_memory_dx_next;
+      d_memory_dx_next = tmp_dx;
+
+      float *tmp_dz = d_memory_dz;
+      d_memory_dz = d_memory_dz_next;
+      d_memory_dz_next = tmp_dz;
+    }
+#else
 #ifdef CUDA3D_PML_ZMEM_IN_P
 #ifdef CUDA3D_PML_ZMEM_DEBUG_FILL
     cudaDeviceSynchronize();
@@ -777,6 +863,7 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
       d_memory_dz = d_memory_dz_next;
       d_memory_dz_next = tmp_dz;
     }
+#endif
 #endif
 #ifdef CUDA3D_PML_DEBUG_DUMP
     if (it == pml_dump_step) {
@@ -836,6 +923,9 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   cudaFree(d_rw000); cudaFree(d_rw001); cudaFree(d_rw010); cudaFree(d_rw011);
   cudaFree(d_rw100); cudaFree(d_rw101); cudaFree(d_rw110); cudaFree(d_rw111);
   cudaFree(d_memory_dy); cudaFree(d_memory_dx); cudaFree(d_memory_dz);
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+  cudaFree(d_memory_dy_next); cudaFree(d_memory_dx_next);
+#endif
 #ifdef CUDA3D_PML_ZMEM_IN_P
   cudaFree(d_memory_dz_next);
 #endif

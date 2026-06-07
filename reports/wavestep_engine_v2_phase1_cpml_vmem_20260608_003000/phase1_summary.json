@@ -1,0 +1,60 @@
+{
+  "runs": {
+    "zmem_smoke": "benchmarks/runs/smoke_1gpu_wavestep_v2_zmem_ref_20260608_002551",
+    "zmem_correctness": "benchmarks/runs/correctness_wavestep_v2_zmem_ref_20260608_002554",
+    "zmem_perf6": "benchmarks/runs/perf_1gpu_6shots_wavestep_v2_zmem_ref_20260608_002557",
+    "zmem_perf6_repeat": "benchmarks/runs/perf_1gpu_6shots_wavestep_v2_zmem_ref_repeat_20260608_002602",
+    "phase1_smoke": "benchmarks/runs/smoke_1gpu_wavestep_v2_cpml_vmem_release_20260608_002928",
+    "phase1_correctness": "benchmarks/runs/correctness_wavestep_v2_cpml_vmem_release_20260608_002931",
+    "phase1_perf1": "benchmarks/runs/perf_1gpu_wavestep_v2_cpml_vmem_release_20260608_002934",
+    "phase1_perf6": "benchmarks/runs/perf_1gpu_6shots_wavestep_v2_cpml_vmem_release_20260608_002937",
+    "phase1_perf6_repeat": "benchmarks/runs/perf_1gpu_6shots_wavestep_v2_cpml_vmem_release_repeat_20260608_002943"
+  },
+  "metrics": {
+    "zmem_smoke": {
+      "wp": 0.002491,
+      "gradient": 0.003291
+    },
+    "zmem_correctness": {
+      "wp": 0.012922,
+      "gradient": 0.014551
+    },
+    "zmem_perf6": {
+      "wp": 2.444596,
+      "gradient": 2.55898
+    },
+    "zmem_perf6_repeat": {
+      "wp": 2.455479,
+      "gradient": 2.56544
+    },
+    "phase1_smoke": {
+      "wp": 0.002409,
+      "gradient": 0.003263
+    },
+    "phase1_correctness": {
+      "wp": 0.013069,
+      "gradient": 0.01467
+    },
+    "phase1_perf1": {
+      "wp": 0.475411,
+      "gradient": 0.505165
+    },
+    "phase1_perf6": {
+      "wp": 2.36487,
+      "gradient": 2.48105
+    },
+    "phase1_perf6_repeat": {
+      "wp": 2.366573,
+      "gradient": 2.487687
+    }
+  },
+  "zmem_perf6_mean_wp": 2.4500375,
+  "phase1_perf6_mean_wp": 2.3657215,
+  "wp_speedup_vs_zmem": 1.0356407125690832,
+  "wp_slowdown_percent": -3.441416713009504,
+  "zmem_perf6_mean_gradient": 2.5622100000000003,
+  "phase1_perf6_mean_gradient": 2.4843685000000004,
+  "gradient_speedup_vs_zmem": 1.0313325096498365,
+  "gradient_slowdown_percent": -3.0380608927449315,
+  "phase1_gate": "continue"
+}

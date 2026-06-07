@@ -5,6 +5,14 @@
 #error "CUDA3D_PML_ZMEM_IN_P requires CUDA3D_PML_RECOMPUTE_Z"
 #endif
 
+#if defined(CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL) && !defined(CUDA3D_PML_ZMEM_IN_P)
+#error "CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL currently requires the stable CUDA3D_PML_ZMEM_IN_P path"
+#endif
+
+#if defined(CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL) && !defined(CUDA3D_CPML_VMEM_DISABLE_MPI)
+#error "CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL phase 1 is single-rank only; define CUDA3D_CPML_VMEM_DISABLE_MPI to acknowledge this gate"
+#endif
+
 __constant__ float c_ay_pml[CUDA3D_MAX_PML];
 __constant__ float c_by_pml[CUDA3D_MAX_PML];
 __constant__ float c_ax_pml[CUDA3D_MAX_PML];
@@ -787,7 +795,12 @@ __global__ void cuda_fd3d_v_pml_ns(const float *__restrict__ p1, float *vy, floa
 				   float _dy2, float _dx2, float _dz2,
 				   int n3, int n2, int n1, int npml, float dt,
 				   float *ay_h, float *by_h, float *ax_h, float *bx_h, float *az_h, float *bz_h,
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+				   const float *__restrict__ mem_dy, const float *__restrict__ mem_dx, const float *__restrict__ mem_dz,
+				   float *mem_dy_next, float *mem_dx_next, float *mem_dz_next){
+#else
 				   float *mem_dy, float *mem_dx, float *mem_dz){
+#endif
   float c1, c2, c3;
   int gtid1 = blockIdx.x * blockDim.x + threadIdx.x;
   int gtid2 = blockIdx.y * blockDim.y + threadIdx.y;
@@ -863,54 +876,84 @@ __global__ void cuda_fd3d_v_pml_ns(const float *__restrict__ p1, float *vy, floa
     if(need_vz && gtid1<npml) {
       pind=gtid3*n2*npml + gtid2*npml + gtid1;
       const float coef = c_bz_h_pml[gtid1];
-      mem_dz[pind]=mem_dz[pind]*coef+c1*(coef-1);
+      const float new_mem = __ldg(mem_dz+pind)*coef+c1*(coef-1);
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+      mem_dz_next[pind]=new_mem;
+#else
+      mem_dz[pind]=new_mem;
+#endif
 #ifndef CUDA3D_PML_RECOMPUTE_Z
-      vz[outIndex]+=mem_dz[pind];
+      vz[outIndex]+=new_mem;
 #endif
     }
     if (need_vz && gtid1>=n1-npml) {
       ic=gtid1-n1+npml;
       pind=  n3*n2*npml+gtid3*n2*npml + gtid2*npml + ic;
       const float coef = c_az_h_pml[ic];
-      mem_dz[pind]=mem_dz[pind]*coef+c1*(coef-1);
+      const float new_mem = __ldg(mem_dz+pind)*coef+c1*(coef-1);
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+      mem_dz_next[pind]=new_mem;
+#else
+      mem_dz[pind]=new_mem;
+#endif
 #ifndef CUDA3D_PML_RECOMPUTE_Z
-      vz[outIndex]+=mem_dz[pind];
+      vz[outIndex]+=new_mem;
 #endif
     }
     
     if (need_vx && gtid2<npml){
       pind=gtid3*npml*n1 + gtid2*n1 + gtid1;
       const float coef = c_bx_h_pml[gtid2];
-      mem_dx[pind]=mem_dx[pind]*coef+c2*(coef-1);
+      const float new_mem = __ldg(mem_dx+pind)*coef+c2*(coef-1);
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+      mem_dx_next[pind]=new_mem;
+#else
+      mem_dx[pind]=new_mem;
+#endif
 #ifndef CUDA3D_PML_RECOMPUTE_X
-      vx[outIndex]+=mem_dx[pind];
+      vx[outIndex]+=new_mem;
 #endif
     }
     if (need_vx && gtid2>=n2-npml){
       ic=gtid2-n2+npml;
       pind=n3*npml*n1+gtid3*(npml*n1) + ic*n1 + gtid1;
       const float coef = c_ax_h_pml[ic];
-      mem_dx[pind]=mem_dx[pind]*coef+c2*(coef-1);
+      const float new_mem = __ldg(mem_dx+pind)*coef+c2*(coef-1);
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+      mem_dx_next[pind]=new_mem;
+#else
+      mem_dx[pind]=new_mem;
+#endif
 #ifndef CUDA3D_PML_RECOMPUTE_X
-      vx[outIndex]+=mem_dx[pind];
+      vx[outIndex]+=new_mem;
 #endif
     }
     
     if(need_vy && gtid3<npml) {
       pind=gtid3*n2*n1 + gtid2*n1 + gtid1;
       const float coef = c_by_h_pml[gtid3];
-      mem_dy[pind]=mem_dy[pind]*coef+c3*(coef-1);
+      const float new_mem = __ldg(mem_dy+pind)*coef+c3*(coef-1);
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+      mem_dy_next[pind]=new_mem;
+#else
+      mem_dy[pind]=new_mem;
+#endif
 #ifndef CUDA3D_PML_RECOMPUTE_Y
-      vy[outIndex]+=mem_dy[pind];
+      vy[outIndex]+=new_mem;
 #endif
     }
     if (need_vy && gtid3>=n3-npml){
       ic=gtid3-n3+npml;
       pind= npml*n2*n1+ic*n2*n1 + gtid2*(n1) + gtid1;
       const float coef = c_ay_h_pml[ic];
-      mem_dy[pind]=mem_dy[pind]*coef+c3*(coef-1);
+      const float new_mem = __ldg(mem_dy+pind)*coef+c3*(coef-1);
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+      mem_dy_next[pind]=new_mem;
+#else
+      mem_dy[pind]=new_mem;
+#endif
 #ifndef CUDA3D_PML_RECOMPUTE_Y
-      vy[outIndex]+=mem_dy[pind];
+      vy[outIndex]+=new_mem;
 #endif
     }
   }
@@ -920,7 +963,12 @@ __global__ void cuda_fd3d_v_pml_tile_ns(const float *__restrict__ p1, float *vy,
 				   float _dy2, float _dx2, float _dz2,
 				   int n3, int n2, int n1, int npml, float dt,
 				   float *ay_h, float *by_h, float *ax_h, float *bx_h, float *az_h, float *bz_h,
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+				   const float *__restrict__ mem_dy, const float *__restrict__ mem_dx, const float *__restrict__ mem_dz,
+				   float *mem_dy_next, float *mem_dx_next, float *mem_dz_next,
+#else
 				   float *mem_dy, float *mem_dx, float *mem_dz,
+#endif
 				   const PmlTile *__restrict__ tiles, int ntile){
   if (blockIdx.x >= ntile) return;
   const PmlTile tile = tiles[blockIdx.x];
@@ -999,54 +1047,84 @@ __global__ void cuda_fd3d_v_pml_tile_ns(const float *__restrict__ p1, float *vy,
     if(need_vz && gtid1<npml) {
       pind=gtid3*n2*npml + gtid2*npml + gtid1;
       const float coef = c_bz_h_pml[gtid1];
-      mem_dz[pind]=mem_dz[pind]*coef+c1*(coef-1);
+      const float new_mem = __ldg(mem_dz+pind)*coef+c1*(coef-1);
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+      mem_dz_next[pind]=new_mem;
+#else
+      mem_dz[pind]=new_mem;
+#endif
 #ifndef CUDA3D_PML_RECOMPUTE_Z
-      vz[outIndex]+=mem_dz[pind];
+      vz[outIndex]+=new_mem;
 #endif
     }
     if (need_vz && gtid1>=n1-npml) {
       ic=gtid1-n1+npml;
       pind=  n3*n2*npml+gtid3*n2*npml + gtid2*npml + ic;
       const float coef = c_az_h_pml[ic];
-      mem_dz[pind]=mem_dz[pind]*coef+c1*(coef-1);
+      const float new_mem = __ldg(mem_dz+pind)*coef+c1*(coef-1);
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+      mem_dz_next[pind]=new_mem;
+#else
+      mem_dz[pind]=new_mem;
+#endif
 #ifndef CUDA3D_PML_RECOMPUTE_Z
-      vz[outIndex]+=mem_dz[pind];
+      vz[outIndex]+=new_mem;
 #endif
     }
     
     if (need_vx && gtid2<npml){
       pind=gtid3*npml*n1 + gtid2*n1 + gtid1;
       const float coef = c_bx_h_pml[gtid2];
-      mem_dx[pind]=mem_dx[pind]*coef+c2*(coef-1);
+      const float new_mem = __ldg(mem_dx+pind)*coef+c2*(coef-1);
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+      mem_dx_next[pind]=new_mem;
+#else
+      mem_dx[pind]=new_mem;
+#endif
 #ifndef CUDA3D_PML_RECOMPUTE_X
-      vx[outIndex]+=mem_dx[pind];
+      vx[outIndex]+=new_mem;
 #endif
     }
     if (need_vx && gtid2>=n2-npml){
       ic=gtid2-n2+npml;
       pind=n3*npml*n1+gtid3*(npml*n1) + ic*n1 + gtid1;
       const float coef = c_ax_h_pml[ic];
-      mem_dx[pind]=mem_dx[pind]*coef+c2*(coef-1);
+      const float new_mem = __ldg(mem_dx+pind)*coef+c2*(coef-1);
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+      mem_dx_next[pind]=new_mem;
+#else
+      mem_dx[pind]=new_mem;
+#endif
 #ifndef CUDA3D_PML_RECOMPUTE_X
-      vx[outIndex]+=mem_dx[pind];
+      vx[outIndex]+=new_mem;
 #endif
     }
     
     if(need_vy && gtid3<npml) {
       pind=gtid3*n2*n1 + gtid2*n1 + gtid1;
       const float coef = c_by_h_pml[gtid3];
-      mem_dy[pind]=mem_dy[pind]*coef+c3*(coef-1);
+      const float new_mem = __ldg(mem_dy+pind)*coef+c3*(coef-1);
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+      mem_dy_next[pind]=new_mem;
+#else
+      mem_dy[pind]=new_mem;
+#endif
 #ifndef CUDA3D_PML_RECOMPUTE_Y
-      vy[outIndex]+=mem_dy[pind];
+      vy[outIndex]+=new_mem;
 #endif
     }
     if (need_vy && gtid3>=n3-npml){
       ic=gtid3-n3+npml;
       pind= npml*n2*n1+ic*n2*n1 + gtid2*(n1) + gtid1;
       const float coef = c_ay_h_pml[ic];
-      mem_dy[pind]=mem_dy[pind]*coef+c3*(coef-1);
+      const float new_mem = __ldg(mem_dy+pind)*coef+c3*(coef-1);
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+      mem_dy_next[pind]=new_mem;
+#else
+      mem_dy[pind]=new_mem;
+#endif
 #ifndef CUDA3D_PML_RECOMPUTE_Y
-      vy[outIndex]+=mem_dy[pind];
+      vy[outIndex]+=new_mem;
 #endif
     }
   }

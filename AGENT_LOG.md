@@ -2558,3 +2558,79 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - profiler gate 已通过，下一步可进入 `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE`。
   - NCU 证据支持数据流/依赖延迟优化，不支持继续做 block-size 或 register-cap 随机 sweep。
   - `p_core` z-pencil 有依据但暂缓，优先做 PML z-slab；若 PML prototype 低于 5% repeat speedup，再转向 p_core 或重新评估。
+
+## 2026-06-08 00:34:22 +0800 - Start WAVESTEP Engine V2 and validate CPML velocity memory double buffer
+
+- 操作目标：
+  - 按用户提供的新 Pro 路线启动 `CUDA3D_WAVESTEP_ENGINE_V2`。
+  - 从 `main` 创建新分支 `exp/wavestep-engine-v2-pml-vp-fusion`。
+  - 完成 Phase 0 设计盘点文档。
+  - 实现 Phase 1：全方向 CPML velocity memory double-buffer，不做 PML fusion。
+  - 在 RTX 5090 服务器上完成 debug fill、debug dump、correctness、perf6 repeat gate。
+- 修改文件：
+  - 新增 `docs/wavestep_engine_v2_design.md`。
+  - 新增 `docs/architecture_decision_log.md`。
+  - 更新 `AGENTS.md`，记录 `CUDA3D_WAVESTEP_ENGINE_V2` 当前主线、Phase 1 结果和下一步 fused VP gate。
+  - 更新 `include/inc3D/single_solver.h`。
+  - 更新 `src/single_solver.cu`。
+  - 更新 `src/rem_fd.cu`。
+  - 新增本地同步报告目录：`reports/wavestep_engine_v2_phase1_cpml_vmem_20260608_003000/`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地：
+    - `git checkout main`
+    - `git -c http.proxy= -c https.proxy= pull --ff-only origin main`
+    - `git checkout -b exp/wavestep-engine-v2-pml-vp-fusion`
+  - 服务器：
+    - `git checkout -B exp/wavestep-engine-v2-pml-vp-fusion origin/main`
+    - 上传 `docs/wavestep_engine_v2_design.md`、`single_solver.h`、`single_solver.cu`、`rem_fd.cu`。
+  - 默认 zmem 编译：
+    - `-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2`
+  - Phase 1 debug 编译：
+    - zmem flags + `-DCUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL -DCUDA3D_CPML_VMEM_DISABLE_MPI -DCUDA3D_CPML_VMEM_DEBUG_FILL -DCUDA3D_DEBUG_CHECKS`
+  - Debug dump 编译：
+    - zmem dump flags + `-DCUDA3D_PML_DEBUG_DUMP`
+    - Phase1 dump flags + `-DCUDA3D_PML_DEBUG_DUMP`
+  - Phase 1 release 编译：
+    - zmem flags + `-DCUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL -DCUDA3D_CPML_VMEM_DISABLE_MPI`
+  - 运行：
+    - zmem `smoke_1gpu`、`correctness`、`perf_1gpu_6shots`、repeat。
+    - Phase1 debug `smoke_1gpu`、`correctness`。
+    - zmem/Phase1 debug dump step `0/1/2`。
+    - Phase1 release `smoke_1gpu`、`correctness`、`perf_1gpu`、`perf_1gpu_6shots`、repeat。
+    - post A/B：重建 zmem 后再次运行 `perf_1gpu_6shots`、repeat。
+  - 对比：
+    - `tools/compare_outputs.py` 比较 smoke/correctness/perf6/perf6_repeat。
+    - `tools/compare_debug_dumps.py` 比较 step `0/1/2` dump。
+- 测试结果：
+  - 默认 zmem 编译通过。
+  - Phase1 debug-fill 编译通过，`smoke_1gpu` 和 `correctness` 通过；未发现 next CPML velocity memory 未写回。
+  - Debug dump step `0/1/2` 全部通过。
+  - Phase1 release `smoke_1gpu`、`correctness`、`perf_1gpu`、`perf_1gpu_6shots`、repeat 全部 return code `0`。
+  - release 输出对比全部通过，rel L2 满足 `<=1e-5`。
+- 输出/哈希/误差摘要：
+  - Phase 1 report：`reports/wavestep_engine_v2_phase1_cpml_vmem_20260608_003000/phase1_report.md`
+  - Phase 1 summary：`reports/wavestep_engine_v2_phase1_cpml_vmem_20260608_003000/phase1_ab_summary.json`
+  - zmem pre perf6：
+    - `benchmarks/runs/perf_1gpu_6shots_wavestep_v2_zmem_ref_20260608_002557`：WP `2.444596s`，Gradient `2.558980s`
+    - `benchmarks/runs/perf_1gpu_6shots_wavestep_v2_zmem_ref_repeat_20260608_002602`：WP `2.455479s`，Gradient `2.565440s`
+  - Phase1 release perf6：
+    - `benchmarks/runs/perf_1gpu_6shots_wavestep_v2_cpml_vmem_release_20260608_002937`：WP `2.364870s`，Gradient `2.481050s`
+    - `benchmarks/runs/perf_1gpu_6shots_wavestep_v2_cpml_vmem_release_repeat_20260608_002943`：WP `2.366573s`，Gradient `2.487687s`
+  - zmem post perf6：
+    - `benchmarks/runs/perf_1gpu_6shots_wavestep_v2_zmem_post_ab_20260608_003136`：WP `2.431655s`，Gradient `2.545308s`
+    - `benchmarks/runs/perf_1gpu_6shots_wavestep_v2_zmem_post_ab_repeat_20260608_003142`：WP `2.439698s`，Gradient `2.552431s`
+  - A/B 汇总：
+    - Phase1 mean WP：`2.3657215s`
+    - zmem all mean WP：`2.442857s`
+    - speedup vs all zmem WP：`1.032605x`
+    - speedup vs all zmem Gradient：`1.028648x`
+    - gate：`continue`
+  - Phase1 release binary SHA256：`0749563fd944e6a275de4ffb6ef63822ec710551b7da520acdbb41b90d2eaee8`
+  - 服务器最终恢复 zmem binary SHA256：`ad99db7cb09ed2b223607ef06df05589b388d411bfb5bd711c598db45ee0a195`
+- 风险与下一步：
+  - Phase1 是 ownership scaffold，默认关闭；不要把它误认为最终 fused VP。
+  - Phase1 在本次 A/B 中有约 `3.26%` WP 正收益，但仍需后续更多 repeat 确认稳定性。
+  - 下一步允许进入 `CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY`。
+  - fused VP 必须真正消除 fused region 内 `vx/vy/vz` global write/read round trip，禁止 pressure-only split。
+  - pure z-face gate：meaningful case repeat speedup `>=10%`，`perf_1gpu_6shots repeat >=5%`，否则停止 PML fused VP。

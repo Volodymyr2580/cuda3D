@@ -59,18 +59,28 @@ Profiler gate：
 - 小候选没有 `>=2%` repeat speedup，不进入主线。
 - prototype 没有 `>=5%` repeat speedup，不扩展范围。
 
-当前允许的下一阶段 prototype：
+当前活动主线：
 
-1. `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE`
-   - 只处理 pure z-PML face，且 x/y 位于 core 区域。
-   - edge/corner/x-face/y-face/residual 继续走 `zmem_reference` generic path。
-   - 不默认启用，必须宏控制。
-   - 只有相对 `zmem_reference` 的 `perf_1gpu_6shots repeat >= 5%` 才继续扩展。
+1. `CUDA3D_WAVESTEP_ENGINE_V2`
+   - 目标是重构 wave-step ownership，而不是继续 micro sweep。
+   - 主攻 PML velocity + pressure 数据流，辅攻 core global-region temporal pipeline。
+   - Phase 0 设计文档：`docs/wavestep_engine_v2_design.md`。
+   - Phase 1 已实现：`CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL`。
+   - Phase 1 宏默认关闭，必须显式开启：
+     - `CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL`
+     - `CUDA3D_CPML_VMEM_DISABLE_MPI`
+     - `CUDA3D_CPML_VMEM_DEBUG_FILL`
+   - Phase 1 只允许 single GPU / single MPI rank，当前用于清理 CPML velocity memory ownership，不做 fusion。
+   - Phase 1 gate：debug dump step 0/1/2、correctness、`perf_1gpu_6shots repeat slowdown <= 2%`。
+   - 当前 Phase 1 结果：gate `continue`，相对 zmem all-mean WP speedup `1.032605x`，Gradient speedup `1.028648x`。
+   - Phase 1 报告：`reports/wavestep_engine_v2_phase1_cpml_vmem_20260608_003000/phase1_report.md`。
 
-2. `CUDA3D_CORE_ZPENCIL_SHARED`
-   - 只在 profiler 显示 `p_core` memory-bound 时启动。
-   - 只做 z-pencil shared-memory prototype，不做完整 temporal blocking。
-   - 要求 `p_core` kernel 自身 `>=10%` 加速，整体 `perf_1gpu_6shots repeat >=2%`。
+2. 下一步只允许 `CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY`
+   - 必须基于 Phase 1 的 CPML velocity memory double-buffer。
+   - 禁止 pressure-only split；fused-owned region 必须同时替换 v+p，并消除 fused region 内 `vx/vy/vz` global write/read round trip。
+   - 第一版只做 pure z-PML face，x/y 位于 core-safe 区域。
+   - edge/corner/source/receiver/MPI 继续 fallback。
+   - gate：meaningful case repeat speedup `>=10%`，`perf_1gpu_6shots repeat >=5%`，否则停止 fused VP。
 
 ## 速度阈值存档规则
 
