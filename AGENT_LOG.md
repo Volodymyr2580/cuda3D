@@ -2481,3 +2481,28 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 根目录 1.4GB `.nav` 与 56MB `.dir` 未纳入 Git，仍保留在本地/服务器文件系统。
   - perf benchmark 所需大体积 `.dir` 数据也未纳入 Git；clone 后若要跑 perf，需要服务器原始数据或重新生成/复制。
   - 以后新增重要 benchmark 报告时，如果被 `.gitignore` 忽略，需要显式 `git add -f <path>`。
+
+## 2026-06-07 09:05:00 +0800 - Profiler gate and architecture freeze
+
+- 操作目标：落实 Pro 架构反馈，把 `ZMEM_IN_P` 固化为 RTX 5090 稳定基线，并检查是否具备 Nsight Compute 硬件 counter 权限。
+- 修改文件：
+  - 更新 `AGENTS.md`，加入当前稳定基线、do-not-invest 列表、profiler gate 和两个允许的 prototype 门槛。
+  - 新增 `docs/profiler_inventory.md`、`docs/final_arch_report.md`、`docs/pml_fusion_result.md`、`docs/core_zpencil_result.md`。
+  - 更新 `overnight_20260607/reports/best_variant.env`、`best_binary.sha256`、`final_report.md`、`final_summary.json` 中的当前二进制 hash。
+- 执行命令摘要：
+  - 服务器执行 `cat /proc/driver/nvidia/params | grep -E "RmProfilingAdminOnly|Profiling"`。
+  - 服务器执行 `ncu --target-processes all ... --kernel-name regex:".*(p_pml_tile|v_pml_tile|p_core).*"` 对 `profile_1gpu` 尝试采集。
+  - 服务器用正式 zmem flags 加 `-Xptxas -v` 生成 `ptxas` verbose log，并用 `cuobjdump --dump-resource-usage` 生成静态资源表。
+  - 服务器最后用正式 zmem flags 重新编译 `bin/cuda_3D_FM`，恢复当前 best binary 口径。
+- 测试结果：
+  - Nsight Compute 已安装：`/usr/local/cuda-13.0/bin/ncu`，版本 `2025.3.0.0`。
+  - GPU counter 权限不可用：`RmProfilingAdminOnly: 1`。
+  - NCU 尝试连接到进程并且应用 `ALL DONE`，但 NCU 返回 `ERR_NVGPUCTRPERM`，return code `1`。
+  - 因 profiler gate 未通过，未启动 `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE` 或 `CUDA3D_CORE_ZPENCIL_SHARED`。
+- 输出/哈希摘要：
+  - 当前正式 zmem binary SHA256：`db55f6505d3bf2460a07028056a3b00da8bf0b884ffb69a250b2d1bd023ab488  bin/cuda_3D_FM`。
+  - fallback 静态资源：`p_pml_tile` 44 regs/0 spill，`v_pml_tile` 38 regs/0 spill，`p_core` 48 regs/0 spill/约 2KB shared。
+- 风险与下一步：
+  - 当前只有静态资源信息，没有 memory throughput、occupancy、stall reason，不能据此启动大结构重写。
+  - 需要管理员把 NVIDIA profiling counter 权限打开，目标是 `RmProfilingAdminOnly: 0`。
+  - 权限打开后，先重跑 `docs/profiler_inventory.md` 中的 NCU 命令，再决定是否进入 PML z-slab fusion 或 p_core z-pencil。

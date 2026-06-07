@@ -14,6 +14,64 @@
 - 不能只看运行时间变快，也必须确认输出结果没有超出数值容差。
 - 如果测试时 GPU 被其他任务占用，该轮性能数据只能作为参考，不能作为正式性能结论。
 
+## 当前稳定基线
+
+自 2026-06-07 起，RTX 5090 平台的主基线固定为 `zmem_reference`，不再以更早的 `current_best_reference` 作为主比较对象。
+
+当前稳定构建 flags：
+
+```bash
+NVFLAGS="-O3 -arch=sm_120 --use_fast_math \
+-DCUDA3D_PML_RECOMPUTE_Z \
+-DCUDA3D_PML_TILE_LIST \
+-DCUDA3D_PML_ZMEM_IN_P \
+-DPmlTileBlockSize1=32 \
+-DPmlTileBlockSize2=4 \
+-DPmlTileBlockSize3=2"
+```
+
+当前基线理由：
+
+- `perf6_repeat` 中，`ZMEM_IN_P` 相对 `current_best_reference` 的 WP speedup 约 `1.0493x`，Gradient speedup 约 `1.0469x`。
+- zmem 之后的候选没有达到 `>=2%` repeat speedup 门槛。
+- 后续所有 CUDA 实验必须相对 `zmem_reference` 报告 correctness、`perf_1gpu_6shots` 和 repeat 结果。
+
+## 下一阶段架构纪律
+
+下一阶段停止随机 CUDA 微调，进入 profiler-guided 的结构重写阶段。
+
+禁止继续投入以下路线，除非有新的 profiler 证据推翻既有结论：
+
+- `CUDA3D_PML_ZMEM_V_TILE_PRUNE`
+- `CUDA3D_PML_TILE_MASK_FASTPATH`
+- `CUDA3D_PML_ZFACE_P_SPECIALIZE`
+- `CUDA3D_PML_ZFACE_V_SPECIALIZE`
+- `RECOMPUTE_X` / `RECOMPUTE_Y` / `RECOMPUTE_XYZ`
+- PML tile block shape sweep
+- `p_core` simple block shape sweep
+- `-maxrregcount` / register cap sweep
+
+Profiler gate：
+
+- 没有 Nsight Compute 或等价硬件级 profiler evidence，不启动新的大结构重写。
+- PML 数学路径改动必须通过 debug dump step 0/1/2。
+- 性能结论必须包含 `perf_1gpu_6shots repeat`。
+- 小候选没有 `>=2%` repeat speedup，不进入主线。
+- prototype 没有 `>=5%` repeat speedup，不扩展范围。
+
+当前允许的下一阶段 prototype：
+
+1. `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE`
+   - 只处理 pure z-PML face，且 x/y 位于 core 区域。
+   - edge/corner/x-face/y-face/residual 继续走 `zmem_reference` generic path。
+   - 不默认启用，必须宏控制。
+   - 只有相对 `zmem_reference` 的 `perf_1gpu_6shots repeat >= 5%` 才继续扩展。
+
+2. `CUDA3D_CORE_ZPENCIL_SHARED`
+   - 只在 profiler 显示 `p_core` memory-bound 时启动。
+   - 只做 z-pencil shared-memory prototype，不做完整 temporal blocking。
+   - 要求 `p_core` kernel 自身 `>=10%` 加速，整体 `perf_1gpu_6shots repeat >=2%`。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

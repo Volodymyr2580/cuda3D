@@ -9,7 +9,7 @@ Reason: no candidate after zmem reached the required >=2% repeat speedup. The zm
 Binary SHA256:
 
 ```text
-ad993cb6a5cd2301e2bbf077186ec350f3565eab41861ebbc8e5f6fd0f3c4d1e  bin/cuda_3D_FM
+db55f6505d3bf2460a07028056a3b00da8bf0b884ffb69a250b2d1bd023ab488  bin/cuda_3D_FM
 ```
 
 ## Baseline vs ZMEM
