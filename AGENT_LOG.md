@@ -2715,3 +2715,20 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - standalone predict+copy commit prototype 不会带来速度提升，因为 `p(t+2)` 仍由额外 kernel 单独计算；它只证明调度正确性。
   - 默认 strict region 会被 acquisition crop 破坏，后续 fused kernel 必须支持 per-shot region fallback、tile list 或显式 region。
   - 真正下一步应实现 fused two-step core kernel：在同一 kernel 内计算 `p(t+1)` 与 strict-interior `p(t+2)`，复用 shared/global loads，并避免为已提交区域加载整块 shared tile。
+
+## 2026-06-07 16:07:53 +0800 - Write Pro feedback report for core 2-step work
+
+- 操作目标：根据用户请求，整理一份面向 Pro 的反馈报告，说明 core two-step interior 当前验证结果、性能结论和下一步请求。
+- 修改文件：
+  - 新增 `feedback/codex_report_20260607_160753_core2step_commit.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 检查 `feedback/` 目录已有报告命名风格。
+  - 新增 Markdown 报告。
+- 测试结果：
+  - 未修改 CUDA 源码或构建文件。
+  - 未运行新的编译或数值测试。
+- 输出/哈希/误差摘要：
+  - 报告总结了 `248ebba` 与 `616280f` 两个 commit 的验证结果。
+- 风险与下一步：
+  - 报告明确当前 commit prototype 不是 speedup 路线，下一步应要求 Pro 设计 fused two-step core temporal blocking kernel。
