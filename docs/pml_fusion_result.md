@@ -2,13 +2,19 @@
 
 ## Status
 
-Not started.
+Ready to start.
 
 ## Reason
 
-`CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE` is gated on Nsight Compute evidence. On 2026-06-07, NCU failed with `ERR_NVGPUCTRPERM` because `RmProfilingAdminOnly: 1`.
+`CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE` was originally gated on Nsight Compute evidence. The profiling counter issue has now been fixed and NCU data is available.
 
-Starting a PML fusion rewrite without knowing whether `p_pml_tile` and `v_pml_tile` are memory-bound, branch-bound, instruction-bound, or occupancy-bound would violate the project architecture gate.
+NCU shows:
+
+- `p_pml_tile`: largest sampled launch among target kernels, long-scoreboard/wait/short-scoreboard pressure.
+- `v_pml_tile`: strong long-scoreboard pressure.
+- Both kernels have no spill and moderate DRAM throughput.
+
+This supports a scoped z-slab dataflow/reuse prototype. It does not justify a broad region-wide fusion yet.
 
 ## Prototype Definition For Later
 

@@ -49,9 +49,11 @@ Current status:
 
 ```text
 NCU installed: yes
-NCU counter permission: no
-Reason: RmProfilingAdminOnly: 1 / ERR_NVGPUCTRPERM
+NCU counter permission: yes
+Reason: RmProfilingAdminOnly: 0 after profiler module config and reboot
 ```
+
+NCU evidence is now available. See `docs/profiler_inventory.md`.
 
 ## Approved Prototype Order
 
@@ -67,6 +69,9 @@ Reason: RmProfilingAdminOnly: 1 / ERR_NVGPUCTRPERM
 
 ## Current Outcome
 
-No new structural CUDA code was started in this pass because the profiler gate failed. This is intentional: the current evidence says more blind micro-tuning is low-value.
+The profiler gate is now satisfied. The data confirms that more blind block-size/register-cap tuning is low-value:
 
-Next action: enable NVIDIA performance counters, rerun NCU, then decide whether PML z-slab fusion or p_core z-pencil has the stronger evidence.
+- `p_pml_tile` and `v_pml_tile` both show long-scoreboard dominated stalls and moderate DRAM throughput, which supports a dataflow/reuse prototype.
+- `p_core` also shows long scoreboard and high compute/memory throughput, but p_core work should follow PML z-slab unless PML fails its 5% repeat threshold or p_core becomes dominant.
+
+Next action: implement `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE` as a macro-gated pure z-PML face prototype, with debug dump step 0/1/2, correctness, `perf_1gpu`, `perf_1gpu_6shots`, and repeat validation.

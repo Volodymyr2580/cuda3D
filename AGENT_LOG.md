@@ -2530,3 +2530,31 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
 - 风险与下一步：
   - 尚未重启服务器，当前 Nsight Compute 仍会因 `ERR_NVGPUCTRPERM` 失败。
   - 下一步需要用户确认是否允许重启服务器；重启后重新检查 `RmProfilingAdminOnly` 是否变为 `0`，然后重跑 NCU。
+
+## 2026-06-07 09:30:00 +0800 - Server reboot and successful NCU profiler inventory
+
+- 操作目标：重启 RTX 5090 服务器使 NVIDIA profiler counter 配置生效，并采集 `zmem_reference` 的 NCU profiler inventory。
+- 修改文件：
+  - 更新 `docs/profiler_inventory.md`、`docs/final_arch_report.md`、`docs/pml_fusion_result.md`、`docs/core_zpencil_result.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+  - 服务器生成 raw profiler artifacts 于 `benchmarks/profiles/`，这些文件按 `.gitignore` 不进入 Git。
+- 执行命令摘要：
+  - 使用 sudo 发起 `/sbin/reboot`。
+  - 轮询 SSH，服务器恢复后检查 `cat /proc/driver/nvidia/params | grep RmProfilingAdminOnly`。
+  - 运行 NCU 主采集：`SpeedOfLight`、`MemoryWorkloadAnalysis`、`SchedulerStats`、`Occupancy`、`LaunchStats`。
+  - 补跑 NCU `WarpStateStats`，提取 warp stall breakdown。
+- 测试结果：
+  - 服务器重启成功，SSH 恢复。
+  - `RmProfilingAdminOnly` 从 `1` 变为 `0`。
+  - NCU main run return code `0`，应用日志包含 `ALL DONE`。
+  - NCU warp-state run return code `0`，应用日志包含 `ALL DONE`。
+- 输出/哈希/指标摘要：
+  - main report：`benchmarks/profiles/zmem_ncu_main_20260607.ncu-rep`。
+  - warp report：`benchmarks/profiles/zmem_ncu_warpstates_20260607.ncu-rep`。
+  - `p_pml_tile`: time avg `189.366`，compute/mem throughput `56.15%`，DRAM throughput `40.43%`，warps active `72.82%`，top stalls long_scoreboard `8.70`、wait `1.97`、short_scoreboard `1.91`。
+  - `v_pml_tile`: time avg `71.299`，compute/mem throughput `55.40%`，DRAM throughput `45.74%`，warps active `82.35%`，top stalls long_scoreboard `15.63`、wait `1.56`、not_selected `1.49`。
+  - `p_core`: time avg `93.555`，compute/mem throughput `96.94%`，DRAM throughput `42.44%`，warps active `66.33%`，top stalls long_scoreboard `8.64`、barrier `3.49`、not_selected `1.67`。
+- 风险与下一步：
+  - profiler gate 已通过，下一步可进入 `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE`。
+  - NCU 证据支持数据流/依赖延迟优化，不支持继续做 block-size 或 register-cap 随机 sweep。
+  - `p_core` z-pencil 有依据但暂缓，优先做 PML z-slab；若 PML prototype 低于 5% repeat speedup，再转向 p_core 或重新评估。

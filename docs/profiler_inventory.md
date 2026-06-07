@@ -2,54 +2,54 @@
 
 ## Summary
 
-Nsight Compute is installed on the RTX 5090 server, but GPU performance counters are currently admin-only. The attempted NCU run connected to the target process and the application completed, but NCU failed to collect hardware counters with `ERR_NVGPUCTRPERM`.
+Nsight Compute hardware counters are now available on the RTX 5090 server after enabling the NVIDIA profiling module option and rebooting.
 
-Decision: do not start PML fusion or p_core z-pencil implementation until counters are enabled, unless the user explicitly overrides this architecture gate.
-
-## Environment Probe
-
-Server path:
+Current gate status:
 
 ```text
-/work/wenzhe/cuda3D
+RmProfilingAdminOnly: 0
+NCU hardware counters available: yes
+PML fusion allowed to start: yes
+p_core z-pencil allowed to start: conditionally yes, after/if PML z-slab result is insufficient or if p_core becomes the dominant bottleneck
 ```
 
-Probe result:
+## Permission Fix
+
+The server originally reported:
 
 ```text
-GPU: NVIDIA GeForce RTX 5090, driver 595.71.05, 32607 MiB
-Nsight Compute: /usr/local/cuda-13.0/bin/ncu
-NCU version: 2025.3.0.0
-NVCC: /usr/local/cuda-13.0/bin/nvcc, CUDA 13.0
-Profiling parameter: RmProfilingAdminOnly: 1
+RmProfilingAdminOnly: 1
+ERR_NVGPUCTRPERM
 ```
 
-NCU attempt result:
+The following persistent configuration was written with administrator permission:
 
 ```text
-return code: 1
-error: ERR_NVGPUCTRPERM
-application status: ALL DONE
-attempt log: benchmarks/profiles/zmem_ncu_main_attempt_20260607.log
+/etc/modprobe.d/nvidia-profiler.conf
+options nvidia NVreg_RestrictProfilingToAdminUsers=0
 ```
 
-## Admin Request
-
-Please enable NVIDIA GPU performance counters for non-admin users on the RTX 5090 server, or run the NCU profile under an account with sufficient permissions.
-
-Diagnostic command:
-
-```bash
-cat /proc/driver/nvidia/params | grep -E "RmProfilingAdminOnly|Profiling"
-```
-
-Required outcome:
+Then `update-initramfs -u` and a server reboot were performed. After reboot:
 
 ```text
 RmProfilingAdminOnly: 0
 ```
 
-After enabling counters, run:
+## Environment
+
+```text
+Server path: /work/wenzhe/cuda3D
+GPU: NVIDIA GeForce RTX 5090
+Driver: 595.71.05
+Nsight Compute: /usr/local/cuda-13.0/bin/ncu
+NCU version: 2025.3.0.0
+NVCC: CUDA 13.0
+Git head: 1034ddb before profiler run
+```
+
+## NCU Commands
+
+Main throughput/resource inventory:
 
 ```bash
 cd /work/wenzhe/cuda3D
@@ -64,43 +64,77 @@ ncu --target-processes all \
   --kernel-name regex:".*(p_pml_tile|v_pml_tile|p_core).*" \
   --launch-skip 10 \
   --launch-count 30 \
-  -o benchmarks/profiles/zmem_ncu_main \
+  -o benchmarks/profiles/zmem_ncu_main_20260607 \
   bash -lc 'cd benchmarks/cases/profile_1gpu && CUDA_VISIBLE_DEVICES=0 /opt/intel/oneapi/mpi/latest/bin/mpirun -np 1 ../../../bin/cuda_3D_FM < input_profile_1gpu.in'
 ```
 
-## Fallback Static Resource Table
+Warp-state inventory:
 
-Because NCU counters are unavailable, a fallback `ptxas -v` and `cuobjdump --dump-resource-usage` inventory was generated. This is not a substitute for memory throughput, occupancy, or stall reasons; it only tells us static resource pressure.
+```bash
+ncu --target-processes all \
+  --force-overwrite \
+  --section WarpStateStats \
+  --kernel-name regex:".*(p_pml_tile|v_pml_tile|p_core).*" \
+  --launch-skip 10 \
+  --launch-count 30 \
+  -o benchmarks/profiles/zmem_ncu_warpstates_20260607 \
+  bash -lc 'cd benchmarks/cases/profile_1gpu && CUDA_VISIBLE_DEVICES=0 /opt/intel/oneapi/mpi/latest/bin/mpirun -np 1 ../../../bin/cuda_3D_FM < input_profile_1gpu.in'
+```
+
+Both NCU runs completed with return code `0` and the application reached `ALL DONE`.
+
+## Kernel Throughput And Occupancy
+
+| Kernel | Samples | Block | Grid | Time avg | Compute/mem throughput % | DRAM throughput % | SM throughput % | Warps active % | Eligible warps/cycle | Reg/thread | Shared/block | Waves/SM |
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `p_pml_tile` | 10 | `(32, 4, 2)` | `(22188, 1, 1)` | 189.366 | 56.15 | 40.43 | 56.15 | 72.82 | 1.143 | 44 | 1.024 KB | 26.10 |
+| `v_pml_tile` | 10 | `(32, 4, 2)` | `(23100, 1, 1)` | 71.299 | 55.40 | 45.74 | 42.33 | 82.35 | 1.129 | 38 | 1.024 KB | 22.65 |
+| `p_core` | 10 | `(128, 2, 1)` | `(1, 117, 233)` | 93.555 | 96.94 | 42.44 | 58.16 | 66.33 | 1.173 | 48 | 2.160 KB | 32.07 |
+
+`Time avg` is the NCU raw `gpu__time_duration.avg` value for each sampled launch; use it for within-report comparison, not whole-application timing.
+
+## Top Warp Stalls
+
+| Kernel | Stall 1 | Stall 2 | Stall 3 | Stall 4 | Stall 5 | Issue active/cycle |
+|---|---:|---:|---:|---:|---:|---:|
+| `p_pml_tile` | long_scoreboard 8.70 | wait 1.97 | short_scoreboard 1.91 | not_selected 1.17 | branch_resolving 0.63 | 0.528 |
+| `v_pml_tile` | long_scoreboard 15.63 | wait 1.56 | not_selected 1.49 | math_pipe_throttle 0.69 | short_scoreboard 0.49 | 0.457 |
+| `p_core` | long_scoreboard 8.64 | barrier 3.49 | not_selected 1.67 | wait 0.90 | mio_throttle 0.84 | 0.444 |
+
+## Static Resource Fallback
+
+The earlier fallback table remains useful for sanity checking:
 
 | Kernel | Registers | Shared Memory | Stack | Local | Spill |
 |---|---:|---:|---:|---:|---:|
-| `cuda_fd3d_p_pml_tile_ns` | 44 | 0 B | 0 B | 0 B | 0 B |
-| `cuda_fd3d_v_pml_tile_ns` | 38 | 0 B | 0 B | 0 B | 0 B |
+| `cuda_fd3d_p_pml_tile_ns` | 44 | 0 B static / 1.024 KB launch allocation | 0 B | 0 B | 0 B |
+| `cuda_fd3d_v_pml_tile_ns` | 38 | 0 B static / 1.024 KB launch allocation | 0 B | 0 B | 0 B |
 | `cuda_fd3d_p_core_ns` | 48 | 2160 B cuobjdump / 1136 B ptxas | 0 B | 0 B | 0 B |
-| `cuda_fd3d_p_pml_ns` | 48 | 0 B | 0 B | 0 B | 0 B |
-| `cuda_fd3d_v_pml_ns` | 38 | 0 B | 0 B | 0 B | 0 B |
 
-Static interpretation:
+## Architecture Read
 
-- The target tile kernels show no spill, so register cap sweeping is unlikely to help and was already empirically slower.
-- `p_pml_tile` and `v_pml_tile` use no shared memory in the current tile-list implementation, which leaves room for a carefully scoped shared-halo/fusion prototype, but not enough evidence to start it without NCU.
-- `p_core` already uses a small shared z-tile and 48 registers; a z-pencil rewrite should wait for NCU evidence that global memory or z-neighbor reloads dominate.
+- `p_pml_tile` is the largest sampled launch among the three target kernels and shows long-scoreboard, wait, and short-scoreboard pressure. This supports a dataflow/reuse prototype rather than more block-size tuning.
+- `v_pml_tile` has the strongest long-scoreboard signal. A fused z-slab prototype is plausible if it reduces global velocity/memory round trips and dependency latency.
+- `p_core` has very high compute/memory throughput (`~96.94%`) but only moderate DRAM throughput (`~42.44%`) and long-scoreboard stalls. A controlled z-pencil/shared-memory prototype is justified, but should follow PML z-slab unless PML fails or p_core becomes the dominant limiter.
+- Register pressure is not the lead bottleneck: target kernels have no spill, and prior `-maxrregcount` sweeps were slower.
 
-Raw fallback artifacts are on the server:
+## Artifacts
+
+Tracked summary:
 
 ```text
-benchmarks/profiles/ncu_permission_probe_20260607.txt
-benchmarks/profiles/zmem_ncu_main_attempt_20260607.log
-benchmarks/profiles/zmem_ptxas_verbose_20260607.log
-benchmarks/profiles/zmem_cuobjdump_resource_20260607.txt
-benchmarks/profiles/zmem_static_resource_inventory_20260607.md
+docs/profiler_inventory.md
 ```
 
-## Gate Status
+Raw artifacts, ignored by Git but kept on the server:
 
 ```text
-NCU hardware counters available: no
-PML fusion allowed to start: no
-p_core z-pencil allowed to start: no
-Next action: ask admin to enable counters, then rerun NCU command above.
+benchmarks/profiles/zmem_ncu_main_20260607.ncu-rep
+benchmarks/profiles/zmem_ncu_main_20260607.log
+benchmarks/profiles/zmem_ncu_main_20260607_raw.csv
+benchmarks/profiles/zmem_ncu_main_20260607_key_metrics.json
+benchmarks/profiles/zmem_ncu_warpstates_20260607.ncu-rep
+benchmarks/profiles/zmem_ncu_warpstates_20260607.log
+benchmarks/profiles/zmem_ncu_warpstates_20260607_raw.csv
+benchmarks/profiles/zmem_ncu_warpstates_20260607_key_metrics.json
 ```
