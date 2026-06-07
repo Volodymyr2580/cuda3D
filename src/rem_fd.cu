@@ -12,6 +12,14 @@
 #error "CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL phase 1 is single-rank only; define CUDA3D_CPML_VMEM_DISABLE_MPI to acknowledge this gate"
 #endif
 
+#if defined(CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY) && !defined(CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL)
+#error "CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY requires CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL"
+#endif
+
+#if defined(CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY) && defined(CUDA3D_PML_ZFACE_P_SPECIALIZE)
+#error "CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY replaces the old pressure-only zface specialize path"
+#endif
+
 #ifdef CUDA3D_PML_DEBUG_DUMP
 #include <sys/stat.h>
 #endif

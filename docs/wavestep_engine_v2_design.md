@@ -216,3 +216,26 @@ meaningful case repeat speedup >= 10%
 perf_1gpu_6shots repeat speedup >= 5%
 ```
 
+## Phase 2 Z-Face Result
+
+`CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY` was tested in two forms:
+
+```text
+1. Separate fused z-face kernel.
+2. Inline p_pml fused branch with no extra kernel launch.
+```
+
+Both forms passed smoke, correctness, and perf6 repeat output comparison, but both failed performance:
+
+```text
+zmem mean WP:              2.434461s
+separate zface mean WP:    2.660077s
+inline zface mean WP:      2.692579s
+```
+
+Conclusion:
+
+```text
+Direct p1-based x/y second derivatives are not an acceptable replacement for the vx/vy global round trip on RTX 5090.
+Do not repeat this route unless the next design keeps velocity intermediates CTA-local with shared-memory reuse or is backed by new profiler evidence.
+```

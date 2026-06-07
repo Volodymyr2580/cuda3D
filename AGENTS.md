@@ -46,6 +46,7 @@ NVFLAGS="-O3 -arch=sm_120 --use_fast_math \
 - `CUDA3D_PML_TILE_MASK_FASTPATH`
 - `CUDA3D_PML_ZFACE_P_SPECIALIZE`
 - `CUDA3D_PML_ZFACE_V_SPECIALIZE`
+- `CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY` with direct p1 x/y second derivatives replacing `vx/vy`
 - `RECOMPUTE_X` / `RECOMPUTE_Y` / `RECOMPUTE_XYZ`
 - PML tile block shape sweep
 - `p_core` simple block shape sweep
@@ -75,12 +76,11 @@ Profiler gate：
    - 当前 Phase 1 结果：gate `continue`，相对 zmem all-mean WP speedup `1.032605x`，Gradient speedup `1.028648x`。
    - Phase 1 报告：`reports/wavestep_engine_v2_phase1_cpml_vmem_20260608_003000/phase1_report.md`。
 
-2. 下一步只允许 `CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY`
-   - 必须基于 Phase 1 的 CPML velocity memory double-buffer。
-   - 禁止 pressure-only split；fused-owned region 必须同时替换 v+p，并消除 fused region 内 `vx/vy/vz` global write/read round trip。
-   - 第一版只做 pure z-PML face，x/y 位于 core-safe 区域。
-   - edge/corner/source/receiver/MPI 继续 fallback。
-   - gate：meaningful case repeat speedup `>=10%`，`perf_1gpu_6shots repeat >=5%`，否则停止 fused VP。
+2. `CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY` direct form 已停止
+   - separate fused z-face kernel：correctness pass，但 mean WP `2.660077s`，慢于 zmem mean WP `2.434461s`。
+   - inline p_pml fused branch：correctness pass，但 mean WP `2.692579s`，慢于 zmem mean WP `2.434461s`。
+   - 禁止继续重复 direct p1 x/y second-derivative 替代 `vx/vy` global round trip。
+   - 只有在新设计能把 velocity intermediates 保持在 CTA-local shared memory 中，或有新的 Nsight Compute 证据证明总 memory stall 下降时，才允许重开 PML z-face fusion。
 
 ## 速度阈值存档规则
 

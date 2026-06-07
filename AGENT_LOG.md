@@ -2634,3 +2634,66 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 下一步允许进入 `CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY`。
   - fused VP 必须真正消除 fused region 内 `vx/vy/vz` global write/read round trip，禁止 pressure-only split。
   - pure z-face gate：meaningful case repeat speedup `>=10%`，`perf_1gpu_6shots repeat >=5%`，否则停止 PML fused VP。
+
+## 2026-06-08 01:08:00 +0800 - Test and stop direct PML fused VP z-face
+
+- 操作目标：
+  - 继续 `CUDA3D_WAVESTEP_ENGINE_V2` Phase 2。
+  - 实现并测试 `CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY`。
+  - 验证是否能通过 correctness 和 `perf_1gpu_6shots repeat >=5%` gate。
+- 修改文件：
+  - 更新 `include/inc3D/single_solver.h`。
+  - 更新 `src/single_solver.cu`。
+  - 更新 `src/rem_fd.cu`。
+  - 新增 `reports/wavestep_engine_v2_phase2_fused_zface_20260608_010000/phase2_fused_zface_report.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 更新 `docs/wavestep_engine_v2_design.md`。
+  - 更新 `AGENTS.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地 `git diff --check`。
+  - 上传 `single_solver.cu`、`rem_fd.cu`、`single_solver.h` 到 `/work/wenzhe/cuda3D`。
+  - 编译默认 zmem flags，确认宏关闭路径可编译。
+  - 编译 fused debug/release flags：
+    - zmem flags
+    - `-DCUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL`
+    - `-DCUDA3D_CPML_VMEM_DISABLE_MPI`
+    - `-DCUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY`
+  - 运行 fused separate-kernel 版：
+    - `smoke_1gpu`
+    - `correctness`
+    - `perf_1gpu_6shots`
+    - `perf_1gpu_6shots` repeat
+  - 运行 fused inline 版：
+    - `smoke_1gpu`
+    - `correctness`
+    - `perf_1gpu_6shots`
+    - `perf_1gpu_6shots` repeat
+  - 重建 zmem 并同机复跑 `perf_1gpu_6shots`、repeat，最终服务器 binary 恢复为 zmem release。
+  - 使用 `tools/compare_outputs.py` 对比 smoke/correctness/perf6 repeat 输出。
+- 测试结果：
+  - 默认 zmem 编译通过。
+  - fused separate-kernel 版编译通过；smoke/correctness/perf6 repeat 输出对比均通过。
+  - fused inline 版编译通过；smoke/correctness/perf6 repeat 输出对比均通过。
+  - 两个 fused 版本都未达到性能 gate，均慢于同机 zmem。
+- 输出/哈希/误差摘要：
+  - separate fused binary SHA256：`63531df023ebab0bf8104eafe4b420658f6eb1cfd0801b6cbe3d5d4dd4adad4a`
+  - inline fused binary SHA256：`c88b2acf88025f7796288603250d3f63749a2af8b548449af9b1373507e1cff9`
+  - final restored zmem binary SHA256：`c768270c431b3922f803fc787b1eaaffdc8967b072dfc5f74f30c0a94bf459e5`
+  - same-session zmem perf6:
+    - `20260608_010619`：WP `2.432802s`，Gradient `2.545055s`
+    - repeat `20260608_010625`：WP `2.436119s`，Gradient `2.550727s`
+    - mean WP `2.434461s`
+  - separate fused perf6:
+    - `20260608_005956`：WP `2.656186s`，Gradient `2.771636s`
+    - repeat `20260608_010002`：WP `2.663968s`，Gradient `2.776977s`
+    - mean WP `2.660077s`，speed ratio vs zmem `0.915184x`
+  - inline fused perf6:
+    - `20260608_010449`：WP `2.691287s`，Gradient `2.812600s`
+    - repeat `20260608_010455`：WP `2.693871s`，Gradient `2.817426s`
+    - mean WP `2.692579s`，speed ratio vs zmem `0.904137x`
+  - perf6 repeat 最大 rel L2：`6.358816e-07`，满足 `<=1e-5`。
+- 风险与下一步：
+  - 直接用 p1 x/y second derivatives 替代 `vx/vy` global round trip 的 z-face fusion 已停止。
+  - 后续不要重复 separate zface kernel 或 inline p_pml direct recompute。
+  - 只有新设计使用 CTA-local shared-memory velocity intermediates，或有新的 NCU 证据说明总 memory stall 下降，才允许重开 PML z-face fusion。

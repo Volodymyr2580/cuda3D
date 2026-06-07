@@ -102,3 +102,59 @@ Hard gate:
 meaningful case repeat speedup >= 10%
 perf_1gpu_6shots repeat speedup >= 5%
 ```
+
+## 2026-06-08 - Stop Direct PML Fused VP Z-Face
+
+Decision:
+
+```text
+Stop CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY in its direct p1 second-derivative form.
+Do not repeat this route without new profiler evidence.
+```
+
+Implemented but rejected variants:
+
+```text
+1. Separate fused z-face kernel:
+   v_pml skips fused-owned vx/vy writes; p_pml skips fused points; a separate zface kernel updates p0.
+
+2. Inline p_pml fused branch:
+   v_pml skips fused-owned vx/vy writes; p_pml_tile handles zface points directly without an extra kernel launch.
+```
+
+Correctness evidence:
+
+```text
+smoke: pass
+correctness: pass
+perf_1gpu_6shots repeat output compare: pass
+max perf6 repeat rel L2: 6.358816e-07
+```
+
+Performance evidence on RTX 5090 same-session A/B:
+
+```text
+zmem mean WP:              2.434461s
+separate zface mean WP:    2.660077s, speed ratio 0.915184x
+inline zface mean WP:      2.692579s, speed ratio 0.904137x
+```
+
+Reason:
+
+```text
+The direct z-face fusion is mathematically valid but replaces vx/vy global reads with additional p1 loads, extra arithmetic, and branch pressure.
+The saved vx/vy round trip is not enough to overcome this cost on the perf_1gpu_6shots gate.
+```
+
+Stop rule:
+
+```text
+Do not continue direct p1 x/y second-derivative z-face fusion.
+Only reopen PML z-face fusion if the design keeps velocity intermediates CTA-local with shared-memory reuse or has Nsight Compute evidence showing lower total memory stalls.
+```
+
+Report:
+
+```text
+reports/wavestep_engine_v2_phase2_fused_zface_20260608_010000/phase2_fused_zface_report.md
+```

@@ -13,6 +13,14 @@
 #error "CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL phase 1 is single-rank only; define CUDA3D_CPML_VMEM_DISABLE_MPI to acknowledge this gate"
 #endif
 
+#if defined(CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY) && !defined(CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL)
+#error "CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY requires CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL"
+#endif
+
+#if defined(CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY) && defined(CUDA3D_PML_ZFACE_P_SPECIALIZE)
+#error "CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY replaces the old pressure-only zface specialize path"
+#endif
+
 __constant__ float c_ay_pml[CUDA3D_MAX_PML];
 __constant__ float c_by_pml[CUDA3D_MAX_PML];
 __constant__ float c_ax_pml[CUDA3D_MAX_PML];
@@ -42,6 +50,41 @@ void upload_pml_constants(int nbd,
   cudaMemcpyToSymbol(c_az_h_pml, az_h, nbd*sizeof(float));
   cudaMemcpyToSymbol(c_bz_h_pml, bz_h, nbd*sizeof(float));
 }
+
+#ifdef CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY
+__device__ __forceinline__ bool pml_fused_zface_pressure_point(int gtid1, int gtid2, int gtid3,
+							       int n3, int n2, int n1, int npml) {
+  const int core2_lo = npml + CorePmlMargin;
+  const int core3_lo = npml + CorePmlMargin;
+  const int core2_hi = n2 - npml - CorePmlMargin;
+  const int core3_hi = n3 - npml - CorePmlMargin;
+  return ((gtid1 < npml) || (gtid1 >= n1 - npml)) &&
+    (gtid2 >= core2_lo) && (gtid2 < core2_hi) &&
+    (gtid3 >= core3_lo) && (gtid3 < core3_hi);
+}
+
+__device__ __forceinline__ bool pml_fused_zface_vx_global_point(int gtid1, int gtid2, int gtid3,
+								int n3, int n2, int n1, int npml) {
+  const int core2_lo = npml + CorePmlMargin;
+  const int core3_lo = npml + CorePmlMargin;
+  const int core2_hi = n2 - npml - CorePmlMargin;
+  const int core3_hi = n3 - npml - CorePmlMargin;
+  return ((gtid1 < npml) || (gtid1 >= n1 - npml)) &&
+    (gtid2 >= core2_lo + 3) && (gtid2 < core2_hi - 4) &&
+    (gtid3 >= core3_lo) && (gtid3 < core3_hi);
+}
+
+__device__ __forceinline__ bool pml_fused_zface_vy_global_point(int gtid1, int gtid2, int gtid3,
+								int n3, int n2, int n1, int npml) {
+  const int core2_lo = npml + CorePmlMargin;
+  const int core3_lo = npml + CorePmlMargin;
+  const int core2_hi = n2 - npml - CorePmlMargin;
+  const int core3_hi = n3 - npml - CorePmlMargin;
+  return ((gtid1 < npml) || (gtid1 >= n1 - npml)) &&
+    (gtid2 >= core2_lo) && (gtid2 < core2_hi) &&
+    (gtid3 >= core3_lo + 3) && (gtid3 < core3_hi - 4);
+}
+#endif
 
 //< step forward: 3-D FD, order=8 >
 // mod from pengliang yang
@@ -825,12 +868,18 @@ __global__ void cuda_fd3d_v_pml_ns(const float *__restrict__ p1, float *vy, floa
 			   (gtid2 >= core2_lo) && (gtid2 < core2_hi) &&
 			   (gtid3 >= core3_lo) && (gtid3 < core3_hi));
 #endif
-    const bool need_vx = !((gtid1 >= core1_lo) && (gtid1 < core1_hi) &&
-			   (gtid2 >= core2_lo + 3) && (gtid2 < core2_hi - 4) &&
-			   (gtid3 >= core3_lo) && (gtid3 < core3_hi));
-    const bool need_vy = !((gtid1 >= core1_lo) && (gtid1 < core1_hi) &&
-			   (gtid2 >= core2_lo) && (gtid2 < core2_hi) &&
-			   (gtid3 >= core3_lo + 3) && (gtid3 < core3_hi - 4));
+    bool need_vx = !((gtid1 >= core1_lo) && (gtid1 < core1_hi) &&
+		     (gtid2 >= core2_lo + 3) && (gtid2 < core2_hi - 4) &&
+		     (gtid3 >= core3_lo) && (gtid3 < core3_hi));
+    bool need_vy = !((gtid1 >= core1_lo) && (gtid1 < core1_hi) &&
+		     (gtid2 >= core2_lo) && (gtid2 < core2_hi) &&
+		     (gtid3 >= core3_lo + 3) && (gtid3 < core3_hi - 4));
+#ifdef CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY
+    if (need_vx && pml_fused_zface_vx_global_point(gtid1, gtid2, gtid3, n3, n2, n1, npml))
+      need_vx = false;
+    if (need_vy && pml_fused_zface_vy_global_point(gtid1, gtid2, gtid3, n3, n2, n1, npml))
+      need_vy = false;
+#endif
 
     if (!need_vz && !need_vx && !need_vy) return;
 
@@ -996,12 +1045,18 @@ __global__ void cuda_fd3d_v_pml_tile_ns(const float *__restrict__ p1, float *vy,
 			   (gtid2 >= core2_lo) && (gtid2 < core2_hi) &&
 			   (gtid3 >= core3_lo) && (gtid3 < core3_hi));
 #endif
-    const bool need_vx = !((gtid1 >= core1_lo) && (gtid1 < core1_hi) &&
-			   (gtid2 >= core2_lo + 3) && (gtid2 < core2_hi - 4) &&
-			   (gtid3 >= core3_lo) && (gtid3 < core3_hi));
-    const bool need_vy = !((gtid1 >= core1_lo) && (gtid1 < core1_hi) &&
-			   (gtid2 >= core2_lo) && (gtid2 < core2_hi) &&
-			   (gtid3 >= core3_lo + 3) && (gtid3 < core3_hi - 4));
+    bool need_vx = !((gtid1 >= core1_lo) && (gtid1 < core1_hi) &&
+		     (gtid2 >= core2_lo + 3) && (gtid2 < core2_hi - 4) &&
+		     (gtid3 >= core3_lo) && (gtid3 < core3_hi));
+    bool need_vy = !((gtid1 >= core1_lo) && (gtid1 < core1_hi) &&
+		     (gtid2 >= core2_lo) && (gtid2 < core2_hi) &&
+		     (gtid3 >= core3_lo + 3) && (gtid3 < core3_hi - 4));
+#ifdef CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY
+    if (need_vx && pml_fused_zface_vx_global_point(gtid1, gtid2, gtid3, n3, n2, n1, npml))
+      need_vx = false;
+    if (need_vy && pml_fused_zface_vy_global_point(gtid1, gtid2, gtid3, n3, n2, n1, npml))
+      need_vy = false;
+#endif
 
     if (!need_vz && !need_vx && !need_vy) return;
 
@@ -1361,6 +1416,73 @@ __device__ __forceinline__ bool pml_zface_p_special_point(int gtid1, int gtid2, 
 }
 #endif
 
+#ifdef CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY
+__device__ __forceinline__ float pml_fused_second_inline_from_p1(const float *__restrict__ p1,
+								 size_t base,
+								 size_t stride,
+								 float inv_d) {
+  const float d2 = inv_d * inv_d;
+  const float center = __ldg(p1 + base);
+  float value = -2.8751201527567405f * center;
+  value += 1.6234617233276367f * (__ldg(p1 + base + stride) + __ldg(p1 + base - stride));
+  value += -0.21382331848144528f * (__ldg(p1 + base + 2 * stride) + __ldg(p1 + base - 2 * stride));
+  value += 0.030927128261990015f * (__ldg(p1 + base + 3 * stride) + __ldg(p1 + base - 3 * stride));
+  value += -0.003195444742838541f * (__ldg(p1 + base + 4 * stride) + __ldg(p1 + base - 4 * stride));
+  value += 0.0002028528849283854f * (__ldg(p1 + base + 5 * stride) + __ldg(p1 + base - 5 * stride));
+  value += -0.000013351440429687502f * (__ldg(p1 + base + 6 * stride) + __ldg(p1 + base - 6 * stride));
+  value += 0.000000486568528778699f * (__ldg(p1 + base + 7 * stride) + __ldg(p1 + base - 7 * stride));
+  return d2 * value;
+}
+
+__device__ __forceinline__ void pml_fused_zface_pressure_update(float *p0,
+							       const float *__restrict__ p1,
+							       float *cw2,
+							       float _dy2, float _dx2, float _dz2,
+							       int n3, int n2, int n1, int npml, float dt,
+							       float *mem_dzz,
+							       const float *__restrict__ mem_dz_v,
+							       float *mem_dz_next_v,
+							       int gtid3, int gtid2, int gtid1) {
+  const int stride2 = n1 + 2 * radius;
+  const int stride3 = stride2 * (n2 + 2 * radius);
+  const size_t ts3 = (size_t)(gtid3 + radius) * stride3;
+  const size_t ts2 = (size_t)(gtid2 + radius) * stride2;
+  const size_t base = ts3 + ts2 + gtid1 + radius;
+
+  const float vz0 = recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2,
+							   n3, n2, n1, npml, gtid3, gtid2, gtid1, true);
+  float c1 = stencil[1]*(vz0-
+			 recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1-1, false))
+    +stencil[2]*(recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1+1, false)-
+		 recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1-2, false))
+    +stencil[3]*(recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1+2, false)-
+		 recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1-3, false))
+    +stencil[4]*(recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1+3, false)-
+		 recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1-4, false));
+
+  c1 *= _dz2;
+  const float c2 = pml_fused_second_inline_from_p1(p1, base, (size_t)stride2, _dx2);
+  const float c3 = pml_fused_second_inline_from_p1(p1, base, (size_t)stride3, _dy2);
+
+  size_t pind, ic;
+  if (gtid1 < npml) {
+    pind=(size_t)gtid3*npml*n2 + (size_t)gtid2*npml + gtid1;
+    const float coef = c_bz_pml[gtid1];
+    mem_dzz[pind]=mem_dzz[pind]*coef+c1*(coef-1);
+    c1+=mem_dzz[pind];
+  } else {
+    ic=gtid1-n1+npml;
+    pind=(size_t)n3*n2*npml+(size_t)gtid3*npml*n2 + (size_t)gtid2*npml + ic;
+    const float coef = c_az_pml[ic];
+    mem_dzz[pind]=mem_dzz[pind]*coef+c1*(coef-1);
+    c1+=mem_dzz[pind];
+  }
+
+  p0[base]=2*__ldg(p1+base)-p0[base]
+    +__ldg(cw2+base)*dt*(c1+c2+c3);
+}
+#endif
+
 __global__ void cuda_fd3d_p_pml_ns(float *p0, const float *__restrict__ p1, const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
 				   float *cw2, float _dy2, float _dx2, float _dz2,
 				   int n3, int n2, int n1, int npml, float dt,
@@ -1391,6 +1513,15 @@ __global__ void cuda_fd3d_p_pml_ns(float *p0, const float *__restrict__ p1, cons
     if ((gtid1 >= core1_lo) && (gtid1 < core1_hi) &&
 	(gtid2 >= core2_lo) && (gtid2 < core2_hi) &&
 	(gtid3 >= core3_lo) && (gtid3 < core3_hi)) return;
+#ifdef CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY
+    if (pml_fused_zface_pressure_point(gtid1, gtid2, gtid3, n3, n2, n1, npml)) {
+      pml_fused_zface_pressure_update(p0, p1, cw2, _dy2, _dx2, _dz2,
+				       n3, n2, n1, npml, dt,
+				       mem_dzz, mem_dz_v, mem_dz_next_v,
+				       gtid3, gtid2, gtid1);
+      return;
+    }
+#endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
     if (pml_zface_p_special_point(gtid1, gtid2, gtid3, n3, n2, n1, npml)) return;
 #endif
@@ -1557,6 +1688,15 @@ __global__ void cuda_fd3d_p_pml_tile_ns(float *p0, const float *__restrict__ p1,
     if ((gtid1 >= core1_lo) && (gtid1 < core1_hi) &&
 	(gtid2 >= core2_lo) && (gtid2 < core2_hi) &&
 	(gtid3 >= core3_lo) && (gtid3 < core3_hi)) return;
+#ifdef CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY
+    if (pml_fused_zface_pressure_point(gtid1, gtid2, gtid3, n3, n2, n1, npml)) {
+      pml_fused_zface_pressure_update(p0, p1, cw2, _dy2, _dx2, _dz2,
+				       n3, n2, n1, npml, dt,
+				       mem_dzz, mem_dz_v, mem_dz_next_v,
+				       gtid3, gtid2, gtid1);
+      return;
+    }
+#endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
     const bool tile_may_hit_zface = ((tile.z0 < npml) || (tile.z0 + (int)blockDim.x > n1 - npml)) &&
       (tile.x0 < core2_hi) && (tile.x0 + (int)blockDim.y > core2_lo) &&
@@ -1799,6 +1939,81 @@ __global__ void cuda_fd3d_p_pml_zface_ns(float *p0, const float *__restrict__ p1
 
   p0[outIndex]=2*__ldg(p1+outIndex)-p0[outIndex]
     +__ldg(cw2+outIndex)*dt*(c1+c2+c3);
+}
+#endif
+
+#ifdef CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY
+__device__ __forceinline__ float pml_fused_second_from_p1(const float *__restrict__ p1,
+							  size_t base,
+							  size_t stride,
+							  float inv_d) {
+  const float d2 = inv_d * inv_d;
+  const float center = __ldg(p1 + base);
+  float value = -2.8751201527567405f * center;
+  value += 1.6234617233276367f * (__ldg(p1 + base + stride) + __ldg(p1 + base - stride));
+  value += -0.21382331848144528f * (__ldg(p1 + base + 2 * stride) + __ldg(p1 + base - 2 * stride));
+  value += 0.030927128261990015f * (__ldg(p1 + base + 3 * stride) + __ldg(p1 + base - 3 * stride));
+  value += -0.003195444742838541f * (__ldg(p1 + base + 4 * stride) + __ldg(p1 + base - 4 * stride));
+  value += 0.0002028528849283854f * (__ldg(p1 + base + 5 * stride) + __ldg(p1 + base - 5 * stride));
+  value += -0.000013351440429687502f * (__ldg(p1 + base + 6 * stride) + __ldg(p1 + base - 6 * stride));
+  value += 0.000000486568528778699f * (__ldg(p1 + base + 7 * stride) + __ldg(p1 + base - 7 * stride));
+  return d2 * value;
+}
+
+__global__ void cuda_fd3d_pml_fused_vp_zface_ns(float *p0,
+					       const float *__restrict__ p1,
+					       float *cw2, float _dy2, float _dx2, float _dz2,
+					       int n3, int n2, int n1, int npml, float dt,
+					       float *mem_dzz,
+					       const float *__restrict__ mem_dz_v,
+					       float *mem_dz_next_v,
+					       const PmlTile *__restrict__ tiles, int ntile) {
+  if (blockIdx.x >= ntile) return;
+  const PmlTile tile = tiles[blockIdx.x];
+  const int gtid1 = tile.z0 + threadIdx.x;
+  const int gtid2 = tile.x0 + threadIdx.y;
+  const int gtid3 = tile.y0 + threadIdx.z;
+
+  if (gtid1 >= n1 || gtid2 >= n2 || gtid3 >= n3) return;
+  if (!pml_fused_zface_pressure_point(gtid1, gtid2, gtid3, n3, n2, n1, npml)) return;
+
+  const int stride2 = n1 + 2 * radius;
+  const int stride3 = stride2 * (n2 + 2 * radius);
+  const size_t ts3 = (size_t)(gtid3 + radius) * stride3;
+  const size_t ts2 = (size_t)(gtid2 + radius) * stride2;
+  const size_t base = ts3 + ts2 + gtid1 + radius;
+
+  const float vz0 = recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2,
+							   n3, n2, n1, npml, gtid3, gtid2, gtid1, true);
+  float c1 = stencil[1]*(vz0-
+			 recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1-1, false))
+    +stencil[2]*(recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1+1, false)-
+		 recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1-2, false))
+    +stencil[3]*(recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1+2, false)-
+		 recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1-3, false))
+    +stencil[4]*(recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1+3, false)-
+		 recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1-4, false));
+
+  c1 *= _dz2;
+  const float c2 = pml_fused_second_from_p1(p1, base, (size_t)stride2, _dx2);
+  const float c3 = pml_fused_second_from_p1(p1, base, (size_t)stride3, _dy2);
+
+  size_t pind, ic;
+  if (gtid1 < npml) {
+    pind=(size_t)gtid3*npml*n2 + (size_t)gtid2*npml + gtid1;
+    const float coef = c_bz_pml[gtid1];
+    mem_dzz[pind]=mem_dzz[pind]*coef+c1*(coef-1);
+    c1+=mem_dzz[pind];
+  } else {
+    ic=gtid1-n1+npml;
+    pind=(size_t)n3*n2*npml+(size_t)gtid3*npml*n2 + (size_t)gtid2*npml + ic;
+    const float coef = c_az_pml[ic];
+    mem_dzz[pind]=mem_dzz[pind]*coef+c1*(coef-1);
+    c1+=mem_dzz[pind];
+  }
+
+  p0[base]=2*__ldg(p1+base)-p0[base]
+    +__ldg(cw2+base)*dt*(c1+c2+c3);
 }
 #endif
 
