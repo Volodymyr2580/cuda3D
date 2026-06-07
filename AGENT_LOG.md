@@ -2558,3 +2558,37 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - profiler gate 已通过，下一步可进入 `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE`。
   - NCU 证据支持数据流/依赖延迟优化，不支持继续做 block-size 或 register-cap 随机 sweep。
   - `p_core` z-pencil 有依据但暂缓，优先做 PML z-slab；若 PML prototype 低于 5% repeat speedup，再转向 p_core 或重新评估。
+
+## 2026-06-07 18:03:59 +0800 - Start pressure triple-buffer design branch
+
+- 操作目标：根据 Pro 最新决策选择 A，停止 CTA-local core two-step route，从 `main` 创建 `exp/pressure-triple-buffer-pipeline` 分支，启动 `CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE` 的 design/audit 阶段，不直接大规模改 CUDA 源码。
+- 修改文件：
+  - 更新 `AGENTS.md`，记录 core two-step fused commit V2 已按 tile-budget gate 停止，当前活动路线变为 pressure triple-buffer pipeline design/audit。
+  - 新增 `docs/architecture_decision_log.md`，记录 zmem accepted、PML z-slab stopped、p_core z-pencil stopped、core two-step correctness pass、CTA-local fused commit stopped、triple-buffer 新方向。
+  - 新增 `docs/pressure_pointer_swap_audit.md`，审计 `d_p0/d_p1` allocation、swap、p_core、p_pml、v_pml、source injection、receiver extraction、ZMEM_IN_P swap 和 debug dump 的 buffer 语义。
+  - 新增 `docs/pressure_triple_buffer_pipeline_design.md`，设计 `p_prev/p_curr/p_next` 时间步顺序、kernel signature、source/receiver 语义、debug fill、ZMEM_IN_P 相对时序和验收 gate。
+  - 新增 `docs/pressure_triple_buffer_memory.md` 与 `tools/pressure_buffer_memory_estimate.py`，估算 triple-buffer 额外 pressure buffer 显存。
+  - 新增 `docs/post_triple_buffer_temporal_plan.md`，记录 triple-buffer 后续 temporal blocking 的可能路线和 gate。
+- 执行命令摘要：
+  - 本地将旧的无关 `AGENT_LOG.md` 残留保存到 stash：`preserve unrelated local AGENT_LOG residue before pressure triple buffer branch`。
+  - 本地执行 `git checkout main`、`git -c http.proxy= -c https.proxy= pull --ff-only origin main`、`git checkout -b exp/pressure-triple-buffer-pipeline`。
+  - 本地使用 `git grep` 和文件审查读取 `src/rem_fd.cu`、`src/single_solver.cu`、`include/inc3D/single_solver.h` 中的 pressure buffer 使用点。
+  - 本地执行 `python -m py_compile tools/pressure_buffer_memory_estimate.py`。
+  - 本地执行 `python tools/pressure_buffer_memory_estimate.py --json-out benchmarks/reports/pressure_triple_buffer_memory_local.json --markdown-out docs/pressure_triple_buffer_memory.md`。
+  - 本地执行 `git diff --check`。
+  - 服务器切到 `main` 并 fast-forward；由于服务器 main 下仍有早先测试留下的 untracked core2step case 目录，复核脚本使用 `--case` 白名单只扫描 main 分支四个主要 case。
+  - 服务器临时上传明确文件 `tools/pressure_buffer_memory_estimate.py` 并运行同样的 memory estimate，输出到 ignored `benchmarks/reports/`。
+- 测试结果：
+  - 本地和服务器 memory estimate 输出一致。
+  - `correctness`：triple pressure buffers `0.0142 GiB`，additional `0.0047 GiB`。
+  - `perf_1gpu` / `perf_1gpu_6shots` / `profile_1gpu`：triple pressure buffers `0.2456 GiB`，additional `0.0819 GiB`。
+  - RTX 5090 32 GiB 上，额外 pressure buffer 本身不是显存瓶颈。
+  - 未修改 CUDA 源码，未运行 CUDA 编译或数值测试。
+- 输出/哈希/误差摘要：
+  - 本地 JSON 运行产物：`benchmarks/reports/pressure_triple_buffer_memory_local.json`，该目录被 `.gitignore` 忽略。
+  - 服务器 JSON/Markdown 运行产物：`benchmarks/reports/pressure_triple_buffer_memory_remote_20260607_174000.*`，同样为 ignored artifact。
+  - 审计关键结论：`cuda_fd3d_p_core_ns` 和 `cuda_fd3d_p_pml_*` 当前都读 old `p0` 并写 new `p0`，因此 triple-buffer 不能只靠 host pointer remap，必须显式拆分 kernel 参数为 `p_next/p_curr/p_prev`。
+- 风险与下一步：
+  - 当前分支只完成 design/audit/memory estimate；下一步若实现，必须宏控制且默认关闭。
+  - 第一版 implementation 应只覆盖 single GPU，先实现 `p_core` 与启用路径的 `p_pml_tile`/generic PML triple variants，再做 debug dump step 0/1/2 与 correctness/perf gate。
+  - 已保存的 stash 仅用于保留旧无关 `AGENT_LOG.md` 残留，不能误合入本分支 commit。

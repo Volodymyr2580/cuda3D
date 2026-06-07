@@ -59,18 +59,32 @@ Profiler gate：
 - 小候选没有 `>=2%` repeat speedup，不进入主线。
 - prototype 没有 `>=5%` repeat speedup，不扩展范围。
 
-当前允许的下一阶段 prototype：
+已结束或禁止继续的路线：
 
-1. `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE`
-   - 只处理 pure z-PML face，且 x/y 位于 core 区域。
-   - edge/corner/x-face/y-face/residual 继续走 `zmem_reference` generic path。
-   - 不默认启用，必须宏控制。
-   - 只有相对 `zmem_reference` 的 `perf_1gpu_6shots repeat >= 5%` 才继续扩展。
+- `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE`：correctness pass，但相对 `zmem_reference` repeat 变慢。
+- `CUDA3D_CORE_ZPENCIL_SHARED`：source-level NCU gate 发现 baseline 已有 z shared tile，不实现。
+- `CUDA3D_CORE_2STEP_FUSED_COMMIT_V2`：Stage-4 tile budget gate failed，A/D commit ratio 约 `3.2%`，低于 `10%` stop gate。
+- standalone predict+copy micro tuning、PML face split、PML block/mask/prune sweep、p_core block sweep、full-domain temporal blocking、MPI temporal blocking。
 
-2. `CUDA3D_CORE_ZPENCIL_SHARED`
-   - 只在 profiler 显示 `p_core` memory-bound 时启动。
-   - 只做 z-pencil shared-memory prototype，不做完整 temporal blocking。
-   - 要求 `p_core` kernel 自身 `>=10%` 加速，整体 `perf_1gpu_6shots repeat >=2%`。
+当前活动路线：
+
+1. `CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE`
+   - 当前阶段只做 design/audit，不直接大规模改 CUDA 源码。
+   - 目标是显式拆分 `p_prev` / `p_curr` / `p_next`，不再让 `p0` 同时作为 old input 和 new output。
+   - 第一阶段文档：
+     - `docs/architecture_decision_log.md`
+     - `docs/pressure_pointer_swap_audit.md`
+     - `docs/pressure_triple_buffer_pipeline_design.md`
+     - `docs/pressure_triple_buffer_memory.md`
+     - `docs/post_triple_buffer_temporal_plan.md`
+   - 第一版实现若启动，必须宏控制并默认关闭：
+     - `CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE`
+     - `CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG`
+     - `CUDA3D_PRESSURE_TRIPLE_BUFFER_DISABLE_MPI`
+     - `CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG_FILL`
+   - 不能只在 host 侧换指针；`p_core` 和 `p_pml` 当前都读 old `p0` 并写 new `p0`，因此 triple-buffer implementation 必须显式传入 `p_next`、`p_curr`、`p_prev`。
+   - correctness gate：debug dump step 0/1/2 对齐、输出 `rel_l2 <= 1e-5`、禁止 NaN/Inf。
+   - performance gate：`perf_1gpu_6shots repeat` slowdown `<=2%` 可作为 disabled dataflow-clean candidate；`>5%` 必须停止并分析内存/数据流开销。
 
 ## 速度阈值存档规则
 
