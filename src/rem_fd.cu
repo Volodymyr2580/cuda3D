@@ -172,7 +172,9 @@ static void dump_core2step_debug_state(const char *dump_dir,
 				       int yl, int xl,
 				       int indxy, int indxx, int indxz,
 				       int **rec0_indx, size_t nr,
-				       float *d_p0, float *d_p1) {
+				       float *d_p0, float *d_p1, float *d_p2,
+				       float *d_cw2,
+				       float tdy, float tdx, float tdz, float dt2) {
   if (dump_dir == NULL || dump_dir[0] == '\0') return;
 
   int mpi_size = 1;
@@ -252,10 +254,35 @@ static void dump_core2step_debug_state(const char *dump_dir,
 	  source_in_region, nr, receivers_in_region);
   fclose(meta);
 
+#ifdef CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE
+  if (d_p2 != NULL) {
+    if (source_in_region || receivers_in_region) {
+      printf("ERROR CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE requires source/receivers outside region: source=%d receivers=%zu\n",
+	     source_in_region, receivers_in_region);
+      exit(0);
+    }
+    dim3 block(PBlockSize1, PBlockSize2, PBlockSize3);
+    dim3 grid((z1 - z0 + PBlockSize1 - 1) / PBlockSize1,
+	      (x1 - x0 + PBlockSize2 - 1) / PBlockSize2,
+	      (y1 - y0 + PBlockSize3 - 1) / PBlockSize3);
+    cuda_fd3d_p_core_2step_predict_ns<<<grid, block>>>(d_p2, d_p1, d_p0, d_cw2,
+						       tdy, tdx, tdz,
+						       nby, nbx, nbz, nbd, dt2,
+						       z0, z1, x0, x1, y0, y1);
+    check_gpu_error_2("compute core 2step p2 prediction");
+    cudaDeviceSynchronize();
+    check_gpu_error_2("sync core 2step p2 prediction");
+  }
+#endif
+
   dump_core2step_region_array(dump_dir, "p0", mytid, snum, it, d_p0,
 			      nypad, nxpad, nzpad, z0, z1, x0, x1, y0, y1);
   dump_core2step_region_array(dump_dir, "p1", mytid, snum, it, d_p1,
 			      nypad, nxpad, nzpad, z0, z1, x0, x1, y0, y1);
+  if (d_p2 != NULL) {
+    dump_core2step_region_array(dump_dir, "p2", mytid, snum, it, d_p2,
+				nypad, nxpad, nzpad, z0, z1, x0, x1, y0, y1);
+  }
 }
 #endif
 
@@ -576,6 +603,9 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 
   //wavefields
   float *d_p0, *d_p1, *ptr, *d_vx, *d_vy, *d_vz;
+#ifdef CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE
+  float *d_p2_core_debug = NULL;
+#endif
   // pml
   float *d_ax=NULL, *d_bx=NULL, *d_ay=NULL, *d_by=NULL, *d_az=NULL, *d_bz=NULL;
   float *d_ax_h=NULL, *d_bx_h=NULL, *d_ay_h=NULL, *d_by_h=NULL, *d_az_h=NULL, *d_bz_h=NULL;
@@ -680,11 +710,17 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
  
   cudaMalloc((void**)&d_p0, nxyzpad*sizeof(float));
   cudaMalloc((void**)&d_p1, nxyzpad*sizeof(float));
+#ifdef CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE
+  cudaMalloc((void**)&d_p2_core_debug, nxyzpad*sizeof(float));
+#endif
   cudaMalloc((void**)&d_vy, nxyzpad*sizeof(float));
   cudaMalloc((void**)&d_vx, nxyzpad*sizeof(float));
   cudaMalloc((void**)&d_vz, nxyzpad*sizeof(float));
   cudaMemset(d_p0, 0, nxyzpad*sizeof(float));
   cudaMemset(d_p1, 0, nxyzpad*sizeof(float));
+#ifdef CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE
+  cudaMemset(d_p2_core_debug, 0, nxyzpad*sizeof(float));
+#endif
   cudaMemset(d_vy, 0, nxyzpad*sizeof(float));
   cudaMemset(d_vx, 0, nxyzpad*sizeof(float));
   cudaMemset(d_vz, 0, nxyzpad*sizeof(float));
@@ -987,10 +1023,15 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 	(core2step_dump_step < 0 || core2step_dump_step == it)) {
       cudaDeviceSynchronize();
       check_gpu_error_2("sync before core 2step debug dump");
+      float *d_p2_for_dump = NULL;
+#ifdef CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE
+      if (it + 1 < nt) d_p2_for_dump = d_p2_core_debug;
+#endif
       dump_core2step_debug_state(core2step_dump_dir, mytid, snum, it,
 				 nby, nbx, nbz, nypad, nxpad, nzpad, nbd,
 				 yl, xl, indxy, indxx, indxz,
-				 rec0_indx, nr, d_p0, d_p1);
+				 rec0_indx, nr, d_p0, d_p1, d_p2_for_dump,
+				 d_cw2, tdy, tdx, tdz, dt2);
     }
 #endif
 
@@ -1031,6 +1072,9 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   if (h_zface_p_pml_tiles) free(h_zface_p_pml_tiles);
 #endif
   cudaFree(d_p0); cudaFree(d_p1);
+#ifdef CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE
+  cudaFree(d_p2_core_debug);
+#endif
   cudaFree(d_vy); cudaFree(d_vx); cudaFree(d_vz); 
   cudaFree(d_ay); cudaFree(d_by); cudaFree(d_ax); cudaFree(d_bx); cudaFree(d_az); cudaFree(d_bz);
   cudaFree(d_ay_h); cudaFree(d_by_h); cudaFree(d_ax_h); cudaFree(d_bx_h); cudaFree(d_az_h); cudaFree(d_bz_h);

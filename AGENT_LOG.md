@@ -2650,3 +2650,35 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 无数值输出变化。
 - 风险与下一步：
   - 这些文件是 acquisition 调试/派生文本，不属于 CUDA 计算结果；已存在的 tracked case 中文件不受 ignore 规则影响。
+
+## 2026-06-07 15:32:57 +0800 - Validate core 2-step debug-only p2 predictor
+
+- 操作目标：在不改变主计算路径的前提下，为 `CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE` 增加 debug-only `p(t+2)` strict-interior 预测，并验证 `p2(it)` 是否与下一步 baseline `p0(it+1)` 完全一致。
+- 修改文件：
+  - 更新 `include/inc3D/single_solver.h`，在 `CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE` 下声明 `cuda_fd3d_p_core_2step_predict_ns`。
+  - 更新 `src/single_solver.cu`，新增受 prototype 宏保护的 strict-interior `p2` 预测 kernel。
+  - 更新 `src/rem_fd.cu`，在 debug dump 阶段分配辅助 `d_p2_core_debug`，预测并 dump `p2_core.bin`；source/receiver 落入 region 时停止。
+  - 更新 `tools/compare_core_interior_dumps.py`，新增 `--mode p2-shift`，比较 candidate `p2(it)` 与 baseline `p0(it+1)`。
+  - 更新 `docs/core_2step_interior_design.md`、`docs/core_2step_interior_result.md`，记录 debug-only predictor 的设计和验收结果。
+- 执行命令摘要：
+  - 本地执行 `python -m py_compile tools/compare_core_interior_dumps.py` 与 `git diff --check`。
+  - 通过 SSH 将当前源码 diff 临时应用到 `/work/wenzhe/cuda3D`，未写入密码到项目文件。
+  - 服务器 debug build flags：稳定 zmem flags 加 `-DCUDA3D_CORE_2STEP_DEBUG_DUMP -DCUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE`。
+  - 服务器运行 `benchmarks/cases/core_2step_interior_1gpu/input_core_2step_interior_1gpu.in`，dump 到 `benchmarks/runs/core_2step_p2_debug_20260607_152450/dumps`。
+  - 服务器执行 `python3 tools/compare_core_interior_dumps.py --mode p2-shift`，报告写入 `benchmarks/reports/core2step_p2_shift_compare_20260607_152450/`。
+  - 服务器重新编译 non-debug zmem build，并运行同一最小 case 做 post-restore sanity check。
+- 测试结果：
+  - debug prototype 编译通过；debug binary SHA256：`b3ba2be23e7f07aa4b7593ba154649bf1b4c616b87c880548ef38dc29bc90f36`。
+  - debug run 通过：`Gradient TIME all=0.005677s`，`WP computing time=0.004523s`，elapsed `0:02.49`，日志包含 `ALL DONE`。
+  - dump 文件数符合预期：总计 `23`，其中 `p2_core.bin` 为 `5` 个。
+  - `p2-shift` 比较通过：5 个 timestep 全部 `pass=True`，`rel_l2=0.0`，`max_abs=0.0`。
+  - post-restore non-debug sanity check 通过：`Gradient TIME all=0.002968s`，`WP computing time=0.001357s`，elapsed `0:02.48`，日志包含 `ALL DONE`。
+- 输出/哈希/误差摘要：
+  - shifted compare report：`benchmarks/reports/core2step_p2_shift_compare_20260607_152450/comparison.md`。
+  - post-restore binary SHA256：`b0996e463e6a89c8adfaf5daf84c6441d3bf6289356ec2f3637110791858289b`。
+  - 观察到同 flags 连续 non-debug rebuild 的 binary SHA256 不完全稳定，因此本阶段记录 hash 作为追溯信息，但验收以 build/run/correctness report 为主。
+  - 远端命令经验总结：PowerShell 直接把复杂多行命令作为 argv 传给 WSL/SSH 时容易出现引号或执行范围问题；后续远端多行命令优先使用 `remote_exec.py ... -` 的 stdin-command 模式。
+- 风险与下一步：
+  - 当前 `p2` 只是辅助 buffer 中的 debug-only 预测，还没有减少任何正式计算量，因此不声明性能提升。
+  - 下一步可以进入 commit mode：在 single GPU、source/receiver 不落入 strict region 的条件下，提交已验证的 `p(t+2)` interior，并在下一 timestep 跳过同一区域的 baseline core 计算。
+  - commit mode 必须保留 PML、guard region、source injection、receiver extraction 和 pointer swap 的 baseline 时序。

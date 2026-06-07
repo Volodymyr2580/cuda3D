@@ -1139,6 +1139,63 @@ __global__ void cuda_fd3d_p_core_ns(float *p0, float *p1, float *cw2,
 
 }
 
+#ifdef CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE
+__global__ void cuda_fd3d_p_core_2step_predict_ns(float *p2, const float *prev, const float *curr, const float *cw2,
+						  float _dy2, float _dx2, float _dz2,
+						  int n3, int n2, int n1, int npml, float dt,
+						  int z0, int z1, int x0, int x1, int y0, int y1){
+  int gtid1 = z0 + blockIdx.x * blockDim.x + threadIdx.x;
+  int gtid2 = x0 + blockIdx.y * blockDim.y + threadIdx.y;
+  int gtid3 = y0 + blockIdx.z * blockDim.z + threadIdx.z;
+
+  if (gtid1 >= z1 || gtid2 >= x1 || gtid3 >= y1) return;
+
+  const int stride2 = n1 + 2 * radius;
+  const int stride3 = stride2 * (n2 + 2 * radius);
+  const int t1 = gtid1 + radius;
+  const int t2 = gtid2 + radius;
+  const int t3 = gtid3 + radius;
+  const size_t base = (size_t)t3 * stride3 + (size_t)t2 * stride2 + t1;
+
+  const float z2 = _dz2 * _dz2;
+  const float x2 = _dx2 * _dx2;
+  const float y2 = _dy2 * _dy2;
+  const float center = curr[base];
+  float lap = -2.8751201527567405f * (z2 + x2 + y2) * center;
+
+  lap += 1.6234617233276367f *
+    (z2 * (curr[base + 1] + curr[base - 1]) +
+     x2 * (curr[base + stride2] + curr[base - stride2]) +
+     y2 * (curr[base + stride3] + curr[base - stride3]));
+  lap += -0.21382331848144528f *
+    (z2 * (curr[base + 2] + curr[base - 2]) +
+     x2 * (curr[base + 2 * stride2] + curr[base - 2 * stride2]) +
+     y2 * (curr[base + 2 * stride3] + curr[base - 2 * stride3]));
+  lap += 0.030927128261990015f *
+    (z2 * (curr[base + 3] + curr[base - 3]) +
+     x2 * (curr[base + 3 * stride2] + curr[base - 3 * stride2]) +
+     y2 * (curr[base + 3 * stride3] + curr[base - 3 * stride3]));
+  lap += -0.003195444742838541f *
+    (z2 * (curr[base + 4] + curr[base - 4]) +
+     x2 * (curr[base + 4 * stride2] + curr[base - 4 * stride2]) +
+     y2 * (curr[base + 4 * stride3] + curr[base - 4 * stride3]));
+  lap += 0.0002028528849283854f *
+    (z2 * (curr[base + 5] + curr[base - 5]) +
+     x2 * (curr[base + 5 * stride2] + curr[base - 5 * stride2]) +
+     y2 * (curr[base + 5 * stride3] + curr[base - 5 * stride3]));
+  lap += -0.000013351440429687502f *
+    (z2 * (curr[base + 6] + curr[base - 6]) +
+     x2 * (curr[base + 6 * stride2] + curr[base - 6 * stride2]) +
+     y2 * (curr[base + 6 * stride3] + curr[base - 6 * stride3]));
+  lap += 0.000000486568528778699f *
+    (z2 * (curr[base + 7] + curr[base - 7]) +
+     x2 * (curr[base + 7 * stride2] + curr[base - 7 * stride2]) +
+     y2 * (curr[base + 7 * stride3] + curr[base - 7 * stride3]));
+
+  p2[base] = 2.0f * center - prev[base] + cw2[base] * dt * lap;
+}
+#endif
+
 #ifdef CUDA3D_PML_RECOMPUTE_Z
 __device__ __forceinline__ float recompute_vz_from_p1_mem(const float *__restrict__ p1,
 							  const float *__restrict__ mem_dz,

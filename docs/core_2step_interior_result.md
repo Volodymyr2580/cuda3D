@@ -4,7 +4,7 @@ Date: 2026-06-07
 
 ## Status
 
-Scaffolding validated.
+Debug-only `p(t+2)` strict-interior prediction validated.
 
 Implemented in this phase:
 
@@ -14,11 +14,10 @@ Implemented in this phase:
 - `tools/create_core_2step_case.py`;
 - `tools/compare_core_interior_dumps.py`;
 - design document for debug-only and future commit mode.
+- `CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE` debug-only predictor kernel.
 
 Not implemented yet:
 
-- `CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE` compute kernel;
-- debug-only `p(t+2)` prediction;
 - commit mode;
 - performance mode.
 
@@ -34,6 +33,8 @@ This phase is accepted:
 | dump metadata reports `source_in_region=0` | pass |
 | dump metadata reports `receivers_in_region=0` | pass |
 | comparing a dump directory with itself passes | pass |
+| debug-only `p2(it)` vs next `p0(it+1)` shifted comparison | pass |
+| post-restore non-debug run completes | pass |
 
 ## Validation Runs
 
@@ -109,6 +110,51 @@ WP computing time = 0.001342 s
 ALL DONE
 ```
 
+## Predictor Validation
+
+Debug-only predictor build:
+
+```text
+flags += -DCUDA3D_CORE_2STEP_DEBUG_DUMP -DCUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE
+binary SHA256 = b3ba2be23e7f07aa4b7593ba154649bf1b4c616b87c880548ef38dc29bc90f36
+```
+
+Successful debug-only predictor run:
+
+```text
+run = benchmarks/runs/core_2step_p2_debug_20260607_152450
+Gradient TIME all = 0.005677 s
+WP computing time = 0.004523 s
+Elapsed wall clock = 0:02.49
+ALL DONE
+dump files = 23
+p2 dump files = 5
+```
+
+Shifted predictor comparison:
+
+```text
+report = benchmarks/reports/core2step_p2_shift_compare_20260607_152450/comparison.md
+mode = p2-shift
+pass = True
+files compared = 5
+rel_l2 = 0.0 for all compared timesteps
+max_abs = 0.0 for all compared timesteps
+```
+
+Post-restore non-debug run after gating the predictor kernel behind `CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE`:
+
+```text
+run = benchmarks/runs/core_2step_p2_postrestore_default_20260607_152450
+Gradient TIME all = 0.002968 s
+WP computing time = 0.001357 s
+Elapsed wall clock = 0:02.48
+ALL DONE
+binary SHA256 after this rebuild = b0996e463e6a89c8adfaf5daf84c6441d3bf6289356ec2f3637110791858289b
+```
+
+Note: repeated non-debug rebuilds on this server did not produce identical binary SHA256 values, so binary hash is recorded for traceability but is not used as the sole acceptance criterion for this step.
+
 ## Next Step
 
-The next implementation step can add debug-only `p(t+2)` strict-interior prediction. It should not commit the predicted values into the main path until per-timestep interior comparison passes.
+The next implementation step is commit mode: reuse the validated `p(t+2)` strict-interior result and skip recomputing that interior region on the following timestep. The first commit-mode version must stay single-GPU, reject source/receiver-in-region cases, and keep the baseline path for PML and guard regions.

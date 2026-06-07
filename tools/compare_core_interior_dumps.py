@@ -3,6 +3,7 @@ import argparse
 import array
 import json
 import math
+import re
 from pathlib import Path
 
 
@@ -106,20 +107,34 @@ def compare_float_files(base, cand, rel_tol, abs_tol):
     }
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--baseline", required=True)
-    parser.add_argument("--candidate", required=True)
-    parser.add_argument("--out", required=True)
-    parser.add_argument("--rel-tol", type=float, default=1.0e-5)
-    parser.add_argument("--abs-tol", type=float, default=1.0e-7)
-    args = parser.parse_args()
+CORE_DUMP_RE = re.compile(r"^rank_(?P<rank>\d+)_shot_(?P<shot>\d+)_it_(?P<it>\d+)_(?P<field>p[012])_core\.bin$")
 
-    baseline = Path(args.baseline)
-    candidate = Path(args.candidate)
-    out = Path(args.out)
-    out.mkdir(parents=True, exist_ok=True)
 
+def parse_core_dump_name(path):
+    match = CORE_DUMP_RE.match(path.name)
+    if match is None:
+        return None
+    return (
+        int(match.group("rank")),
+        int(match.group("shot")),
+        int(match.group("it")),
+        match.group("field"),
+    )
+
+
+def collect_core_dumps(path):
+    files = {}
+    ignored = []
+    for dump in sorted(path.glob("*_core.bin")):
+        key = parse_core_dump_name(dump)
+        if key is None:
+            ignored.append(dump.name)
+        else:
+            files[key] = dump
+    return files, ignored
+
+
+def compare_same_name(baseline, candidate, rel_tol, abs_tol):
     base_files = {p.name: p for p in sorted(baseline.glob("*_core.bin"))}
     cand_files = {p.name: p for p in sorted(candidate.glob("*_core.bin"))}
     missing = sorted(set(base_files) - set(cand_files))
@@ -128,19 +143,89 @@ def main():
     results = []
     all_pass = not missing and not extra
     for name in sorted(set(base_files) & set(cand_files)):
-        result = compare_float_files(base_files[name], cand_files[name], args.rel_tol, args.abs_tol)
+        result = compare_float_files(base_files[name], cand_files[name], rel_tol, abs_tol)
         result["file"] = name
+        result["baseline_file"] = name
+        result["candidate_file"] = name
         results.append(result)
         all_pass = all_pass and result.get("pass", False)
+
+    return all_pass, missing, extra, [], results
+
+
+def compare_p2_shift(baseline, candidate, rel_tol, abs_tol):
+    base_files, base_ignored = collect_core_dumps(baseline)
+    cand_files, cand_ignored = collect_core_dumps(candidate)
+
+    p2_keys = sorted(key for key in cand_files if key[3] == "p2")
+    targets = {}
+    missing = []
+    results = []
+    all_pass = bool(p2_keys)
+
+    for rank, shot, it, _field in p2_keys:
+        target_key = (rank, shot, it + 1, "p0")
+        cand_path = cand_files[(rank, shot, it, "p2")]
+        base_path = base_files.get(target_key)
+        label = f"rank_{rank}_shot_{shot}_it_{it}_p2_core.bin -> it_{it + 1}_p0_core.bin"
+        if base_path is None:
+            missing.append(f"rank_{rank}_shot_{shot}_it_{it + 1}_p0_core.bin")
+            all_pass = False
+            continue
+        targets[target_key] = True
+        result = compare_float_files(base_path, cand_path, rel_tol, abs_tol)
+        result["file"] = label
+        result["baseline_file"] = base_path.name
+        result["candidate_file"] = cand_path.name
+        results.append(result)
+        all_pass = all_pass and result.get("pass", False)
+
+    extra = []
+    if not p2_keys:
+        missing.append("candidate p2_core dumps")
+    ignored = sorted(base_ignored + cand_ignored)
+    return all_pass, sorted(missing), extra, ignored, results
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--baseline", required=True)
+    parser.add_argument("--candidate", required=True)
+    parser.add_argument("--out", required=True)
+    parser.add_argument("--rel-tol", type=float, default=1.0e-5)
+    parser.add_argument("--abs-tol", type=float, default=1.0e-7)
+    parser.add_argument(
+        "--mode",
+        choices=("same-name", "p2-shift"),
+        default="same-name",
+        help="same-name compares matching dump names; p2-shift compares candidate p2(it) with baseline p0(it+1)",
+    )
+    args = parser.parse_args()
+
+    baseline = Path(args.baseline)
+    candidate = Path(args.candidate)
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+
+    if args.mode == "same-name":
+        all_pass, missing, extra, ignored, results = compare_same_name(
+            baseline, candidate, args.rel_tol, args.abs_tol
+        )
+    else:
+        all_pass, missing, extra, ignored, results = compare_p2_shift(
+            baseline, candidate, args.rel_tol, args.abs_tol
+        )
 
     meta_files = sorted(baseline.glob("*_core_meta.txt"))
     meta_summary = [parse_meta(path) for path in meta_files[:8]]
     report = {
         "pass": all_pass,
+        "mode": args.mode,
         "baseline": str(baseline),
         "candidate": str(candidate),
         "missing": missing,
         "extra": extra,
+        "ignored": ignored,
         "meta_samples": meta_summary,
         "results": results,
     }
@@ -150,10 +235,12 @@ def main():
         "# Core Interior Dump Comparison",
         "",
         f"- Pass: `{all_pass}`",
+        f"- Mode: `{args.mode}`",
         f"- Baseline: `{baseline}`",
         f"- Candidate: `{candidate}`",
         f"- Missing files: `{len(missing)}`",
         f"- Extra files: `{len(extra)}`",
+        f"- Ignored files: `{len(ignored)}`",
         "",
         "| File | Pass | Criterion | Count | Rel L2 | Max Abs | Max Rel | RMS | Max Index |",
         "|---|---:|---|---:|---:|---:|---:|---:|---:|",

@@ -21,7 +21,12 @@ CUDA3D_CORE_2STEP_INTERIOR_DEBUG
 CUDA3D_CORE_2STEP_DISABLE_MPI
 ```
 
-Current implementation only adds the dump/compare harness. The actual prototype macro remains reserved for the next step.
+The debug path has two levels:
+
+- `CUDA3D_CORE_2STEP_DEBUG_DUMP` dumps post-injection, pre-swap strict-interior state.
+- `CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE` additionally computes a debug-only `p(t+2)` prediction into an auxiliary buffer and dumps it as `p2_core`.
+
+The prototype macro must not change the main pressure buffers or receiver output until the shifted dump comparison passes.
 
 ## Region Ownership
 
@@ -121,6 +126,7 @@ Dump files:
 ```text
 rank_<rank>_shot_<shot>_it_<it>_p0_core.bin
 rank_<rank>_shot_<shot>_it_<it>_p1_core.bin
+rank_<rank>_shot_<shot>_it_<it>_p2_core.bin  # only with CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE and it+1 < nt
 rank_<rank>_shot_<shot>_it_<it>_core_meta.txt
 ```
 
@@ -135,6 +141,16 @@ python3 tools/compare_core_interior_dumps.py \
   --baseline <baseline_dump_dir> \
   --candidate <candidate_dump_dir> \
   --out <report_dir>
+```
+
+For the debug-only two-step proof, compare the predicted `p2(it)` against the next baseline `p0(it+1)`:
+
+```bash
+python3 tools/compare_core_interior_dumps.py \
+  --baseline <dump_dir> \
+  --candidate <dump_dir> \
+  --out <report_dir> \
+  --mode p2-shift
 ```
 
 Metrics:
@@ -154,7 +170,4 @@ abs <= 1e-7 for all-zero baseline
 
 ## Next Implementation Step
 
-After this harness compiles and dumps a valid single-GPU case, implement debug-only `p(t+2)` prediction without committing it to the main path.
-
-Only after debug-only comparison passes should commit mode be attempted.
-
+After the debug-only `p(t+2)` comparison passes, the next step is to decide whether commit mode is worth implementing and how to gate it so it only covers strict interior timesteps with no source/receiver ownership conflicts.
