@@ -19,6 +19,9 @@ __pycache__/
 !benchmarks/cases/**/*.nav
 !benchmarks/cases/correctness/*.dir
 !benchmarks/cases/correctness/d_obs/*.dir
+benchmarks/cases/**/nrec_shot_new.txt
+benchmarks/cases/**/s_cor_new.txt
+benchmarks/cases/**/r_cor_new.txt
 
 # Benchmark generated artifacts
 benchmarks/runs/

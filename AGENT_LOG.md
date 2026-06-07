@@ -2635,3 +2635,18 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - acquisition-based subdomain crop 会改变实际 `nby/nbx/nbz`，不能只按输入全域判断 strict interior；后续必须以 dump meta 中的实际 region 为准。
   - debug dump 通过并不代表 temporal blocking 已经正确，只说明第一阶段的 dependency map、safe case 和 per-step dump/compare 工具可用。
   - 下一步可以实现 debug-only `p(t+2)` strict-interior prediction，但仍不得改变主计算输出或 source/receiver 时序。
+
+## 2026-06-07 11:52:20 +0800 - Ignore generated acquisition text artifacts
+
+- 操作目标：保持服务器 `exp/core-2step-interior-prototype` 工作区在运行最小 case 后可读，避免程序自动生成的 acquisition 文本文件显示为未跟踪文件。
+- 修改文件：
+  - 更新 `.gitignore`，忽略 `benchmarks/cases/**/nrec_shot_new.txt`、`s_cor_new.txt`、`r_cor_new.txt`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 服务器运行最小 case 后，`git status --short` 显示 `benchmarks/cases/core_2step_interior_1gpu/nrec_shot_new.txt`、`s_cor_new.txt`、`r_cor_new.txt` 为未跟踪文件。
+- 测试结果：
+  - 未删除这些服务器文件，仅新增 ignore 规则。
+- 输出/哈希/误差摘要：
+  - 无数值输出变化。
+- 风险与下一步：
+  - 这些文件是 acquisition 调试/派生文本，不属于 CUDA 计算结果；已存在的 tracked case 中文件不受 ignore 规则影响。
