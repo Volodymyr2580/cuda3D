@@ -4,6 +4,7 @@ bin/
 *.a
 *.so
 *.exe
+*.bak
 *.bak.*
 
 # Python cache
@@ -33,6 +34,18 @@ benchmarks/baselines/
 *.qdrep
 
 # Overnight generated artifacts
+overnight_20260607/reports/*
+!overnight_20260607/reports/best_binary.sha256
+!overnight_20260607/reports/best_variant.env
+!overnight_20260607/reports/failed_variants.md
+!overnight_20260607/reports/final_report.md
+!overnight_20260607/reports/final_summary.json
+!overnight_20260607/reports/next_steps.md
+!overnight_20260607/reports/stage3_block_sweep_summary.json
+!overnight_20260607/reports/stage3_top2_repeat_summary.json
+!overnight_20260607/reports/stage4_pcore_128x1x2_repeat_result.json
+!overnight_20260607/reports/stage4_pcore_sweep_summary.json
+!overnight_20260607/reports/stage4b_combo_reg_sweep_summary.json
 overnight_20260607/logs/
 overnight_20260607/builds/
 overnight_20260607/profiles/
