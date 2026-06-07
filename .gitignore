@@ -1,0 +1,43 @@
+# Build products
+bin/
+*.o
+*.a
+*.so
+*.exe
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Large model/input/output data
+*.nav
+*.dir
+!bench_smoke/*.nav
+!bench_smoke/*.dir
+!benchmarks/cases/**/*.nav
+!benchmarks/cases/correctness/*.dir
+!benchmarks/cases/correctness/d_obs/*.dir
+
+# Benchmark generated artifacts
+benchmarks/runs/
+benchmarks/build_logs/
+benchmarks/debug_dumps/
+benchmarks/profiles/
+benchmarks/reports/
+benchmarks/baselines/
+
+# Profiling outputs
+*.nsys-rep
+*.sqlite
+*.qdrep
+
+# Overnight generated artifacts
+overnight_20260607/logs/
+overnight_20260607/builds/
+overnight_20260607/profiles/
+overnight_20260607/archives/
+
+# Local/agent private state
+.claude/settings.local.json
+remote_work/
+._*

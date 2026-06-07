@@ -1,0 +1,34 @@
+../d_obs/d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_        # input shot
+1.                              # scaling
+not implemented yet     # input direct
+1 0                               # read direct flag
+./overthrust_3d_s0y_s0x_nsy_nsx_moffy_moffx_ntr_0.050000_0.050000_20_20_9.575000_9.575000_58675600.nav         # nav file, binary files defines the src and recv locations
+ricker1_mfre_8hz_nt_1501_dt_0.002           # input src name NOT USEFUL
+noinput # water bottom file  
+0                                # top mute flag NOT implemented yet
+./tmut_zz/          # top mute file NOT implemented yet
+0                                # bottom mute flag NOT implemented yet
+./bmut_zz/          # bottom mute file NOT implemented yet
+out.dir   # output name    NOT implemented yet
+58675600              # ntraces of shot
+0.0                #near offset mute
+100.               # far offset mute
+0.0                # offset decay
+2        #  L2 norm for now
+0.002             # dt
+1501              # nt
+./salt_ny_384_nx_384_nz_95_d_0.025_final_cutoff_5kms_v_true_permute.dir              #velocity input 
+0               # vfile flag 0 dir file 1 su file
+4.6             # vmax
+384             # ny
+384             # nx
+95               # nz
+0.025          # dy
+0.025          # dx
+0.025          # dz
+12              # npml boundary
+0.1   good  # boundary decay
+.05                 # km modeling domain pad
+0                  # itop 
+6    # fd order 4-> 4th 6->6th 8->8th o->10th order  NOT implemented yet
+1 6     # numbers of gpu

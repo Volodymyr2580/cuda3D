@@ -1,0 +1,81 @@
+{
+  "pass": true,
+  "baseline": "benchmarks/baselines/current_runnable/correctness_baseline_20260601_165054/outputs",
+  "candidate": "benchmarks/runs/correctness_restored_archive_after_bad_overlay_20260603_032156/outputs",
+  "missing": [],
+  "extra": [],
+  "results": [
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_0.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 9849,
+      "rel_l2": 3.1573084514767927e-07,
+      "rms": 4.161019288936281e-07,
+      "max_abs": 2.6226043701171875e-06,
+      "max_rel": 1.5863804509423693,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_1.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 9849,
+      "rel_l2": 4.03402481078288e-07,
+      "rms": 5.335134224517405e-07,
+      "max_abs": 3.337860107421875e-06,
+      "max_rel": 1.682256155604758,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_2.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 9849,
+      "rel_l2": 2.980189348415367e-07,
+      "rms": 3.787010789615236e-07,
+      "max_abs": 2.0265579223632812e-06,
+      "max_rel": 1.8383177778552415,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_3.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 9849,
+      "rel_l2": 3.4760162575890804e-07,
+      "rms": 4.6628275211750157e-07,
+      "max_abs": 3.814697265625e-06,
+      "max_rel": 1.3555576795030784,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_4.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 9849,
+      "rel_l2": 4.098143208699855e-07,
+      "rms": 5.516301717199053e-07,
+      "max_abs": 5.7220458984375e-06,
+      "max_rel": 0.7922597288125739,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_5.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 9849,
+      "rel_l2": 3.49358290912987e-07,
+      "rms": 4.5174135318749104e-07,
+      "max_abs": 3.337860107421875e-06,
+      "max_rel": 0.7698343871071578,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    }
+  ]
+}

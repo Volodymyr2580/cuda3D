@@ -1,0 +1,162 @@
+{
+  "generated_at": "2026-06-07T01:19:11.650283",
+  "platform": "RTX 5090 server /work/wenzhe/cuda3D",
+  "best_decision": {
+    "final_binary_strategy": "zmem_reference",
+    "reason": "No post-zmem candidate reached >=2% repeat speedup; zmem_reference reproduced >3% over current_best_reference.",
+    "nvflags": "-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2",
+    "binary_sha256": "ad993cb6a5cd2301e2bbf077186ec350f3565eab41861ebbc8e5f6fd0f3c4d1e  bin/cuda_3D_FM"
+  },
+  "baseline_current_best": {
+    "perf1_wp": 0.507556,
+    "perf6_wp": 2.507059,
+    "perf6_gradient": 2.632964,
+    "perf6_repeat_wp": 2.508503,
+    "perf6_repeat_gradient": 2.632298
+  },
+  "zmem_reference": {
+    "perf1_wp": 0.48013,
+    "perf6_wp": 2.393577,
+    "perf6_gradient": 2.514862,
+    "perf6_repeat_wp": 2.390644,
+    "perf6_repeat_gradient": 2.514458,
+    "perf6_wp_speedup_vs_current": 1.0474110504905418,
+    "perf6_gradient_speedup_vs_current": 1.0469616225462868,
+    "perf6_repeat_wp_speedup_vs_current": 1.0493001049089703,
+    "perf6_repeat_gradient_speedup_vs_current": 1.0468649705025894
+  },
+  "stage_results": {
+    "stage1_zmem_v_tile_prune": "correct but no tiles pruned; slower/no benefit",
+    "stage2_tile_mask_fastpath": "correct but slower; do not enable",
+    "stage3_best_repeat": [
+      {
+        "tag": "zmem_shape_32x2x4_repeat",
+        "wp": 2.416933,
+        "gradient": 2.528195,
+        "wall": "04.99",
+        "wp_speedup_vs_zmem_repeat": 0.9891229918247629,
+        "gradient_speedup_vs_zmem_repeat": 0.9945664792470517,
+        "compare_pass": null,
+        "rel_l2_max": null
+      },
+      {
+        "tag": "zmem_shape_32x4x2_repeat",
+        "wp": 2.418862,
+        "gradient": 2.52681,
+        "wall": "04.96",
+        "wp_speedup_vs_zmem_repeat": 0.9883341835954264,
+        "gradient_speedup_vs_zmem_repeat": 0.995111622955426,
+        "compare_pass": null,
+        "rel_l2_max": null
+      }
+    ],
+    "stage4_best_single": [
+      {
+        "tag": "stage4_pcore_128x1x2",
+        "status": "ok",
+        "compare_ok": true,
+        "correctness_wp": 0.012826,
+        "perf1_wp": 0.480447,
+        "perf1_gradient": 0.510347,
+        "perf6_wp": 2.388011,
+        "perf6_gradient": 2.511048,
+        "perf6_wall": "04.78",
+        "perf1_wp_speedup_vs_zmem": 0.9993401977741562,
+        "perf6_wp_speedup_vs_zmem": 1.0023308100339572,
+        "perf6_gradient_speedup_vs_zmem": 1.0015188877313377,
+        "nvflags": "-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2 -DPBlockSize1=128 -DPBlockSize2=1 -DPBlockSize3=2"
+      },
+      {
+        "tag": "stage4_pcore_32x2x4",
+        "status": "ok",
+        "compare_ok": true,
+        "correctness_wp": 0.012942,
+        "perf1_wp": 0.490267,
+        "perf1_gradient": 0.520756,
+        "perf6_wp": 2.412678,
+        "perf6_gradient": 2.541207,
+        "perf6_wall": "04.95",
+        "perf1_wp_speedup_vs_zmem": 0.9793235114743599,
+        "perf6_wp_speedup_vs_zmem": 0.9920830711765101,
+        "perf6_gradient_speedup_vs_zmem": 0.9896328791790673,
+        "nvflags": "-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2 -DPBlockSize1=32 -DPBlockSize2=2 -DPBlockSize3=4"
+      },
+      {
+        "tag": "stage4_pcore_32x4x2",
+        "status": "ok",
+        "compare_ok": true,
+        "correctness_wp": 0.012864,
+        "perf1_wp": 0.487982,
+        "perf1_gradient": 0.51775,
+        "perf6_wp": 2.415801,
+        "perf6_gradient": 2.543195,
+        "perf6_wall": "04.82",
+        "perf1_wp_speedup_vs_zmem": 0.9839092425540286,
+        "perf6_wp_speedup_vs_zmem": 0.9908005667685377,
+        "perf6_gradient_speedup_vs_zmem": 0.988859289201182,
+        "nvflags": "-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2 -DPBlockSize1=32 -DPBlockSize2=4 -DPBlockSize3=2"
+      }
+    ],
+    "stage4_best_repeat": {
+      "tag": "stage4_pcore_128x1x2_repeat",
+      "status": "ok",
+      "compare_ok": true,
+      "wp": 2.386368,
+      "gradient": 2.507736,
+      "wall": "04.93",
+      "wp_speedup_vs_zmem_repeat": 1.0017918443425322,
+      "gradient_speedup_vs_zmem_repeat": 1.0026805054439543,
+      "nvflags": "-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2 -DPBlockSize1=128 -DPBlockSize2=1 -DPBlockSize3=2"
+    },
+    "stage4b_best": [
+      {
+        "tag": "stage4b_pml32x2x4_pcore128x1x2",
+        "status": "ok",
+        "compare_ok": true,
+        "perf1_wp": 0.480266,
+        "perf6_wp": 2.415699,
+        "perf6_gradient": 2.532146,
+        "perf6_wall": "04.84",
+        "perf1_wp_speedup_vs_zmem": 0.9997168235935918,
+        "perf6_wp_speedup_vs_zmem": 0.9908424021370212,
+        "perf6_gradient_speedup_vs_zmem": 0.993174169261962,
+        "nvflags": "-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=2 -DPmlTileBlockSize3=4 -DPBlockSize1=128 -DPBlockSize2=1 -DPBlockSize3=2"
+      },
+      {
+        "tag": "stage4b_pml32x8x1_pcore128x1x2",
+        "status": "ok",
+        "compare_ok": true,
+        "perf1_wp": 0.486036,
+        "perf6_wp": 2.458359,
+        "perf6_gradient": 2.565222,
+        "perf6_wall": "04.95",
+        "perf1_wp_speedup_vs_zmem": 0.9878486367264976,
+        "perf6_wp_speedup_vs_zmem": 0.9736482751298732,
+        "perf6_gradient_speedup_vs_zmem": 0.9803681708639642,
+        "nvflags": "-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=8 -DPmlTileBlockSize3=1 -DPBlockSize1=128 -DPBlockSize2=1 -DPBlockSize3=2"
+      },
+      {
+        "tag": "stage4b_pml16x4x4_pcore128x1x2",
+        "status": "ok",
+        "compare_ok": true,
+        "perf1_wp": 0.499572,
+        "perf6_wp": 2.501256,
+        "perf6_gradient": 2.616666,
+        "perf6_wall": "04.89",
+        "perf1_wp_speedup_vs_zmem": 0.9610826867798835,
+        "perf6_wp_speedup_vs_zmem": 0.9569500283057791,
+        "perf6_gradient_speedup_vs_zmem": 0.9610940028264975,
+        "nvflags": "-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=16 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=4 -DPBlockSize1=128 -DPBlockSize2=1 -DPBlockSize3=2"
+      }
+    ]
+  },
+  "final_validation": {
+    "correctness_status": "ok",
+    "correctness_compare_ok": true,
+    "correctness_wp": 0.012871,
+    "smoke_run_dir": "/work/wenzhe/cuda3D/benchmarks/runs/smoke_1gpu_final_zmem_smoke_20260607_20260607_011703",
+    "smoke_all_done": true,
+    "smoke_wp": 0.002515,
+    "smoke_gradient": 0.003288
+  }
+}

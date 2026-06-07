@@ -1,0 +1,14 @@
+case=profile_1gpu
+ny=384
+nx=384
+nz=95
+nt=501
+shots=1
+receivers_per_shot=441
+receiver_spacing=0.25
+trace_count=441
+gpu_count=1
+xpad=0.5
+velocity=vel_profile_1gpu_ny384_nx384_nz95.dir
+nav=nav_profile_1gpu_1shots_441rec.nav
+input=input_profile_1gpu.in

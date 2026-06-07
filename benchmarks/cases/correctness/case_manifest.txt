@@ -1,0 +1,14 @@
+case=correctness
+ny=96
+nx=96
+nz=64
+nt=201
+shots=6
+receivers_per_shot=49
+receiver_spacing=0.025
+trace_count=294
+gpu_count=1
+xpad=0.05
+velocity=vel_correctness_ny96_nx96_nz64.dir
+nav=nav_correctness_6shots_49rec.nav
+input=input_correctness.in

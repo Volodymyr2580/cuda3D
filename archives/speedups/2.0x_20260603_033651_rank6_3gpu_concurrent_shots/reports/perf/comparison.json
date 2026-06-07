@@ -1,0 +1,117 @@
+{
+  "pass": true,
+  "baseline": "benchmarks/baselines/current_runnable/perf_3gpu_baseline_heavy_contended_20260601_165602/outputs",
+  "candidate": "benchmarks/runs/perf_3gpu_rank6_3gpu_concurrent_shots_serial_20260603_033547/outputs",
+  "missing": [],
+  "extra": [],
+  "results": [
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_0.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 661941,
+      "rel_l2": 2.3127170919630237e-06,
+      "rms": 1.3832818080150327e-07,
+      "max_abs": 1.6093254089355469e-06,
+      "max_rel": 1.9861780048567603,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_1.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 661941,
+      "rel_l2": 2.454066486103625e-06,
+      "rms": 1.4522564416961656e-07,
+      "max_abs": 2.9802322387695312e-06,
+      "max_rel": 1.9735779972768412,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_2.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 661941,
+      "rel_l2": 2.3062697443693066e-06,
+      "rms": 1.4625834569080647e-07,
+      "max_abs": 2.86102294921875e-06,
+      "max_rel": 1.998749405083602,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_3.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 661941,
+      "rel_l2": 2.401265020965914e-06,
+      "rms": 1.4333561516753093e-07,
+      "max_abs": 2.86102294921875e-06,
+      "max_rel": 1.9991596094824624,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_4.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 661941,
+      "rel_l2": 2.444716888434046e-06,
+      "rms": 1.4483702765127888e-07,
+      "max_abs": 3.814697265625e-06,
+      "max_rel": 1.9784189743077076,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_5.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 661941,
+      "rel_l2": 2.3447371713140138e-06,
+      "rms": 1.485616136519444e-07,
+      "max_abs": 1.9073486328125e-06,
+      "max_rel": 1.9931171246079789,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_6.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 661941,
+      "rel_l2": 2.3178702733884408e-06,
+      "rms": 1.3768206778688737e-07,
+      "max_abs": 2.1457672119140625e-06,
+      "max_rel": 1.9845571111862466,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_7.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 661941,
+      "rel_l2": 2.372882399327458e-06,
+      "rms": 1.394553418384575e-07,
+      "max_abs": 2.1457672119140625e-06,
+      "max_rel": 1.9962568202676259,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_8.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 661941,
+      "rel_l2": 2.397417268554234e-06,
+      "rms": 1.5096811096778798e-07,
+      "max_abs": 2.86102294921875e-06,
+      "max_rel": 1.9984505014081142,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    }
+  ]
+}

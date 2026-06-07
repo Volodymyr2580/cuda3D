@@ -1,0 +1,40 @@
+SRCS = alloc.c utility_zz.c abc.c acqui.c lint.c
+SRCUS = main.cu optimization_cuda.cu rem_fd.cu single_solver.cu reduce.cu
+
+OBJS = $(SRCS:.c=.o)
+OBJCUS = $(SRCUS:.cu=.o)
+
+BIN = ../bin
+DEST = $(BIN)/cuda_3D_FM
+
+CUDA_HOME ?= /usr/local/cuda-12.2
+MPI_HOME ?= /opt/intel/oneapi/mpi/latest
+
+NV = $(CUDA_HOME)/bin/nvcc
+CC = $(MPI_HOME)/bin/mpicc
+
+CFLAGS = -O3 -g
+NV_ARCH ?= sm_89
+NVFLAGS = -O3 -arch=$(NV_ARCH) --use_fast_math
+
+INCS = -I../include/inc3D
+INCMPI = -I$(MPI_HOME)/include
+
+LIBMPI = -L$(MPI_HOME)/lib/release -lmpi
+
+test: $(DEST)
+	@echo @@@@@@@@@@@@@@@@@@@@
+	@echo FINISHED COMPILING
+	@echo @@@@@@@@@@@@@@@@@@@@
+
+$(DEST): $(OBJS) $(OBJCUS) | $(BIN)
+	$(NV) $(NVFLAGS) -o $(DEST) $(OBJS) $(OBJCUS) $(LIBMPI)
+
+$(BIN):
+	mkdir -p $(BIN)
+
+%.o: %.c
+	$(CC) $(CFLAGS) $(INCS) $(INCMPI) -c $< -o $@
+
+%.o: %.cu
+	$(NV) $(NVFLAGS) $(INCS) $(INCMPI) -c $< -o $@

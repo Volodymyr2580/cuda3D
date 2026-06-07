@@ -1,0 +1,69 @@
+{
+  "timestamp": "20260601_165602",
+  "case": "perf_3gpu",
+  "tag": "baseline_heavy_contended",
+  "baseline": true,
+  "case_dir": "benchmarks/cases/perf_3gpu",
+  "input": "input_perf_3gpu.in",
+  "np": 3,
+  "gpus": "0,1,2",
+  "timeout_seconds": 1200,
+  "hashes": {
+    "bin/cuda_3D_FM": "f31311fbba8716ef4e2c085cb61d061cdcd5ca96428437a0d7f4c46c2f4780fc",
+    "benchmarks/cases/perf_3gpu/input_perf_3gpu.in": "a6b37e8201ff834aea10848bef3697e0048d5e5c5a7d0ab501d99b6d0c8d866f",
+    "benchmarks/cases/perf_3gpu/case_manifest.txt": "6dbe6477f051721609f37fd1a029cb1ce61d53bf8e7cf7adea824f0084a15949",
+    "benchmarks/cases/perf_3gpu/vel_perf_3gpu_ny384_nx384_nz95.dir": "f7504ad7e4c867bf4c81e5d8c2cbd1d1a0fe36aeb8f75feabe8750d63a97dfa9",
+    "benchmarks/cases/perf_3gpu/nav_perf_3gpu_9shots_441rec.nav": "4799abb111776668bad68b279209b6a6dc1c378f936a78995f89025ea3f79384"
+  },
+  "nvidia_smi_before": "0, NVIDIA GeForce RTX 4090, 854 MiB, 24564 MiB, 0 %\n1, NVIDIA GeForce RTX 4090, 854 MiB, 24564 MiB, 80 %\n2, NVIDIA GeForce RTX 4090, 1618 MiB, 24564 MiB, 99 %\n3, NVIDIA GeForce RTX 4090, 1522 MiB, 24564 MiB, 99 %\n",
+  "tool_versions": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2023 NVIDIA Corporation\nBuilt on Tue_Jun_13_19:16:58_PDT_2023\nCuda compilation tools, release 12.2, V12.2.91\nBuild cuda_12.2.r12.2/compiler.32965470_0\nIntel(R) MPI Library for Linux* OS, Version 2021.16 Build 20250513 (id: a7c135c)\nCopyright 2003-2025, Intel Corporation.\ngcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\n",
+  "returncode": 0,
+  "outputs": [
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_0.dir",
+      "bytes": 2647764,
+      "sha256": "22131a0914a420c9c556c00798fa619daa0c637e15874045373563a5f4d51a04"
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_1.dir",
+      "bytes": 2647764,
+      "sha256": "83d12a150c860c602e2d5c8dca3f7711b66199b4ca65e565318c22ae212e4d5c"
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_2.dir",
+      "bytes": 2647764,
+      "sha256": "3a71cedefd7fd2f0e650121cfa38a1923507b7448ca98207afd3a1fecfb6d3ab"
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_3.dir",
+      "bytes": 2647764,
+      "sha256": "46da8b187a27f1759a918e9212b3cba5147b9e632408b7e0e42b729d21c00686"
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_4.dir",
+      "bytes": 2647764,
+      "sha256": "b5d78f81fa61d71607303e027a7565a6a727c59cac7a398b90b6fd47584128a2"
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_5.dir",
+      "bytes": 2647764,
+      "sha256": "2da62301a3b5c42c599496681061f430c1ac657ab5f155fea6b19f543abc0bb7"
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_6.dir",
+      "bytes": 2647764,
+      "sha256": "0d9b9d1216d1ac5c47a3acb923fbea30a9071cc9e2201d88d459af28580813de"
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_7.dir",
+      "bytes": 2647764,
+      "sha256": "5b438413e2ac752360c33fc859496f4c22424d75951f10d2bcc2b06d505aeaef"
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_8.dir",
+      "bytes": 2647764,
+      "sha256": "a47e9a5c7642de865e91a1039776159b5f28dae51f136f07c1b25a95ad930d31"
+    }
+  ],
+  "nvidia_smi_after": "0, NVIDIA GeForce RTX 4090, 854 MiB, 24564 MiB, 73 %\n1, NVIDIA GeForce RTX 4090, 854 MiB, 24564 MiB, 71 %\n2, NVIDIA GeForce RTX 4090, 1618 MiB, 24564 MiB, 99 %\n3, NVIDIA GeForce RTX 4090, 1522 MiB, 24564 MiB, 99 %\n"
+}

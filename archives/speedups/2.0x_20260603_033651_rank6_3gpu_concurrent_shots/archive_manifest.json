@@ -1,0 +1,202 @@
+{
+  "archive_dir": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots",
+  "baseline_time_seconds": 3.491814,
+  "candidate_time_seconds": 1.549196,
+  "created_at": "2026-06-03T03:36:51",
+  "notes": "Scheduling-layer speedup: run perf_3gpu with np=6 over CUDA_VISIBLE_DEVICES=0,1,2, mapping two MPI ranks per RTX 4090 via cudaSetDevice(mytid%gpus_p_node). Correctness/perf output comparison passed; run had minor external GPU context noise and should be rechecked on empty cards.",
+  "reports": {
+    "correctness": [
+      {
+        "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/reports/correctness/comparison.md",
+        "copied": true,
+        "sha256": "18fcdd438a2f05e2b13a0b11c45d2a256bbc31794d01940d904d081cb460f1a3",
+        "size": 1670,
+        "source": "/data/shengwz/swz/cuda3D/benchmarks/reports/correctness_restored_archive_after_bad_overlay_20260603_032156/comparison.md"
+      },
+      {
+        "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/reports/correctness/comparison.json",
+        "copied": true,
+        "sha256": "cdff3eeab355db432e9181cc030a992266111aa1d03c290da0fe58a080ae018b",
+        "size": 2882,
+        "source": "/data/shengwz/swz/cuda3D/benchmarks/reports/correctness_restored_archive_after_bad_overlay_20260603_032156/comparison.json"
+      }
+    ],
+    "perf": [
+      {
+        "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/reports/perf/comparison.md",
+        "copied": true,
+        "sha256": "fe051dd337c9cf992ad6123d7c89eb2ed7b227ac864f8948ee0b6a8b490a2eed",
+        "size": 2330,
+        "source": "/data/shengwz/swz/cuda3D/benchmarks/reports/perf_3gpu_rank6_3gpu_concurrent_shots_serial_20260603_033547/comparison.md"
+      },
+      {
+        "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/reports/perf/comparison.json",
+        "copied": true,
+        "sha256": "1c5bc8d33075b6efe058c0915f4b7cf9b57d4e2a218a41a2c65af82362c8725a",
+        "size": 4225,
+        "source": "/data/shengwz/swz/cuda3D/benchmarks/reports/perf_3gpu_rank6_3gpu_concurrent_shots_serial_20260603_033547/comparison.json"
+      }
+    ]
+  },
+  "runs": {
+    "baseline": [
+      {
+        "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/runs/baseline/manifest.json",
+        "copied": true,
+        "sha256": "5c76a63e48e25212069f14dc6cce8d96ef2cfa1a5c9bfd2b7827d713177e0025",
+        "size": 4255,
+        "source": "/data/shengwz/swz/cuda3D/benchmarks/baselines/current_runnable/perf_3gpu_baseline_heavy_contended_20260601_165602/manifest.json"
+      },
+      {
+        "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/runs/baseline/run.log",
+        "copied": true,
+        "sha256": "773753912eefdcf72f75a734cd52a9d9b7726e92e0af03c915aa2b5070d958ac",
+        "size": 4042,
+        "source": "/data/shengwz/swz/cuda3D/benchmarks/baselines/current_runnable/perf_3gpu_baseline_heavy_contended_20260601_165602/run.log"
+      },
+      {
+        "copied": false,
+        "reason": "missing",
+        "source": "/data/shengwz/swz/cuda3D/benchmarks/baselines/current_runnable/perf_3gpu_baseline_heavy_contended_20260601_165602/nvidia-smi.txt"
+      }
+    ],
+    "candidate": [
+      {
+        "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/runs/candidate/manifest.json",
+        "copied": true,
+        "sha256": "aaaea3569734c74aa1c06a6c63a5906fa8c34489fa15e6a0178e31b9c4770fd5",
+        "size": 4252,
+        "source": "/data/shengwz/swz/cuda3D/benchmarks/runs/perf_3gpu_rank6_3gpu_concurrent_shots_serial_20260603_033547/manifest.json"
+      },
+      {
+        "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/runs/candidate/run.log",
+        "copied": true,
+        "sha256": "bff4c55a1f278c40c67d0315bbeeb3a52f0572efe38dcd250a6d3fbb99999795",
+        "size": 3941,
+        "source": "/data/shengwz/swz/cuda3D/benchmarks/runs/perf_3gpu_rank6_3gpu_concurrent_shots_serial_20260603_033547/run.log"
+      },
+      {
+        "copied": false,
+        "reason": "missing",
+        "source": "/data/shengwz/swz/cuda3D/benchmarks/runs/perf_3gpu_rank6_3gpu_concurrent_shots_serial_20260603_033547/nvidia-smi.txt"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/AGENTS.md",
+      "copied": true,
+      "sha256": "625836d1792c4aadf99c03775117475966f86d3028e3bf519fd6383ca254b97b",
+      "size": 5317,
+      "source": "/data/shengwz/swz/cuda3D/AGENTS.md"
+    },
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/AGENT_LOG.md",
+      "copied": true,
+      "sha256": "30b4cc77e06f73a57707c2e3d3c52c7b03b3c78fbf465b344d5e53ad6d1b70bb",
+      "size": 64135,
+      "source": "/data/shengwz/swz/cuda3D/AGENT_LOG.md"
+    },
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/src/main.cu",
+      "copied": true,
+      "sha256": "7c21458549765df3533f60f1ee59d5a547b5ae831bc7cdb8ad8406078dbc1b4a",
+      "size": 19259,
+      "source": "/data/shengwz/swz/cuda3D/src/main.cu"
+    },
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/src/rem_fd.cu",
+      "copied": true,
+      "sha256": "9d9e6a2bfa08b3e5865f6ad3bf423d9915307f7edaac931782f3d1778c65e45c",
+      "size": 14397,
+      "source": "/data/shengwz/swz/cuda3D/src/rem_fd.cu"
+    },
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/src/single_solver.cu",
+      "copied": true,
+      "sha256": "46ac1d9820af6b6258aa9e639cdcf0c9f4333c29979460738c717920d2158925",
+      "size": 63212,
+      "source": "/data/shengwz/swz/cuda3D/src/single_solver.cu"
+    },
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/src/makefile.server",
+      "copied": true,
+      "sha256": "2789763712a9d10a32036249c4e66e1e7f6e3ba39aec20035b8f41117c74c392",
+      "size": 854,
+      "source": "/data/shengwz/swz/cuda3D/src/makefile.server"
+    },
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/include/inc3D/alloc.h",
+      "copied": true,
+      "sha256": "b3dc48b253029eb06415b42bb7e1a5bd64b09cef8e002814ae1376d40d746658",
+      "size": 2488,
+      "source": "/data/shengwz/swz/cuda3D/include/inc3D/alloc.h"
+    },
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/include/inc3D/common.h",
+      "copied": true,
+      "sha256": "bfc81a740746bbcfb37cac8b335f5d4b28f1fb634441e0f3b6653c9200973f8c",
+      "size": 1028,
+      "source": "/data/shengwz/swz/cuda3D/include/inc3D/common.h"
+    },
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/include/inc3D/cu_common.h",
+      "copied": true,
+      "sha256": "edc92df392c30b82255e3a51b48181e580984cf987ccb553276ce8b7c72752ff",
+      "size": 2725,
+      "source": "/data/shengwz/swz/cuda3D/include/inc3D/cu_common.h"
+    },
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/include/inc3D/single_solver.h",
+      "copied": true,
+      "sha256": "063a685b26fa17501e80646fe3499dd67c4ff9373e7942b8a441ac5301dd1bf6",
+      "size": 4575,
+      "source": "/data/shengwz/swz/cuda3D/include/inc3D/single_solver.h"
+    },
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/tools/create_smoke_case.py",
+      "copied": true,
+      "sha256": "82b856ff6efba182f221d39e5a6c76a68887c630e2d1c5151e969c5f022daa2f",
+      "size": 1736,
+      "source": "/data/shengwz/swz/cuda3D/tools/create_smoke_case.py"
+    },
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/tools/create_benchmark_cases.py",
+      "copied": true,
+      "sha256": "d9cfa8d83f5ecee9e111f2e3ffc4337baaaaf736ed437e419bcf2a2d62eb7f08",
+      "size": 4835,
+      "source": "/data/shengwz/swz/cuda3D/tools/create_benchmark_cases.py"
+    },
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/tools/run_benchmark.py",
+      "copied": true,
+      "sha256": "f7ced59e4882ad483a7bb208648afac0af4e604cd0f6c9ec7112d514b3eb9c63",
+      "size": 5527,
+      "source": "/data/shengwz/swz/cuda3D/tools/run_benchmark.py"
+    },
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/tools/compare_outputs.py",
+      "copied": true,
+      "sha256": "e810dbfd95b83ae45fa07998f6901d9072695f5269602b5284aaae88b524d075",
+      "size": 3981,
+      "source": "/data/shengwz/swz/cuda3D/tools/compare_outputs.py"
+    },
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/tools/archive_speedup.py",
+      "copied": true,
+      "sha256": "ad4a4eff63dd9ffed5acce259c4782f5d745509bed1fe4d74ad20d4e6799f4ca",
+      "size": 5386,
+      "source": "/data/shengwz/swz/cuda3D/tools/archive_speedup.py"
+    },
+    {
+      "archive": "/data/shengwz/swz/cuda3D/archives/speedups/2.0x_20260603_033651_rank6_3gpu_concurrent_shots/source/tools/sweep_blocksize.py",
+      "copied": true,
+      "sha256": "1b454ce2d356f3a67d8d3c927c235c5d5dc5107c7a6f93627ebc59e65d85f6e3",
+      "size": 5399,
+      "source": "/data/shengwz/swz/cuda3D/tools/sweep_blocksize.py"
+    }
+  ],
+  "speedup": 2.254,
+  "tag": "rank6_3gpu_concurrent_shots",
+  "threshold": "2.0x"
+}

@@ -1,0 +1,11 @@
+{
+  "tag": "stage4_pcore_128x1x2_repeat",
+  "status": "ok",
+  "compare_ok": true,
+  "wp": 2.386368,
+  "gradient": 2.507736,
+  "wall": "04.93",
+  "wp_speedup_vs_zmem_repeat": 1.0017918443425322,
+  "gradient_speedup_vs_zmem_repeat": 1.0026805054439543,
+  "nvflags": "-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2 -DPBlockSize1=128 -DPBlockSize2=1 -DPBlockSize3=2"
+}

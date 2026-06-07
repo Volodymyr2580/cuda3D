@@ -1,0 +1,22 @@
+[
+  {
+    "tag": "zmem_shape_32x2x4_repeat",
+    "wp": 2.416933,
+    "gradient": 2.528195,
+    "wall": "04.99",
+    "wp_speedup_vs_zmem_repeat": 0.9891229918247629,
+    "gradient_speedup_vs_zmem_repeat": 0.9945664792470517,
+    "compare_pass": null,
+    "rel_l2_max": null
+  },
+  {
+    "tag": "zmem_shape_32x4x2_repeat",
+    "wp": 2.418862,
+    "gradient": 2.52681,
+    "wall": "04.96",
+    "wp_speedup_vs_zmem_repeat": 0.9883341835954264,
+    "gradient_speedup_vs_zmem_repeat": 0.995111622955426,
+    "compare_pass": null,
+    "rel_l2_max": null
+  }
+]

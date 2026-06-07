@@ -1,0 +1,144 @@
+# AGENTS.md
+
+## 项目目标
+
+本项目的长期目标是改写和优化 3D CUDA 波场正演程序，提高计算性能和效率，同时保证数值结果在可接受精度范围内保持一致。
+
+当前阶段的目标不是立刻改 CUDA kernel，而是先建立稳定、可重复、可追溯的测试基准。后续任何性能优化都必须与冻结的 baseline 对比。
+
+## 基准原则
+
+- 当前服务器上的可运行版本作为后续 CUDA 优化的数值金标准。
+- 后续优化前必须先冻结 baseline，包括源码哈希、二进制哈希、输入数据哈希、输出数据哈希、运行日志和环境信息。
+- 后续修改 CUDA 代码时，必须同时比较性能和数值结果。
+- 不能只看运行时间变快，也必须确认输出结果没有超出数值容差。
+- 如果测试时 GPU 被其他任务占用，该轮性能数据只能作为参考，不能作为正式性能结论。
+
+## 速度阈值存档规则
+
+以 `perf_3gpu` 的冻结 baseline 作为 1.0x：
+
+```text
+benchmarks/baselines/current_runnable/perf_3gpu_baseline_heavy_contended_20260601_165602
+baseline WP computing time = 3.491814 s
+```
+
+速度提升按以下公式计算：
+
+```text
+speedup = baseline WP computing time / candidate WP computing time
+```
+
+存档规则：
+
+- 只有同时通过 `correctness` 与 `perf_3gpu` 数值对比的版本才能存档。
+- 每突破一个 `0.5x` 阈值就单独存档，例如 `1.5x`、`2.0x`、`2.5x`、`3.0x`。
+- 未达到下一个阈值的中间版本只写入 `AGENT_LOG.md`，不作为正式阈值版本。
+- 存档目录统一放在 `archives/speedups/`，命名示例：`1.5x_20260602_013000_opt_name`。
+- 每个存档至少包含：
+  - 关键源码和头文件快照。
+  - benchmark 工具脚本快照。
+  - correctness/perf 对比报告。
+  - candidate run 的 `manifest.json`、`run.log` 和环境摘要。
+  - baseline 与 candidate 的时间、speedup、误差摘要、SHA256。
+- 存档操作只允许新增文件和目录，不允许删除或覆盖已有存档。
+
+## 数值正确性要求
+
+默认正确性门槛：
+
+- 输出文件数量必须一致。
+- 每个输出 `.dir` 文件尺寸必须一致。
+- 所有输出值必须是 finite，不允许出现 `NaN` 或 `Inf`。
+- 主判据：相对 L2 误差 `<= 1e-5`。
+- 辅助记录：最大绝对误差、最大相对误差、RMS 误差、每炮误差排行。
+- 如果某个 baseline 输出全零，则该文件改用绝对误差 `<= 1e-7` 判定。
+
+## 测试层级
+
+后续维护三个层级的测试样例：
+
+1. `smoke`
+   - 目的：验证程序链路能跑通。
+   - 当前样例：`48 x 48 x 48`，3 炮，每炮 25 个检波点，`nt = 51`。
+   - 要求：1GPU 和 3GPU 都能正常完成，日志包含 `ALL DONE`。
+
+2. `correctness`
+   - 目的：验证数值结果是否与 baseline 一致。
+   - 建议样例：`96 x 96 x 64`，6 炮，每炮 49 个检波点，`nt = 201`。
+   - 要求：相对 L2 误差 `<= 1e-5`。
+
+3. `perf_3gpu`
+   - 目的：验证 3 张 RTX 4090 上的优化收益。
+   - 当前建议样例：`384 x 384 x 95`，9 炮，每炮 441 个检波点，`nt = 1501`。
+   - 检波器孔径要足够大，避免程序裁剪出过小子域，导致测到的是 MPI/启动开销而不是 CUDA kernel。
+   - 要求：默认每轮测试控制在 10 分钟内。
+
+## 服务器测试环境
+
+服务器项目目录：
+
+```text
+/data/shengwz/swz/cuda3D
+```
+
+当前服务器环境要点：
+
+- 系统：Ubuntu 22.04.5 LTS
+- GPU：4 张 NVIDIA GeForce RTX 4090，每张约 24GB 显存
+- CUDA 编译器：`/usr/local/cuda-12.2/bin/nvcc`
+- MPI：Intel MPI，`/opt/intel/oneapi/mpi/latest`
+- 构建文件：`src/makefile.server`
+- 可执行文件：`bin/cuda_3D_FM`
+
+常用编译命令：
+
+```bash
+cd /data/shengwz/swz/cuda3D/src
+make -f makefile.server test
+```
+
+常用 3GPU smoke 运行命令：
+
+```bash
+source /opt/intel/oneapi/setvars.sh
+cd /data/shengwz/swz/cuda3D/bench_smoke
+CUDA_VISIBLE_DEVICES=0,1,2 /opt/intel/oneapi/mpi/latest/bin/mpirun -np 3 ../bin/cuda_3D_FM < input_smoke_3gpu.in
+```
+
+## 工作日志要求
+
+必须维护根目录下的 `AGENT_LOG.md`。
+
+每次执行以下任一操作后，都要追加日志：
+
+- 修改源码或构建文件。
+- 新增、修改测试样例。
+- 编译程序。
+- 运行 smoke、correctness 或 performance 测试。
+- 记录 baseline。
+- 对比新旧结果。
+- 发现数值误差、性能退化、环境问题或服务器占用问题。
+
+每条日志至少包含：
+
+- 时间。
+- 操作目标。
+- 修改文件。
+- 执行命令。
+- 测试结果。
+- 输出、哈希或误差摘要。
+- 风险与下一步。
+
+## 安全约束
+
+- 禁止批量删除文件或目录。
+- 不使用 `del /s`、`rd /s`、`rmdir /s`、`Remove-Item -Recurse`、`rm -rf`。
+- 需要删除文件时，只能一次删除一个明确路径的文件。
+- 不在未说明时修改全局系统配置、全局 Git 配置、全局代理或用户 shell 启动文件。
+- 优先新增独立测试目录和独立构建文件，不覆盖原始输入数据。
+- 后续涉及远程服务器操作时，要记录命令和结果。
+
+## 说明
+
+当前 `orig_code` 目录已确认与当前可运行源码关键文件哈希一致，因此不能作为“未修改原始版”证明。后续若找到真正未修改原始代码，可以补充建立 original baseline。

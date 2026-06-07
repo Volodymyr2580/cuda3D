@@ -1,0 +1,6 @@
+shot 1 nrec =49 
+shot 2 nrec =49 
+shot 3 nrec =49 
+shot 4 nrec =49 
+shot 5 nrec =49 
+shot 6 nrec =49 
