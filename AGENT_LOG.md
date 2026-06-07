@@ -2821,3 +2821,21 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 按 gate 停止：不实现 `CUDA3D_CORE_RETILED_RESIDUAL`，不实现 `CUDA3D_CORE_2STEP_FUSED_COMMIT_V2`。
   - 当前 CTA-local two-step route 的主要瓶颈是 `R=7` erosion 后的 surface/volume loss，而不是单个 kernel 微调。
   - 下一步如继续大结构路线，应先写 `CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE` design doc，系统性拆分 `p_prev/p_curr/p_next`，再审 PML/source/receiver/pointer swap。
+
+## 2026-06-07 17:29:57 +0800 - Write Pro handoff for stage-4 stop decision
+
+- 操作目标：根据用户请求，整理一份可直接交给 Pro 的综合反馈文档，说明 fused debug correctness 已通过、stage-4 tile budget gate 已失败、建议停止 CTA-local fused commit 并转向 triple-buffer pressure pipeline design。
+- 修改文件：
+  - 新增 `feedback/codex_report_20260607_172851_pro_handoff_stage4.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 检查 `feedback/` 目录已有报告命名风格。
+  - 新增综合反馈 Markdown。
+- 测试结果：
+  - 未修改 CUDA 源码。
+  - 未运行新的编译或数值测试。
+- 输出/哈希/误差摘要：
+  - 报告引用 debug fused p2-shift 零误差结果、receiver output 零误差结果、A/D commit ratio `3.19%` / `3.20%` 和最新 commit `0a0d333`。
+- 风险与下一步：
+  - 该文档是交接/决策反馈，不是新的性能实验。
+  - 若 Pro 同意建议，下一步应先写 `docs/pressure_triple_buffer_pipeline_design.md`，不要直接大规模改源码。
