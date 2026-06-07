@@ -4,7 +4,15 @@
 #error "CUDA3D_PML_ZMEM_IN_P requires CUDA3D_PML_RECOMPUTE_Z"
 #endif
 
-#ifdef CUDA3D_PML_DEBUG_DUMP
+#if defined(CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG) && !defined(CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE)
+#error "CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG requires CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE"
+#endif
+
+#if defined(CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG_FILL) && !defined(CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE)
+#error "CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG_FILL requires CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE"
+#endif
+
+#if defined(CUDA3D_PML_DEBUG_DUMP) || defined(CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG)
 #include <sys/stat.h>
 #endif
 
@@ -22,7 +30,65 @@ void check_gpu_error_2(const char *msg){
 #define check_gpu_error_loop(msg) ((void)0)
 #endif
 
-#ifdef CUDA3D_PML_DEBUG_DUMP
+#if defined(CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE) && defined(CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG_FILL)
+__global__ void cuda3d_fill_pressure_active_region(float *p, int n3, int n2, int n1) {
+  const int gtid1 = blockIdx.x * blockDim.x + threadIdx.x;
+  const int gtid2 = blockIdx.y * blockDim.y + threadIdx.y;
+  const int gtid3 = blockIdx.z * blockDim.z + threadIdx.z;
+  if (gtid1 >= n1 || gtid2 >= n2 || gtid3 >= n3) return;
+
+  const int stride2 = n1 + 2 * radius;
+  const int stride3 = stride2 * (n2 + 2 * radius);
+  const size_t idx = (size_t)(gtid3 + radius) * stride3 +
+		     (size_t)(gtid2 + radius) * stride2 +
+		     (gtid1 + radius);
+  p[idx] = __int_as_float(0x7fffffff);
+}
+
+static void check_pressure_active_region_written(float *d_p,
+						int n3, int n2, int n1,
+						int mytid, int snum, int it) {
+  const int stride2 = n1 + 2 * radius;
+  const int stride3 = stride2 * (n2 + 2 * radius);
+  const size_t count = (size_t)(n3 + 2 * radius) *
+		       (size_t)(n2 + 2 * radius) *
+		       (size_t)(n1 + 2 * radius);
+
+  float *host = (float*)malloc(count * sizeof(float));
+  if (host == NULL) {
+    printf("ERROR allocating pressure debug host buffer\n");
+    exit(0);
+  }
+
+  cudaMemcpy(host, d_p, count * sizeof(float), cudaMemcpyDeviceToHost);
+  check_gpu_error_2("copy pressure debug buffer");
+
+  size_t bad = 0;
+  size_t first_bad = 0;
+  for (int y = 0; y < n3; ++y) {
+    for (int x = 0; x < n2; ++x) {
+      for (int z = 0; z < n1; ++z) {
+	const size_t idx = (size_t)(y + radius) * stride3 +
+			   (size_t)(x + radius) * stride2 +
+			   (z + radius);
+	if (!isfinite(host[idx])) {
+	  if (bad == 0) first_bad = idx;
+	  ++bad;
+	}
+      }
+    }
+  }
+  free(host);
+
+  if (bad != 0) {
+    printf("ERROR pressure active region unwritten/nonfinite: rank=%d shot=%d it=%d count=%zu first=%zu\n",
+	   mytid, snum, it, bad, first_bad);
+    exit(0);
+  }
+}
+#endif
+
+#if defined(CUDA3D_PML_DEBUG_DUMP) || defined(CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG)
 static void dump_device_float_array(const char *dump_dir, const char *name,
 				    int mytid, int snum, int it,
 				    const float *dptr, size_t count) {
@@ -50,7 +116,9 @@ static void dump_device_float_array(const char *dump_dir, const char *name,
   fclose(fp);
   free(host);
 }
+#endif
 
+#ifdef CUDA3D_PML_DEBUG_DUMP
 static void dump_pml_debug_state(const char *dump_dir,
 				 int mytid, int snum, int it,
 				 int nby, int nbx, int nbz,
@@ -95,6 +163,37 @@ static void dump_pml_debug_state(const char *dump_dir,
   dump_device_float_array(dump_dir, "memory_dyy", mytid, snum, it, d_memory_dyy, mem_y_count);
   dump_device_float_array(dump_dir, "memory_dxx", mytid, snum, it, d_memory_dxx, mem_x_count);
   dump_device_float_array(dump_dir, "memory_dzz", mytid, snum, it, d_memory_dzz, mem_z_count);
+}
+#endif
+
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG
+static void dump_pressure_triple_debug_state(const char *dump_dir,
+					     int mytid, int snum, int it,
+					     int nypad, int nxpad, int nzpad,
+					     const float *d_p_prev,
+					     const float *d_p_curr,
+					     const float *d_p_next) {
+  if (dump_dir == NULL || dump_dir[0] == '\0') return;
+
+  mkdir(dump_dir, 0775);
+
+  const size_t nxyzpad_debug = (size_t)nypad * (size_t)nxpad * (size_t)nzpad;
+  char meta_path[1024];
+  snprintf(meta_path, sizeof(meta_path), "%s/rank_%d_shot_%d_it_%d_pressure_meta.txt",
+	   dump_dir, mytid, snum, it);
+  FILE *meta = fopen(meta_path, "w");
+  if (meta == NULL) {
+    printf("ERROR opening pressure debug dump meta file %s\n", meta_path);
+    exit(0);
+  }
+  fprintf(meta, "mytid=%d\nsnum=%d\nit=%d\n", mytid, snum, it);
+  fprintf(meta, "nypad=%d\nnxpad=%d\nnzpad=%d\n", nypad, nxpad, nzpad);
+  fprintf(meta, "nxyzpad=%zu\n", nxyzpad_debug);
+  fclose(meta);
+
+  dump_device_float_array(dump_dir, "p_prev", mytid, snum, it, d_p_prev, nxyzpad_debug);
+  dump_device_float_array(dump_dir, "p_curr", mytid, snum, it, d_p_curr, nxyzpad_debug);
+  dump_device_float_array(dump_dir, "p_next", mytid, snum, it, d_p_next, nxyzpad_debug);
 }
 #endif
 
@@ -389,6 +488,19 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   if (pml_dump_step_env != NULL && pml_dump_step_env[0] != '\0')
     pml_dump_step = atoi(pml_dump_step_env);
 #endif
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG
+  const char *pressure_dump_dir = getenv("CUDA3D_PRESSURE_TRIPLE_BUFFER_DUMP_DIR");
+  int pressure_dump_step = 0;
+  const char *pressure_dump_step_env = getenv("CUDA3D_PRESSURE_TRIPLE_BUFFER_DUMP_STEP");
+  if (pressure_dump_step_env != NULL && pressure_dump_step_env[0] != '\0')
+    pressure_dump_step = atoi(pressure_dump_step_env);
+#endif
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_DISABLE_MPI
+  if (mytid != 0) {
+    printf("CUDA3D_PRESSURE_TRIPLE_BUFFER_DISABLE_MPI only allows rank 0, got rank %d\n", mytid);
+    exit(0);
+  }
+#endif
   int nypad, nxpad, nzpad;
   float ss, temp, tdy, tdx, tdz, dt2;
   float *h_bell;
@@ -408,6 +520,9 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 
   //wavefields
   float *d_p0, *d_p1, *ptr, *d_vx, *d_vy, *d_vz;
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+  float *d_p_next = NULL;
+#endif
   // pml
   float *d_ax=NULL, *d_bx=NULL, *d_ay=NULL, *d_by=NULL, *d_az=NULL, *d_bz=NULL;
   float *d_ax_h=NULL, *d_bx_h=NULL, *d_ay_h=NULL, *d_by_h=NULL, *d_az_h=NULL, *d_bz_h=NULL;
@@ -512,11 +627,17 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
  
   cudaMalloc((void**)&d_p0, nxyzpad*sizeof(float));
   cudaMalloc((void**)&d_p1, nxyzpad*sizeof(float));
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+  cudaMalloc((void**)&d_p_next, nxyzpad*sizeof(float));
+#endif
   cudaMalloc((void**)&d_vy, nxyzpad*sizeof(float));
   cudaMalloc((void**)&d_vx, nxyzpad*sizeof(float));
   cudaMalloc((void**)&d_vz, nxyzpad*sizeof(float));
   cudaMemset(d_p0, 0, nxyzpad*sizeof(float));
   cudaMemset(d_p1, 0, nxyzpad*sizeof(float));
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+  cudaMemset(d_p_next, 0, nxyzpad*sizeof(float));
+#endif
   cudaMemset(d_vy, 0, nxyzpad*sizeof(float));
   cudaMemset(d_vx, 0, nxyzpad*sizeof(float));
   cudaMemset(d_vz, 0, nxyzpad*sizeof(float));
@@ -703,6 +824,16 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
     //    fflush(stdout);
     if(it%500==0 && mytid==0)
       printf("FP it=%d\n", it);
+#if defined(CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE) && defined(CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG_FILL)
+    {
+      const dim3 pressure_fill_block(PmlTileBlockSize1, PmlTileBlockSize2, PmlTileBlockSize3);
+      const dim3 pressure_fill_grid((nbz + PmlTileBlockSize1 - 1) / PmlTileBlockSize1,
+				    (nbx + PmlTileBlockSize2 - 1) / PmlTileBlockSize2,
+				    (nby + PmlTileBlockSize3 - 1) / PmlTileBlockSize3);
+      cuda3d_fill_pressure_active_region<<<pressure_fill_grid, pressure_fill_block>>>(d_p_next, nby, nbx, nbz);
+      check_gpu_error_2("fill pressure active region");
+    }
+#endif
     // this is 2nd order time
 #ifdef CUDA3D_PML_TILE_LIST_V
     cuda_fd3d_v_pml_tile_ns<<<dimg_v, dimb_v>>>(d_p1, d_vy, d_vx, d_vz,
@@ -719,9 +850,15 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 				    d_memory_dy, d_memory_dx, d_memory_dz);
 #endif
     check_gpu_error_loop("compute V");
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+    cuda_fd3d_p_core_ns<<<dimg_p, dimb_p >>>(d_p_next, d_p1, d_p0, d_cw2,
+			     tdy, tdx, tdz,
+			     nby, nbx, nbz, nbd, dt2);
+#else
     cuda_fd3d_p_core_ns<<<dimg_p, dimb_p >>>(d_p0, d_p1, d_cw2,
 			     tdy, tdx, tdz,
 			     nby, nbx, nbz, nbd, dt2);
+#endif
     check_gpu_error_loop("compute P core");
 #if defined(CUDA3D_PML_ZMEM_IN_P) && defined(CUDA3D_PML_ZMEM_DEBUG_FILL)
     cudaMemset(d_memory_dz_next, 0xff, mem_z_bytes);
@@ -729,7 +866,13 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 #endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
     if (n_zface_p_pml_tiles > 0) {
-      cuda_fd3d_p_pml_zface_ns<<<dimg_pml_zface, dimb_pml_zface >>>(d_p0, d_p1, d_vy, d_vx, d_vz,
+      cuda_fd3d_p_pml_zface_ns<<<dimg_pml_zface, dimb_pml_zface >>>(
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+				       d_p_next, d_p1, d_p0,
+#else
+				       d_p0, d_p1,
+#endif
+				       d_vy, d_vx, d_vz,
 				       d_cw2, tdy, tdx, tdz,
 				       nby, nbx, nbz, nbd, dt2,
 				       d_memory_dzz, d_memory_dz,
@@ -738,7 +881,13 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
     }
 #endif
 #ifdef CUDA3D_PML_TILE_LIST_P
-    cuda_fd3d_p_pml_tile_ns<<<dimg_pml, dimb_pml >>>(d_p0, d_p1, d_vy, d_vx, d_vz,
+    cuda_fd3d_p_pml_tile_ns<<<dimg_pml, dimb_pml >>>(
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+				     d_p_next, d_p1, d_p0,
+#else
+				     d_p0, d_p1,
+#endif
+				     d_vy, d_vx, d_vz,
 				     d_cw2, tdy, tdx, tdz,
 				     nby, nbx, nbz, nbd, dt2,
 				     d_ay, d_by, d_ax, d_bx, d_az, d_bz,
@@ -752,7 +901,13 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 				     d_memory_dx, d_memory_dy,
 				     d_p_pml_tiles, n_p_pml_tiles);
 #else
-    cuda_fd3d_p_pml_ns<<<dimg_pml, dimb_pml >>>(d_p0, d_p1, d_vy, d_vx, d_vz,
+    cuda_fd3d_p_pml_ns<<<dimg_pml, dimb_pml >>>(
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+				     d_p_next, d_p1, d_p0,
+#else
+				     d_p0, d_p1,
+#endif
+				     d_vy, d_vx, d_vz,
 				     d_cw2, tdy, tdx, tdz,
 				     nby, nbx, nbz, nbd, dt2,
 				     d_ay, d_by, d_ax, d_bx, d_az, d_bz,
@@ -778,19 +933,43 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
       d_memory_dz_next = tmp_dz;
     }
 #endif
+#if defined(CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE) && defined(CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG_FILL)
+    cudaDeviceSynchronize();
+    check_gpu_error_2("sync before pressure active coverage check");
+    check_pressure_active_region_written(d_p_next, nby, nbx, nbz, mytid, snum, it);
+#endif
 #ifdef CUDA3D_PML_DEBUG_DUMP
     if (it == pml_dump_step) {
       cudaDeviceSynchronize();
       check_gpu_error_2("sync before PML debug dump");
       dump_pml_debug_state(pml_dump_dir, mytid, snum, it,
 			   nby, nbx, nbz, nypad, nxpad, nzpad, nbd,
-			   d_p0, d_p1, d_vy, d_vx, d_vz,
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+			   d_p_next, d_p1,
+#else
+			   d_p0, d_p1,
+#endif
+			   d_vy, d_vx, d_vz,
 			   d_memory_dy, d_memory_dx, d_memory_dz,
 			   d_memory_dyy, d_memory_dxx, d_memory_dzz);
     }
 #endif
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG
+    if (it == pressure_dump_step) {
+      cudaDeviceSynchronize();
+      check_gpu_error_2("sync before pressure triple-buffer debug dump");
+      dump_pressure_triple_debug_state(pressure_dump_dir, mytid, snum, it,
+				       nypad, nxpad, nzpad,
+				       d_p0, d_p1, d_p_next);
+    }
+#endif
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+    float *d_p_out = d_p_next;
+#else
+    float *d_p_out = d_p0;
+#endif
     if (nr <= (size_t)BS) {
-      lint3d_inject_bell_extract_gpu_zz<<<1, dimbr>>>(d_p0, nbd, yl, xl, it, nt, snum,
+      lint3d_inject_bell_extract_gpu_zz<<<1, dimbr>>>(d_p_out, nbd, yl, xl, it, nt, snum,
 					    d_src, d_bell, nbell,
 					    indxy, indxx, indxz, nypad, nxpad, nzpad,
 					    d_sw000, d_sw001, d_sw010, d_sw011,
@@ -801,20 +980,24 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
       check_gpu_error_loop("inject src and extract");
     } else {
       // inject bell src
-      lint3d_inject_bell_gpu<<<dims, dimbs>>>(d_p0, nbd, yl, xl, it, snum,
+      lint3d_inject_bell_gpu<<<dims, dimbs>>>(d_p_out, nbd, yl, xl, it, snum,
 					      d_src, d_bell, nbell,
 					      indxy, indxx, indxz, nypad, nxpad, nzpad,
 					      d_sw000, d_sw001, d_sw010, d_sw011,
 					      d_sw100, d_sw101, d_sw110, d_sw111);
       check_gpu_error_loop("inject src");
       // extract 
-      lint3d_extract_gpu_zz<<<dimr, dimbr>>>(d_p0, nbd, yl, xl, it, nt,
+      lint3d_extract_gpu_zz<<<dimr, dimbr>>>(d_p_out, nbd, yl, xl, it, nt,
 					     d_est, d_rec0_indx, nr, nypad, nxpad, nzpad, // ir is fast direction in 3D
 					     d_rw000, d_rw001, d_rw010, d_rw011,
 					     d_rw100, d_rw101, d_rw110, d_rw111);
     }
 
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+    ptr=d_p0; d_p0=d_p1; d_p1=d_p_next; d_p_next=ptr;
+#else
     ptr=d_p0; d_p0=d_p1; d_p1=ptr;
+#endif
    
     //might need this or FD CPML, to improve numerical stability for large dt and dx
     //    bc_3d(fu, nby, nbx, nbz, nbd, bt, bb, bl, br);
@@ -851,6 +1034,9 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   if (h_zface_p_pml_tiles) free(h_zface_p_pml_tiles);
 #endif
   cudaFree(d_p0); cudaFree(d_p1);
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+  cudaFree(d_p_next);
+#endif
   cudaFree(d_vy); cudaFree(d_vx); cudaFree(d_vz); 
   cudaFree(d_ay); cudaFree(d_by); cudaFree(d_ax); cudaFree(d_bx); cudaFree(d_az); cudaFree(d_bz);
   cudaFree(d_ay_h); cudaFree(d_by_h); cudaFree(d_ax_h); cudaFree(d_bx_h); cudaFree(d_az_h); cudaFree(d_bz_h);

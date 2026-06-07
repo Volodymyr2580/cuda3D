@@ -1,0 +1,55 @@
+{
+  "branch": "exp/pressure-triple-buffer-pipeline",
+  "base_commit": "c491351",
+  "implementation_status": "correctness_pass_perf_gate_fail",
+  "final_binary_status": "zmem_reference",
+  "macros": [
+    "CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE",
+    "CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG",
+    "CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG_FILL",
+    "CUDA3D_PRESSURE_TRIPLE_BUFFER_DISABLE_MPI"
+  ],
+  "changed_source_files": [
+    "include/inc3D/single_solver.h",
+    "src/single_solver.cu",
+    "src/rem_fd.cu"
+  ],
+  "correctness": {
+    "smoke_release_pass": true,
+    "correctness_release_pass": true,
+    "perf6_output_compare_pass": true,
+    "max_rel_l2": 0.0
+  },
+  "performance": {
+    "perf_1gpu": {
+      "zmem_run": "benchmarks/runs/perf_1gpu_zmem_reference_before_triple_ab_20260607_185404",
+      "triple_run": "benchmarks/runs/perf_1gpu_triple_buffer_release_ab_20260607_185440",
+      "zmem_wp_seconds": 0.482847,
+      "triple_wp_seconds": 0.473002,
+      "wp_speedup": 1.0208138654804844,
+      "zmem_gradient_seconds": 0.511858,
+      "triple_gradient_seconds": 0.502685,
+      "gradient_speedup": 1.0182480081959875
+    },
+    "perf_1gpu_6shots_repeat": {
+      "zmem_runs": [
+        "benchmarks/runs/perf_1gpu_6shots_zmem_reference_perf6_ab_after_triple_20260607_185736",
+        "benchmarks/runs/perf_1gpu_6shots_zmem_reference_perf6_ab_after_triple_repeat_20260607_185742"
+      ],
+      "triple_runs": [
+        "benchmarks/runs/perf_1gpu_6shots_triple_buffer_release_perf6_ab_20260607_185624",
+        "benchmarks/runs/perf_1gpu_6shots_triple_buffer_release_perf6_ab_repeat_20260607_185629"
+      ],
+      "zmem_wp_mean_seconds": 2.4133735,
+      "triple_wp_mean_seconds": 2.4024425,
+      "wp_speedup": 1.0045499528084438,
+      "zmem_gradient_mean_seconds": 2.5332605,
+      "triple_gradient_mean_seconds": 2.5173425,
+      "gradient_speedup": 1.006323335024932,
+      "gate_pass": false,
+      "gate_threshold_speedup": 1.02
+    }
+  },
+  "decision": "keep_macro_gated_default_off",
+  "recommendation": "use triple-buffer ownership as scaffold for future temporal pipeline work; do not promote as standalone speedup"
+}

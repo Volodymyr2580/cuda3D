@@ -2610,3 +2610,88 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
 - 风险与下一步：
   - 该文档是交接/决策反馈，不是新的性能实验。
   - 若 Pro 同意，下一步应实现 macro-gated minimal triple-buffer correctness prototype，不应在同一轮启动 temporal blocking。
+
+## 2026-06-07 18:29:30 +0800 - Freeze zmem reference before triple-buffer implementation
+
+- 操作目标：按 Pro 的 3 小时 autonomous sprint 路线，在 RTX 5090 稳定服务器上先重建 `zmem_reference` 并跑通 `smoke_1gpu` 与 `correctness`，作为后续 `CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE` 候选的数值参照。
+- 修改文件：
+  - 追加本 `AGENT_LOG.md` 条目。
+  - 服务器生成构建日志于 `benchmarks/build_logs/zmem_reference_before_triple_buffer_3h_*.log`。
+  - 服务器生成 run artifacts：
+    - `benchmarks/runs/smoke_1gpu_zmem_reference_before_triple_buffer_3h_20260607_182919`
+    - `benchmarks/runs/correctness_zmem_reference_before_triple_buffer_3h_20260607_182922`
+- 执行命令摘要：
+  - 远程检查 `/work/wenzhe/cuda3D` 位于 `exp/pressure-triple-buffer-pipeline`，HEAD `c491351`。
+  - 首次远程脚本使用 `set -euo pipefail` 时，`source ./env_5090.sh` 因环境脚本依赖未定义变量而提前退出；改为 `set -eo pipefail` 后成功加载环境。这只影响本次 shell，不修改全局配置。
+  - 使用稳定 flags 重新构建：
+    `-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2`
+  - 运行：
+    - `python3 tools/run_benchmark.py --case smoke_1gpu --tag zmem_reference_before_triple_buffer_3h`
+    - `python3 tools/run_benchmark.py --case correctness --tag zmem_reference_before_triple_buffer_3h`
+- 测试结果：
+  - zmem reference 构建成功。
+  - `smoke_1gpu` return code `0`，日志包含 `ALL DONE`，输出 `.dir` 文件数 `3`。
+  - `correctness` return code `0`，日志包含 `ALL DONE`，输出 `.dir` 文件数 `6`。
+- 输出/哈希/误差摘要：
+  - `smoke_1gpu`：`Gradient TIME all = 0.003193s`，`WP computing time = 0.002368s`，elapsed `0:02.27`。
+  - `correctness`：`Gradient TIME all = 0.014544s`，`WP computing time = 0.012920s`，elapsed `0:02.27`。
+  - 本轮只冻结 baseline，不计算候选误差。
+- 风险与下一步：
+  - 服务器仍有早先测试留下的 untracked core2step case 目录；它们不影响当前白名单 benchmark，但暂不批量删除。
+  - 下一步可以进入 macro-gated `CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE` 最小实现；默认构建必须保持 zmem 行为不变。
+
+## 2026-06-07 18:59:30 +0800 - Implement and validate pressure triple-buffer prototype
+
+- 操作目标：根据 Pro 的路线，在不改变默认 zmem 构建的前提下实现 macro-gated `CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE`，完成 debug、correctness 和 perf gate 验收。
+- 修改文件：
+  - `include/inc3D/single_solver.h`
+  - `src/single_solver.cu`
+  - `src/rem_fd.cu`
+  - `reports/triple_buffer_3h/final_3h_report.md`
+  - `reports/triple_buffer_3h/final_3h_summary.json`
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地执行 `git diff --check`，通过。
+  - 上传修改后的 `single_solver.h`、`single_solver.cu`、`rem_fd.cu` 到 `/work/wenzhe/cuda3D`。
+  - 远程构建默认 zmem flags，运行 `smoke_1gpu`、`correctness`，并用 `tools/compare_outputs.py` 对比冻结 baseline。
+  - 远程构建 triple debug flags：
+    `-DCUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE -DCUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG -DCUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG_FILL -DCUDA3D_PRESSURE_TRIPLE_BUFFER_DISABLE_MPI -DCUDA3D_DEBUG_CHECKS`
+  - 首轮 debug fill 将整个 padded pressure buffer 填 NaN，程序完成但输出从第 2 个时间步起出现 non-finite；诊断为 radius halo 被误毒化。
+  - 修正 debug fill：只填 active wavefield domain，并在 pressure/PML update 后检查 active domain finite。
+  - 远程构建 triple release flags：
+    `-DCUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE`
+  - 运行并比较：
+    - `smoke_1gpu`
+    - `correctness`
+    - `perf_1gpu`
+    - `perf_1gpu_6shots` repeat
+  - 最后重建 zmem reference binary，使服务器最终二进制回到稳定基线构建。
+- 测试结果：
+  - 默认 zmem 路径安全性：
+    - `smoke_1gpu_default_after_triple_buffer_patch_20260607_184226` 对冻结 baseline 通过，rel L2 全为 `0.0`。
+    - `correctness_default_after_triple_buffer_patch_20260607_184229` 对冻结 baseline 通过，rel L2 全为 `0.0`。
+  - triple debug：
+    - 首轮 whole-buffer NaN fill 失败，`triple_debug_smoke_compare` 报告 non-finite。
+    - 修正为 active-domain NaN fill 后，`smoke_1gpu_triple_buffer_debug_fill_active_20260607_185044` 通过，rel L2 全为 `0.0`。
+  - triple release correctness：
+    - `smoke_1gpu_triple_buffer_release_20260607_185212` 通过，rel L2 全为 `0.0`。
+    - `correctness_triple_buffer_release_20260607_185215` 通过，rel L2 全为 `0.0`。
+    - `perf_1gpu_6shots_triple_buffer_release_perf6_ab_20260607_185624` 对 zmem perf6 输出通过，rel L2 全为 `0.0`。
+- 输出/哈希/误差摘要：
+  - `perf_1gpu` A/B：
+    - zmem：`WP = 0.482847s`，`Gradient = 0.511858s`。
+    - triple：`WP = 0.473002s`，`Gradient = 0.502685s`。
+    - speedup：WP `1.0208x`，Gradient `1.0182x`。
+  - `perf_1gpu_6shots` repeat A/B：
+    - triple runs：`WP = 2.401650s / 2.403235s`，`Gradient = 2.515900s / 2.518785s`。
+    - zmem runs：`WP = 2.412274s / 2.414473s`，`Gradient = 2.530637s / 2.535884s`。
+    - mean speedup：WP `1.0045x`，Gradient `1.0063x`。
+  - perf gate 结论：未达到 `>=2%` repeat speedup 门槛。
+  - 最终报告：
+    - `reports/triple_buffer_3h/final_3h_report.md`
+    - `reports/triple_buffer_3h/final_3h_summary.json`
+- 风险与下一步：
+  - triple-buffer 路径数值正确，但作为单独优化没有足够 repeat speedup，不应提升为主基线。
+  - 当前实现只验证 single GPU / single MPI rank；多 rank 不应默认启用。
+  - 该实现应作为后续 temporal pipeline 或 multi-step pressure schedule 的结构地基。
+  - 服务器最终 binary 已恢复为 `zmem_reference`，后续稳定测试仍以 zmem flags 为准。

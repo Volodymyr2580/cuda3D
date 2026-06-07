@@ -1057,9 +1057,19 @@ __global__ void cuda_fd3d_v_pml_tile_ns(const float *__restrict__ p1, float *vy,
 
 enum { CoreStencilRadius = 7 };
 
-__global__ void cuda_fd3d_p_core_ns(float *p0, float *p1, float *cw2,
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+__global__ void cuda_fd3d_p_core_ns(float *p_next, const float *__restrict__ p_curr, const float *__restrict__ p_prev,
+				   float *cw2,
+#else
+__global__ void cuda_fd3d_p_core_ns(float *p0, const float *__restrict__ p1, float *cw2,
+#endif
 				   float _dy2, float _dx2, float _dz2,
 				   int n3, int n2, int n1, int npml, float dt){
+#ifndef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+  float *p_next = p0;
+  const float *__restrict__ p_curr = p1;
+  const float *__restrict__ p_prev = p0;
+#endif
   const int core1_lo = npml + CorePmlMargin;
   const int core2_lo = npml + CorePmlMargin;
   const int core3_lo = npml + CorePmlMargin;
@@ -1083,16 +1093,16 @@ __global__ void cuda_fd3d_p_core_ns(float *p0, float *p1, float *cw2,
   const int local1 = threadIdx.x + CoreStencilRadius;
 
   if (gtid1 < n1 && gtid2 < n2 && gtid3 < n3) {
-    z_tile[threadIdx.z][threadIdx.y][local1] = p1[base];
+    z_tile[threadIdx.z][threadIdx.y][local1] = p_curr[base];
   }
   if (threadIdx.x < CoreStencilRadius && gtid2 < n2 && gtid3 < n3) {
     const int left1 = block1 + threadIdx.x - CoreStencilRadius;
     const int right1 = block1 + blockDim.x + threadIdx.x;
     const size_t plane = (size_t)t3 * stride3 + (size_t)t2 * stride2;
     z_tile[threadIdx.z][threadIdx.y][threadIdx.x] =
-      (left1 >= 0 && left1 < n1) ? p1[plane + left1 + radius] : 0.0f;
+      (left1 >= 0 && left1 < n1) ? p_curr[plane + left1 + radius] : 0.0f;
     z_tile[threadIdx.z][threadIdx.y][threadIdx.x + blockDim.x + CoreStencilRadius] =
-      (right1 >= 0 && right1 < n1) ? p1[plane + right1 + radius] : 0.0f;
+      (right1 >= 0 && right1 < n1) ? p_curr[plane + right1 + radius] : 0.0f;
   }
   __syncthreads();
 
@@ -1108,34 +1118,34 @@ __global__ void cuda_fd3d_p_core_ns(float *p0, float *p1, float *cw2,
 
   lap += 1.6234617233276367f *
     (z2 * (z_tile[threadIdx.z][threadIdx.y][local1 + 1] + z_tile[threadIdx.z][threadIdx.y][local1 - 1]) +
-     x2 * (p1[base + stride2] + p1[base - stride2]) +
-     y2 * (p1[base + stride3] + p1[base - stride3]));
+     x2 * (p_curr[base + stride2] + p_curr[base - stride2]) +
+     y2 * (p_curr[base + stride3] + p_curr[base - stride3]));
   lap += -0.21382331848144528f *
     (z2 * (z_tile[threadIdx.z][threadIdx.y][local1 + 2] + z_tile[threadIdx.z][threadIdx.y][local1 - 2]) +
-     x2 * (p1[base + 2 * stride2] + p1[base - 2 * stride2]) +
-     y2 * (p1[base + 2 * stride3] + p1[base - 2 * stride3]));
+     x2 * (p_curr[base + 2 * stride2] + p_curr[base - 2 * stride2]) +
+     y2 * (p_curr[base + 2 * stride3] + p_curr[base - 2 * stride3]));
   lap += 0.030927128261990015f *
     (z2 * (z_tile[threadIdx.z][threadIdx.y][local1 + 3] + z_tile[threadIdx.z][threadIdx.y][local1 - 3]) +
-     x2 * (p1[base + 3 * stride2] + p1[base - 3 * stride2]) +
-     y2 * (p1[base + 3 * stride3] + p1[base - 3 * stride3]));
+     x2 * (p_curr[base + 3 * stride2] + p_curr[base - 3 * stride2]) +
+     y2 * (p_curr[base + 3 * stride3] + p_curr[base - 3 * stride3]));
   lap += -0.003195444742838541f *
     (z2 * (z_tile[threadIdx.z][threadIdx.y][local1 + 4] + z_tile[threadIdx.z][threadIdx.y][local1 - 4]) +
-     x2 * (p1[base + 4 * stride2] + p1[base - 4 * stride2]) +
-     y2 * (p1[base + 4 * stride3] + p1[base - 4 * stride3]));
+     x2 * (p_curr[base + 4 * stride2] + p_curr[base - 4 * stride2]) +
+     y2 * (p_curr[base + 4 * stride3] + p_curr[base - 4 * stride3]));
   lap += 0.0002028528849283854f *
     (z2 * (z_tile[threadIdx.z][threadIdx.y][local1 + 5] + z_tile[threadIdx.z][threadIdx.y][local1 - 5]) +
-     x2 * (p1[base + 5 * stride2] + p1[base - 5 * stride2]) +
-     y2 * (p1[base + 5 * stride3] + p1[base - 5 * stride3]));
+     x2 * (p_curr[base + 5 * stride2] + p_curr[base - 5 * stride2]) +
+     y2 * (p_curr[base + 5 * stride3] + p_curr[base - 5 * stride3]));
   lap += -0.000013351440429687502f *
     (z2 * (z_tile[threadIdx.z][threadIdx.y][local1 + 6] + z_tile[threadIdx.z][threadIdx.y][local1 - 6]) +
-     x2 * (p1[base + 6 * stride2] + p1[base - 6 * stride2]) +
-     y2 * (p1[base + 6 * stride3] + p1[base - 6 * stride3]));
+     x2 * (p_curr[base + 6 * stride2] + p_curr[base - 6 * stride2]) +
+     y2 * (p_curr[base + 6 * stride3] + p_curr[base - 6 * stride3]));
   lap += 0.000000486568528778699f *
     (z2 * (z_tile[threadIdx.z][threadIdx.y][local1 + 7] + z_tile[threadIdx.z][threadIdx.y][local1 - 7]) +
-     x2 * (p1[base + 7 * stride2] + p1[base - 7 * stride2]) +
-     y2 * (p1[base + 7 * stride3] + p1[base - 7 * stride3]));
+     x2 * (p_curr[base + 7 * stride2] + p_curr[base - 7 * stride2]) +
+     y2 * (p_curr[base + 7 * stride3] + p_curr[base - 7 * stride3]));
 
-  p0[base] = 2.0f * center - p0[base] + cw2[base] * dt * lap;
+  p_next[base] = 2.0f * center - __ldg(p_prev + base) + cw2[base] * dt * lap;
 
 }
 
@@ -1283,7 +1293,13 @@ __device__ __forceinline__ bool pml_zface_p_special_point(int gtid1, int gtid2, 
 }
 #endif
 
-__global__ void cuda_fd3d_p_pml_ns(float *p0, const float *__restrict__ p1, const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+__global__ void cuda_fd3d_p_pml_ns(float *p_next, const float *__restrict__ p_curr, const float *__restrict__ p_prev,
+				   const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#else
+__global__ void cuda_fd3d_p_pml_ns(float *p0, const float *__restrict__ p1,
+				   const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#endif
 				   float *cw2, float _dy2, float _dx2, float _dz2,
 				   int n3, int n2, int n1, int npml, float dt,
 				   float *ay, float *by, float *ax, float *bx, float *az, float *bz,
@@ -1292,6 +1308,12 @@ __global__ void cuda_fd3d_p_pml_ns(float *p0, const float *__restrict__ p1, cons
 				   float *mem_dz_next_v,
 				   const float *__restrict__ mem_dx_v,
 				   const float *__restrict__ mem_dy_v){
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+  const float *__restrict__ p1 = p_curr;
+#else
+  float *p_next = p0;
+  const float *__restrict__ p_prev = p0;
+#endif
   float c1, c2, c3;
   int gtid1 = blockIdx.x * blockDim.x + threadIdx.x;
   int gtid2 = blockIdx.y * blockDim.y + threadIdx.y;
@@ -1437,12 +1459,18 @@ __global__ void cuda_fd3d_p_pml_ns(float *p0, const float *__restrict__ p1, cons
     }
     //END YPML
 
-    p0[outIndex]=2*__ldg(p1+outIndex)-p0[outIndex]
+    p_next[outIndex]=2*__ldg(p1+outIndex)-__ldg(p_prev+outIndex)
       +__ldg(cw2+outIndex)*dt*(c1+c2+c3);
   }
 }
 
-__global__ void cuda_fd3d_p_pml_tile_ns(float *p0, const float *__restrict__ p1, const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+__global__ void cuda_fd3d_p_pml_tile_ns(float *p_next, const float *__restrict__ p_curr, const float *__restrict__ p_prev,
+				   const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#else
+__global__ void cuda_fd3d_p_pml_tile_ns(float *p0, const float *__restrict__ p1,
+				   const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#endif
 				   float *cw2, float _dy2, float _dx2, float _dz2,
 				   int n3, int n2, int n1, int npml, float dt,
 				   float *ay, float *by, float *ax, float *bx, float *az, float *bz,
@@ -1452,6 +1480,12 @@ __global__ void cuda_fd3d_p_pml_tile_ns(float *p0, const float *__restrict__ p1,
 				   const float *__restrict__ mem_dx_v,
 				   const float *__restrict__ mem_dy_v,
 				   const PmlTile *__restrict__ tiles, int ntile){
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+  const float *__restrict__ p1 = p_curr;
+#else
+  float *p_next = p0;
+  const float *__restrict__ p_prev = p0;
+#endif
   if (blockIdx.x >= ntile) return;
   const PmlTile tile = tiles[blockIdx.x];
 #ifdef CUDA3D_PML_TILE_MASK_FASTPATH
@@ -1646,17 +1680,29 @@ __global__ void cuda_fd3d_p_pml_tile_ns(float *p0, const float *__restrict__ p1,
       }
     }
 
-    p0[outIndex]=2*__ldg(p1+outIndex)-p0[outIndex]
+    p_next[outIndex]=2*__ldg(p1+outIndex)-__ldg(p_prev+outIndex)
       +__ldg(cw2+outIndex)*dt*(c1+c2+c3);
   }
 }
 
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
-__global__ void cuda_fd3d_p_pml_zface_ns(float *p0, const float *__restrict__ p1, const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+__global__ void cuda_fd3d_p_pml_zface_ns(float *p_next, const float *__restrict__ p_curr, const float *__restrict__ p_prev,
+				   const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#else
+__global__ void cuda_fd3d_p_pml_zface_ns(float *p0, const float *__restrict__ p1,
+				   const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#endif
 				   float *cw2, float _dy2, float _dx2, float _dz2,
 				   int n3, int n2, int n1, int npml, float dt,
 				   float *mem_dzz, const float *__restrict__ mem_dz_v,
 				   const PmlTile *__restrict__ tiles, int ntile){
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+  const float *__restrict__ p1 = p_curr;
+#else
+  float *p_next = p0;
+  const float *__restrict__ p_prev = p0;
+#endif
   if (blockIdx.x >= ntile) return;
   const PmlTile tile = tiles[blockIdx.x];
   const int gtid1 = tile.z0 + threadIdx.x;
@@ -1719,7 +1765,7 @@ __global__ void cuda_fd3d_p_pml_zface_ns(float *p0, const float *__restrict__ p1
     c1+=mem_dzz[pind];
   }
 
-  p0[outIndex]=2*__ldg(p1+outIndex)-p0[outIndex]
+  p_next[outIndex]=2*__ldg(p1+outIndex)-__ldg(p_prev+outIndex)
     +__ldg(cw2+outIndex)*dt*(c1+c2+c3);
 }
 #endif

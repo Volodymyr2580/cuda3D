@@ -80,7 +80,13 @@ __global__ void cuda_fd3d_v_pml_ns(const float *__restrict__ p1, float *vy, floa
 				float *ay_h, float *by_h, float *ax_h, float *bx_h, float *az_h, float *bz_h,
 				float *mem_dy, float *mem_dx, float *mem_dz);
 
-__global__ void cuda_fd3d_p_pml_ns(float *p0, const float *__restrict__ p1, const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+__global__ void cuda_fd3d_p_pml_ns(float *p_next, const float *__restrict__ p_curr, const float *__restrict__ p_prev,
+				const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#else
+__global__ void cuda_fd3d_p_pml_ns(float *p0, const float *__restrict__ p1,
+				const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#endif
 				float *cw2, float _dy2, float _dx2, float _dz2,
 				int n3, int n2, int n1, int npml, float dt,
 				float *ay, float *by, float *ax, float *bx, float *az, float *bz,
@@ -97,7 +103,13 @@ __global__ void cuda_fd3d_v_pml_tile_ns(const float *__restrict__ p1, float *vy,
 				float *mem_dy, float *mem_dx, float *mem_dz,
 				const PmlTile *__restrict__ tiles, int ntile);
 
-__global__ void cuda_fd3d_p_pml_tile_ns(float *p0, const float *__restrict__ p1, const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+__global__ void cuda_fd3d_p_pml_tile_ns(float *p_next, const float *__restrict__ p_curr, const float *__restrict__ p_prev,
+				const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#else
+__global__ void cuda_fd3d_p_pml_tile_ns(float *p0, const float *__restrict__ p1,
+				const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#endif
 				float *cw2, float _dy2, float _dx2, float _dz2,
 				int n3, int n2, int n1, int npml, float dt,
 				float *ay, float *by, float *ax, float *bx, float *az, float *bz,
@@ -108,7 +120,13 @@ __global__ void cuda_fd3d_p_pml_tile_ns(float *p0, const float *__restrict__ p1,
 				const float *__restrict__ mem_dy_v,
 				const PmlTile *__restrict__ tiles, int ntile);
 
-__global__ void cuda_fd3d_p_pml_zface_ns(float *p0, const float *__restrict__ p1, const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+__global__ void cuda_fd3d_p_pml_zface_ns(float *p_next, const float *__restrict__ p_curr, const float *__restrict__ p_prev,
+				const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#else
+__global__ void cuda_fd3d_p_pml_zface_ns(float *p0, const float *__restrict__ p1,
+				const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
+#endif
 				float *cw2, float _dy2, float _dx2, float _dz2,
 				int n3, int n2, int n1, int npml, float dt,
 				float *mem_dzz, const float *__restrict__ mem_dz_v,
@@ -121,7 +139,12 @@ __global__ void cuda_fd3d_p_pml_shared_ns(float *p0, float *p1, float *vy, float
 				float *ay, float *by, float *ax, float *bx, float *az, float *bz,
 				float *mem_dyy, float *mem_dxx, float *mem_dzz);
 
-__global__ void cuda_fd3d_p_core_ns(float *p0, float *p1, float *cw2,
+#ifdef CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE
+__global__ void cuda_fd3d_p_core_ns(float *p_next, const float *__restrict__ p_curr, const float *__restrict__ p_prev,
+				float *cw2,
+#else
+__global__ void cuda_fd3d_p_core_ns(float *p0, const float *__restrict__ p1, float *cw2,
+#endif
 				float _dy2, float _dx2, float _dz2,
 				int n3, int n2, int n1, int npml, float dt);
 
