@@ -64,7 +64,9 @@ Profiler gate：
 1. `CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE`
    - 只允许 single GPU / single MPI rank。
    - 只允许 core strict interior，默认 guard margin 至少 `2 * CUDA3D_CORE_STENCIL_RADIUS`。
-   - 第一阶段只做 dependency map、debug dump、interior compare 和 debug-only `p(t+2)` prediction。
+   - dependency map、debug dump、interior compare、debug-only `p(t+2)` prediction 已完成。
+   - `CUDA3D_CORE_2STEP_COMMIT_INTERIOR` 已完成 correctness prototype，但性能变慢，只作为调度正确性证明。
+   - 下一步只应推进 fused two-step core kernel，目标是在同一 kernel 内计算 `p(t+1)` 与 strict-interior `p(t+2)` 并复用数据。
    - PML、source injection、receiver extraction、`p0/p1` swap 时序必须保持 baseline。
    - source 或 receiver 落入 blocked region 时，第一版必须停止或新建安全 case。
    - 不默认启用，必须宏控制。
@@ -74,6 +76,7 @@ Profiler gate：
 - `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE`：correctness pass，但相对 `zmem_reference` repeat 变慢。
 - `CUDA3D_PML_FUSED_ZSLAB_SKIP_V_OWNED`：phase 1 已失败，不进入 phase 2。
 - `CUDA3D_CORE_ZPENCIL_SHARED`：source-level NCU gate 发现 baseline 已有 z shared tile，不实现。
+- `CUDA3D_CORE_2STEP_COMMIT_INTERIOR` standalone predict+copy 性能路线：correctness pass，但不是 speedup 路线，因为 prediction 仍是单独 kernel。
 - p_core simple block sweep、PML tile/block/mask/prune sweep、`RECOMPUTE_X/Y/XYZ`、full-domain temporal blocking、MPI temporal blocking。
 
 ## 速度阈值存档规则

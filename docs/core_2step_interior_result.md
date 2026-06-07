@@ -155,6 +155,72 @@ binary SHA256 after this rebuild = b0996e463e6a89c8adfaf5daf84c6441d3bf6289356ec
 
 Note: repeated non-debug rebuilds on this server did not produce identical binary SHA256 values, so binary hash is recorded for traceability but is not used as the sole acceptance criterion for this step.
 
+## Commit Prototype Validation
+
+`CUDA3D_CORE_2STEP_COMMIT_INTERIOR` was implemented as a correctness prototype.
+
+Build flags:
+
+```text
+flags += -DCUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE -DCUDA3D_CORE_2STEP_COMMIT_INTERIOR -DCUDA3D_DEBUG_CHECKS
+candidate binary SHA256 = 5beb9c6c5698a4131689e82b698a9dbb4e45f726a58d30da1a55618c13ced974
+```
+
+Minimal output correctness:
+
+```text
+run = benchmarks/runs/core_2step_commit_correctness_20260607_154200
+report = benchmarks/reports/core2step_commit_correctness_20260607_154200/comparison.md
+pass = True
+files compared = 1
+rel_l2 = 0.0
+max_abs = 0.0
+baseline WP = 0.001391 s
+candidate WP = 0.001453 s
+```
+
+Strict-interior dump correctness:
+
+```text
+run = benchmarks/runs/core_2step_commit_dump_compare_20260607_154800
+report = benchmarks/reports/core2step_commit_dump_compare_20260607_154800/comparison.md
+pass = True
+files compared = 17
+rel_l2 = 0.0 for all compared files
+max_abs = 0.0 for all compared files
+baseline dump files = 23
+candidate dump files = 23
+baseline WP = 0.004412 s
+candidate WP = 0.004554 s
+```
+
+Full correctness case:
+
+```text
+run = benchmarks/runs/core_2step_commit_correctness_full_20260607_155200
+default commit region failed as designed on cropped shots:
+ERROR invalid CUDA3D_CORE_2STEP commit region z=[26,54) x=[26,1) y=[26,1), n=(80,27,27)
+
+rerun with explicit safe region:
+CUDA3D_CORE_2STEP_REGION=26:54,12:15,12:15
+report = benchmarks/reports/core2step_commit_correctness_full_region_20260607_155200/comparison.md
+pass = True
+files compared = 6
+rel_l2 = 0.0 for all compared files
+max_abs = 0.0 for all compared files
+baseline WP = 0.012992 s
+candidate WP = 0.015493 s
+```
+
+Conclusion:
+
+```text
+correctness = pass
+speed = slower
+```
+
+This prototype validates commit scheduling but does not provide a speedup because the `p(t+2)` work is still performed as a separate prediction kernel. The next performance attempt should fuse `p(t+1)` and `p(t+2)` inside one core kernel or use a block/tile list that avoids launching work for fully committed blocks.
+
 ## Next Step
 
-The next implementation step is commit mode: reuse the validated `p(t+2)` strict-interior result and skip recomputing that interior region on the following timestep. The first commit-mode version must stay single-GPU, reject source/receiver-in-region cases, and keep the baseline path for PML and guard regions.
+The next implementation step is fused two-step core temporal blocking. It should start from the validated commit scheduling above, but remove the extra standalone prediction kernel and avoid doing shared-memory loads for skipped blocks.

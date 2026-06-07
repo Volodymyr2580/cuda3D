@@ -69,16 +69,27 @@ d_p2_core_interior
 
 Debug-only mode must not change the main output.
 
-## Commit Mode Sketch
+## Commit Mode Prototype
 
-Commit mode is not implemented in this branch yet. A later commit mode must solve:
+`CUDA3D_CORE_2STEP_COMMIT_INTERIOR` is a correctness prototype, not a performance implementation.
 
-1. when the precomputed `p(t+2)` region is committed into global `p0`;
-2. how the next timestep avoids recomputing the same strict region;
-3. how odd timesteps fall back to baseline;
-4. how source-in-region is detected and rejected or handled;
-5. how receiver extraction remains every-step exact;
-6. how PML avoids stale boundary/core values.
+Current behavior:
+
+1. timestep 0 runs the baseline core pressure kernel;
+2. after source injection, the prototype predicts strict-interior `p(t+2)` into `d_p2_core_debug`;
+3. on the next timestep, `cuda_fd3d_p_core_ns_skip_region` skips that strict region;
+4. after PML pressure update, `cuda_core2step_copy_region` commits the predicted values back into `p0`;
+5. the normal source injection, receiver extraction, and `p0/p1` swap still run in baseline order.
+
+This proves the commit scheduling contract but does not reduce arithmetic yet, because the prediction is still a separate kernel. A real speedup requires a fused two-step core kernel that reuses loaded data while computing `p(t+1)` and `p(t+2)`.
+
+The next performance implementation must solve:
+
+1. computing `p(t+1)` and strict-interior `p(t+2)` in one fused kernel;
+2. reusing shared-memory/global loads across the two temporal steps;
+3. skipping whole covered core blocks rather than only returning per point after shared-memory loads;
+4. keeping guard-region/PML/source/receiver ordering identical to baseline;
+5. handling cropped subdomains where the default strict region is empty or too small.
 
 ## Source/Receiver Rule
 

@@ -4,7 +4,11 @@
 #error "CUDA3D_PML_ZMEM_IN_P requires CUDA3D_PML_RECOMPUTE_Z"
 #endif
 
-#if defined(CUDA3D_PML_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_INTERIOR_COMPARE)
+#if defined(CUDA3D_CORE_2STEP_COMMIT_INTERIOR) && !defined(CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE)
+#error "CUDA3D_CORE_2STEP_COMMIT_INTERIOR requires CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE"
+#endif
+
+#if defined(CUDA3D_PML_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_INTERIOR_COMPARE) || defined(CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE) || defined(CUDA3D_CORE_2STEP_COMMIT_INTERIOR)
 #include <sys/stat.h>
 #endif
 
@@ -22,7 +26,7 @@ void check_gpu_error_2(const char *msg){
 #define check_gpu_error_loop(msg) ((void)0)
 #endif
 
-#if defined(CUDA3D_PML_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_INTERIOR_COMPARE)
+#if defined(CUDA3D_PML_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_INTERIOR_COMPARE) || defined(CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE) || defined(CUDA3D_CORE_2STEP_COMMIT_INTERIOR)
 static void dump_device_float_array(const char *dump_dir, const char *name,
 				    int mytid, int snum, int it,
 				    const float *dptr, size_t count) {
@@ -100,7 +104,7 @@ static void dump_pml_debug_state(const char *dump_dir,
 }
 #endif
 
-#if defined(CUDA3D_CORE_2STEP_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_INTERIOR_COMPARE)
+#if defined(CUDA3D_CORE_2STEP_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_INTERIOR_COMPARE) || defined(CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE) || defined(CUDA3D_CORE_2STEP_COMMIT_INTERIOR)
 static int parse_core2step_region(const char *text,
 				  int *z0, int *z1, int *x0, int *x1, int *y0, int *y1) {
   if (text == NULL || text[0] == '\0') return 0;
@@ -112,6 +116,86 @@ static int parse_core2step_region(const char *text,
 static int point_in_core2step_region(int z, int x, int y,
 				     int z0, int z1, int x0, int x1, int y0, int y1) {
   return z >= z0 && z < z1 && x >= x0 && x < x1 && y >= y0 && y < y1;
+}
+
+typedef struct Core2StepRegion {
+  int margin;
+  int core_z0, core_z1, core_x0, core_x1, core_y0, core_y1;
+  int z0, z1, x0, x1, y0, y1;
+  int source_z_local, source_x_local, source_y_local;
+  int source_in_region;
+  size_t receivers_in_region;
+} Core2StepRegion;
+
+static void init_core2step_region(Core2StepRegion *region,
+				  const char *label,
+				  int nby, int nbx, int nbz,
+				  int nbd, int yl, int xl,
+				  int indxy, int indxx, int indxz,
+				  int **rec0_indx, size_t nr) {
+  int mpi_size = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+  if (mpi_size != 1) {
+    printf("ERROR CUDA3D_CORE_2STEP %s is single-GPU/single-rank only; MPI size=%d\n", label, mpi_size);
+    exit(0);
+  }
+
+  int margin = 2 * CUDA3D_CORE_STENCIL_RADIUS;
+  const char *margin_env = getenv("CUDA3D_CORE_2STEP_MARGIN");
+  if (margin_env != NULL && margin_env[0] != '\0') margin = atoi(margin_env);
+
+  region->core_z0 = nbd + CorePmlMargin;
+  region->core_x0 = nbd + CorePmlMargin;
+  region->core_y0 = nbd + CorePmlMargin;
+  region->core_z1 = nbz - nbd - CorePmlMargin;
+  region->core_x1 = nbx - nbd - CorePmlMargin;
+  region->core_y1 = nby - nbd - CorePmlMargin;
+  region->z0 = region->core_z0 + margin;
+  region->z1 = region->core_z1 - margin;
+  region->x0 = region->core_x0 + margin;
+  region->x1 = region->core_x1 - margin;
+  region->y0 = region->core_y0 + margin;
+  region->y1 = region->core_y1 - margin;
+
+  const char *region_env = getenv("CUDA3D_CORE_2STEP_REGION");
+  if (parse_core2step_region(region_env,
+			     &region->z0, &region->z1,
+			     &region->x0, &region->x1,
+			     &region->y0, &region->y1)) {
+    margin = -1;
+  }
+  region->margin = margin;
+
+  if (region->z0 < 0 || region->x0 < 0 || region->y0 < 0 ||
+      region->z1 > nbz || region->x1 > nbx || region->y1 > nby ||
+      region->z0 >= region->z1 || region->x0 >= region->x1 || region->y0 >= region->y1) {
+    printf("ERROR invalid CUDA3D_CORE_2STEP %s region z=[%d,%d) x=[%d,%d) y=[%d,%d), n=(%d,%d,%d)\n",
+	   label, region->z0, region->z1, region->x0, region->x1, region->y0, region->y1,
+	   nbz, nbx, nby);
+    exit(0);
+  }
+
+  region->source_z_local = nbd + indxz;
+  region->source_x_local = nbd + indxx - xl;
+  region->source_y_local = nbd + indxy - yl;
+  region->source_in_region = point_in_core2step_region(region->source_z_local,
+						       region->source_x_local,
+						       region->source_y_local,
+						       region->z0, region->z1,
+						       region->x0, region->x1,
+						       region->y0, region->y1);
+  region->receivers_in_region = 0;
+  for (size_t ir = 0; ir < nr; ++ir) {
+    const int rz = nbd + rec0_indx[ir][2];
+    const int rx = nbd + rec0_indx[ir][1] - xl;
+    const int ry = nbd + rec0_indx[ir][0] - yl;
+    if (point_in_core2step_region(rz, rx, ry,
+				  region->z0, region->z1,
+				  region->x0, region->x1,
+				  region->y0, region->y1)) {
+      ++region->receivers_in_region;
+    }
+  }
 }
 
 static void dump_core2step_region_array(const char *dump_dir, const char *name,
@@ -177,56 +261,12 @@ static void dump_core2step_debug_state(const char *dump_dir,
 				       float tdy, float tdx, float tdz, float dt2) {
   if (dump_dir == NULL || dump_dir[0] == '\0') return;
 
-  int mpi_size = 1;
-  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-  if (mpi_size != 1) {
-    printf("ERROR CUDA3D_CORE_2STEP debug dump is single-GPU/single-rank only; MPI size=%d\n", mpi_size);
-    exit(0);
-  }
-
   mkdir(dump_dir, 0775);
 
-  int margin = 2 * CUDA3D_CORE_STENCIL_RADIUS;
-  const char *margin_env = getenv("CUDA3D_CORE_2STEP_MARGIN");
-  if (margin_env != NULL && margin_env[0] != '\0') margin = atoi(margin_env);
-
-  const int core_z0 = nbd + CorePmlMargin;
-  const int core_x0 = nbd + CorePmlMargin;
-  const int core_y0 = nbd + CorePmlMargin;
-  const int core_z1 = nbz - nbd - CorePmlMargin;
-  const int core_x1 = nbx - nbd - CorePmlMargin;
-  const int core_y1 = nby - nbd - CorePmlMargin;
-  int z0 = core_z0 + margin;
-  int z1 = core_z1 - margin;
-  int x0 = core_x0 + margin;
-  int x1 = core_x1 - margin;
-  int y0 = core_y0 + margin;
-  int y1 = core_y1 - margin;
-
-  const char *region_env = getenv("CUDA3D_CORE_2STEP_REGION");
-  if (parse_core2step_region(region_env, &z0, &z1, &x0, &x1, &y0, &y1)) {
-    margin = -1;
-  }
-
-  if (z0 < 0 || x0 < 0 || y0 < 0 || z1 > nbz || x1 > nbx || y1 > nby ||
-      z0 >= z1 || x0 >= x1 || y0 >= y1) {
-    printf("ERROR invalid CUDA3D_CORE_2STEP debug region z=[%d,%d) x=[%d,%d) y=[%d,%d), n=(%d,%d,%d)\n",
-	   z0, z1, x0, x1, y0, y1, nbz, nbx, nby);
-    exit(0);
-  }
-
-  const int source_z_local = nbd + indxz;
-  const int source_x_local = nbd + indxx - xl;
-  const int source_y_local = nbd + indxy - yl;
-  const int source_in_region = point_in_core2step_region(source_z_local, source_x_local, source_y_local,
-							 z0, z1, x0, x1, y0, y1);
-  size_t receivers_in_region = 0;
-  for (size_t ir = 0; ir < nr; ++ir) {
-    const int rz = nbd + rec0_indx[ir][2];
-    const int rx = nbd + rec0_indx[ir][1] - xl;
-    const int ry = nbd + rec0_indx[ir][0] - yl;
-    if (point_in_core2step_region(rz, rx, ry, z0, z1, x0, x1, y0, y1)) ++receivers_in_region;
-  }
+  Core2StepRegion region;
+  init_core2step_region(&region, "debug dump",
+			nby, nbx, nbz, nbd, yl, xl,
+			indxy, indxx, indxz, rec0_indx, nr);
 
   char meta_path[1024];
   snprintf(meta_path, sizeof(meta_path), "%s/rank_%d_shot_%d_it_%d_core_meta.txt",
@@ -242,46 +282,50 @@ static void dump_core2step_debug_state(const char *dump_dir,
   fprintf(meta, "radius=%d\ncore_stencil_radius=%d\ncore_pml_margin=%d\n",
 	  radius, CUDA3D_CORE_STENCIL_RADIUS, CorePmlMargin);
   fprintf(meta, "core_z0=%d\ncore_z1=%d\ncore_x0=%d\ncore_x1=%d\ncore_y0=%d\ncore_y1=%d\n",
-	  core_z0, core_z1, core_x0, core_x1, core_y0, core_y1);
+	  region.core_z0, region.core_z1, region.core_x0, region.core_x1, region.core_y0, region.core_y1);
   fprintf(meta, "margin=%d\nz0=%d\nz1=%d\nx0=%d\nx1=%d\ny0=%d\ny1=%d\n",
-	  margin, z0, z1, x0, x1, y0, y1);
-  fprintf(meta, "count=%zu\n", (size_t)(z1 - z0) * (size_t)(x1 - x0) * (size_t)(y1 - y0));
+	  region.margin, region.z0, region.z1, region.x0, region.x1, region.y0, region.y1);
+  fprintf(meta, "count=%zu\n", (size_t)(region.z1 - region.z0) * (size_t)(region.x1 - region.x0) * (size_t)(region.y1 - region.y0));
   fprintf(meta, "yl=%d\nxl=%d\nsource_z_raw=%d\nsource_x_raw=%d\nsource_y_raw=%d\n",
 	  yl, xl, indxz, indxx, indxy);
   fprintf(meta, "source_z=%d\nsource_x=%d\nsource_y=%d\n",
-	  source_z_local, source_x_local, source_y_local);
+	  region.source_z_local, region.source_x_local, region.source_y_local);
   fprintf(meta, "source_in_region=%d\nreceiver_count=%zu\nreceivers_in_region=%zu\n",
-	  source_in_region, nr, receivers_in_region);
+	  region.source_in_region, nr, region.receivers_in_region);
   fclose(meta);
 
 #ifdef CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE
   if (d_p2 != NULL) {
-    if (source_in_region || receivers_in_region) {
+    if (region.source_in_region || region.receivers_in_region) {
       printf("ERROR CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE requires source/receivers outside region: source=%d receivers=%zu\n",
-	     source_in_region, receivers_in_region);
+	     region.source_in_region, region.receivers_in_region);
       exit(0);
     }
+#ifndef CUDA3D_CORE_2STEP_COMMIT_INTERIOR
     dim3 block(PBlockSize1, PBlockSize2, PBlockSize3);
-    dim3 grid((z1 - z0 + PBlockSize1 - 1) / PBlockSize1,
-	      (x1 - x0 + PBlockSize2 - 1) / PBlockSize2,
-	      (y1 - y0 + PBlockSize3 - 1) / PBlockSize3);
+    dim3 grid((region.z1 - region.z0 + PBlockSize1 - 1) / PBlockSize1,
+	      (region.x1 - region.x0 + PBlockSize2 - 1) / PBlockSize2,
+	      (region.y1 - region.y0 + PBlockSize3 - 1) / PBlockSize3);
     cuda_fd3d_p_core_2step_predict_ns<<<grid, block>>>(d_p2, d_p1, d_p0, d_cw2,
 						       tdy, tdx, tdz,
 						       nby, nbx, nbz, nbd, dt2,
-						       z0, z1, x0, x1, y0, y1);
+						       region.z0, region.z1,
+						       region.x0, region.x1,
+						       region.y0, region.y1);
     check_gpu_error_2("compute core 2step p2 prediction");
     cudaDeviceSynchronize();
     check_gpu_error_2("sync core 2step p2 prediction");
+#endif
   }
 #endif
 
   dump_core2step_region_array(dump_dir, "p0", mytid, snum, it, d_p0,
-			      nypad, nxpad, nzpad, z0, z1, x0, x1, y0, y1);
+			      nypad, nxpad, nzpad, region.z0, region.z1, region.x0, region.x1, region.y0, region.y1);
   dump_core2step_region_array(dump_dir, "p1", mytid, snum, it, d_p1,
-			      nypad, nxpad, nzpad, z0, z1, x0, x1, y0, y1);
+			      nypad, nxpad, nzpad, region.z0, region.z1, region.x0, region.x1, region.y0, region.y1);
   if (d_p2 != NULL) {
     dump_core2step_region_array(dump_dir, "p2", mytid, snum, it, d_p2,
-				nypad, nxpad, nzpad, z0, z1, x0, x1, y0, y1);
+				nypad, nxpad, nzpad, region.z0, region.z1, region.x0, region.x1, region.y0, region.y1);
   }
 }
 #endif
@@ -802,6 +846,34 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   dimb_p.y=PBlockSize2;
   dimb_p.z=PBlockSize3;
 
+#ifdef CUDA3D_CORE_2STEP_COMMIT_INTERIOR
+  Core2StepRegion core2step_region;
+  init_core2step_region(&core2step_region, "commit",
+			nby, nbx, nbz, nbd, yl, xl,
+			indxy, indxx, indxz, rec0_indx, nr);
+  if (core2step_region.source_in_region || core2step_region.receivers_in_region) {
+    printf("ERROR CUDA3D_CORE_2STEP_COMMIT_INTERIOR requires source/receivers outside region: source=%d receivers=%zu\n",
+	   core2step_region.source_in_region, core2step_region.receivers_in_region);
+    exit(0);
+  }
+  dim3 dimg_core2step_region;
+  dim3 dimb_core2step_region;
+  dimb_core2step_region.x = PBlockSize1;
+  dimb_core2step_region.y = PBlockSize2;
+  dimb_core2step_region.z = PBlockSize3;
+  dimg_core2step_region.x = (core2step_region.z1 - core2step_region.z0 + PBlockSize1 - 1) / PBlockSize1;
+  dimg_core2step_region.y = (core2step_region.x1 - core2step_region.x0 + PBlockSize2 - 1) / PBlockSize2;
+  dimg_core2step_region.z = (core2step_region.y1 - core2step_region.y0 + PBlockSize3 - 1) / PBlockSize3;
+  int core2step_have_prediction = 0;
+  if (mytid == 0) {
+    printf("CUDA3D core 2-step commit prototype enabled: region z=[%d,%d) x=[%d,%d) y=[%d,%d), block=%dx%dx%d\n",
+	   core2step_region.z0, core2step_region.z1,
+	   core2step_region.x0, core2step_region.x1,
+	   core2step_region.y0, core2step_region.y1,
+	   PBlockSize1, PBlockSize2, PBlockSize3);
+  }
+#endif
+
   dimg_pml.x=(int)((nbz+PmlBlockSize1-1)/PmlBlockSize1);
   dimg_pml.y=(int)((nbx+PmlBlockSize2-1)/PmlBlockSize2);
   dimg_pml.z=(int)((nby+PmlBlockSize3-1)/PmlBlockSize3);
@@ -866,6 +938,10 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 
   cudaFuncSetCacheConfig(cuda_fd3d_v_pml_ns, cudaFuncCachePreferL1);
   cudaFuncSetCacheConfig(cuda_fd3d_p_core_ns, cudaFuncCachePreferL1);
+#ifdef CUDA3D_CORE_2STEP_COMMIT_INTERIOR
+  cudaFuncSetCacheConfig(cuda_fd3d_p_core_ns_skip_region, cudaFuncCachePreferL1);
+  cudaFuncSetCacheConfig(cuda_core2step_copy_region, cudaFuncCachePreferL1);
+#endif
   cudaFuncSetCacheConfig(cuda_fd3d_p_pml_ns, cudaFuncCachePreferL1);
 #ifdef CUDA3D_PML_TILE_LIST_V
   cudaFuncSetCacheConfig(cuda_fd3d_v_pml_tile_ns, cudaFuncCachePreferL1);
@@ -923,9 +999,24 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 				    d_memory_dy, d_memory_dx, d_memory_dz);
 #endif
     check_gpu_error_loop("compute V");
+#ifdef CUDA3D_CORE_2STEP_COMMIT_INTERIOR
+    if (core2step_have_prediction) {
+      cuda_fd3d_p_core_ns_skip_region<<<dimg_p, dimb_p >>>(d_p0, d_p1, d_cw2,
+				   tdy, tdx, tdz,
+				   nby, nbx, nbz, nbd, dt2,
+				   core2step_region.z0, core2step_region.z1,
+				   core2step_region.x0, core2step_region.x1,
+				   core2step_region.y0, core2step_region.y1);
+    } else {
+      cuda_fd3d_p_core_ns<<<dimg_p, dimb_p >>>(d_p0, d_p1, d_cw2,
+			       tdy, tdx, tdz,
+			       nby, nbx, nbz, nbd, dt2);
+    }
+#else
     cuda_fd3d_p_core_ns<<<dimg_p, dimb_p >>>(d_p0, d_p1, d_cw2,
 			     tdy, tdx, tdz,
 			     nby, nbx, nbz, nbd, dt2);
+#endif
     check_gpu_error_loop("compute P core");
 #if defined(CUDA3D_PML_ZMEM_IN_P) && defined(CUDA3D_PML_ZMEM_DEBUG_FILL)
     cudaMemset(d_memory_dz_next, 0xff, mem_z_bytes);
@@ -982,6 +1073,18 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
       d_memory_dz_next = tmp_dz;
     }
 #endif
+#ifdef CUDA3D_CORE_2STEP_COMMIT_INTERIOR
+    if (core2step_have_prediction) {
+      cuda_core2step_copy_region<<<dimg_core2step_region, dimb_core2step_region>>>(
+	  d_p0, d_p2_core_debug,
+	  nby, nbx, nbz,
+	  core2step_region.z0, core2step_region.z1,
+	  core2step_region.x0, core2step_region.x1,
+	  core2step_region.y0, core2step_region.y1);
+      check_gpu_error_loop("commit core 2step predicted region");
+      core2step_have_prediction = 0;
+    }
+#endif
 #ifdef CUDA3D_PML_DEBUG_DUMP
     if (it == pml_dump_step) {
       cudaDeviceSynchronize();
@@ -1017,6 +1120,20 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 					     d_rw000, d_rw001, d_rw010, d_rw011,
 					     d_rw100, d_rw101, d_rw110, d_rw111);
     }
+
+#ifdef CUDA3D_CORE_2STEP_COMMIT_INTERIOR
+    if (it + 1 < nt) {
+      cuda_fd3d_p_core_2step_predict_ns<<<dimg_core2step_region, dimb_core2step_region>>>(
+	  d_p2_core_debug, d_p1, d_p0, d_cw2,
+	  tdy, tdx, tdz,
+	  nby, nbx, nbz, nbd, dt2,
+	  core2step_region.z0, core2step_region.z1,
+	  core2step_region.x0, core2step_region.x1,
+	  core2step_region.y0, core2step_region.y1);
+      check_gpu_error_loop("predict core 2step next region");
+      core2step_have_prediction = 1;
+    }
+#endif
 
 #if defined(CUDA3D_CORE_2STEP_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_INTERIOR_COMPARE)
     if (core2step_dump_dir != NULL && core2step_dump_dir[0] != '\0' &&

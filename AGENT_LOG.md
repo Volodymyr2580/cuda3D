@@ -2682,3 +2682,36 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 当前 `p2` 只是辅助 buffer 中的 debug-only 预测，还没有减少任何正式计算量，因此不声明性能提升。
   - 下一步可以进入 commit mode：在 single GPU、source/receiver 不落入 strict region 的条件下，提交已验证的 `p(t+2)` interior，并在下一 timestep 跳过同一区域的 baseline core 计算。
   - commit mode 必须保留 PML、guard region、source injection、receiver extraction 和 pointer swap 的 baseline 时序。
+
+## 2026-06-07 16:01:48 +0800 - Validate core 2-step commit correctness prototype
+
+- 操作目标：实现 `CUDA3D_CORE_2STEP_COMMIT_INTERIOR` correctness prototype，在下一 timestep 跳过 strict-interior baseline core 计算并提交上一轮预测的 `p(t+2)`，验证其数值正确性和性能方向。
+- 修改文件：
+  - 更新 `include/inc3D/single_solver.h`，声明 commit-mode skip/copy kernels。
+  - 更新 `src/single_solver.cu`，新增 `cuda_fd3d_p_core_ns_skip_region` 与 `cuda_core2step_copy_region`。
+  - 更新 `src/rem_fd.cu`，抽出 `Core2StepRegion` helper，接入 commit region 初始化、skip-region core launch、predicted-region copy 和下一步 prediction。
+  - 更新 `docs/core_2step_interior_design.md`、`docs/core_2step_interior_result.md` 与 `AGENTS.md`，记录 commit prototype 结论和后续 fused two-step 方向。
+- 执行命令摘要：
+  - 本地执行 `git diff --check`。
+  - 服务器临时应用源码 diff 后编译：稳定 zmem flags 加 `-DCUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE -DCUDA3D_CORE_2STEP_COMMIT_INTERIOR -DCUDA3D_DEBUG_CHECKS`。
+  - 服务器运行 `core_2step_interior_1gpu` baseline/candidate 输出对比。
+  - 服务器运行 baseline-debug 与 commit-debug strict-interior dump same-name 对比。
+  - 服务器运行 `correctness` 6-shot case；默认 region 因裁剪后子域过小按设计停止，随后用 `CUDA3D_CORE_2STEP_REGION=26:54,12:15,12:15` 重跑。
+  - 服务器最后重新编译 non-debug zmem build。
+- 测试结果：
+  - commit prototype 编译通过；candidate binary SHA256：`5beb9c6c5698a4131689e82b698a9dbb4e45f726a58d30da1a55618c13ced974`。
+  - minimal output correctness 通过：`benchmarks/reports/core2step_commit_correctness_20260607_154200/comparison.md`，1 个输出文件 `rel_l2=0.0`，`max_abs=0.0`。
+  - minimal timing：baseline `WP=0.001391s`，candidate `WP=0.001453s`，candidate 略慢。
+  - strict-interior dump compare 通过：`benchmarks/reports/core2step_commit_dump_compare_20260607_154800/comparison.md`，23 个 dump 文件，17 个 `.bin` 比较均 `rel_l2=0.0`，`max_abs=0.0`。
+  - full correctness 默认 region 失败且未作为通过结果：`ERROR invalid CUDA3D_CORE_2STEP commit region z=[26,54) x=[26,1) y=[26,1), n=(80,27,27)`。
+  - full correctness 显式安全 region 通过：`benchmarks/reports/core2step_commit_correctness_full_region_20260607_155200/comparison.md`，6 个输出文件全部 `rel_l2=0.0`，`max_abs=0.0`。
+  - full correctness timing：baseline `WP=0.012992s`，candidate `WP=0.015493s`，candidate 变慢。
+  - post-restore non-debug zmem binary SHA256：`099bd05e192cd6017b2a851f09c923c91599c0ecb68683a949af029ede2be1f5`。
+- 输出/哈希/误差摘要：
+  - 关键 run：`benchmarks/runs/core_2step_commit_correctness_20260607_154200`、`core_2step_commit_dump_compare_20260607_154800`、`core_2step_commit_correctness_full_20260607_155200`。
+  - 关键 reports：`benchmarks/reports/core2step_commit_correctness_20260607_154200/`、`core2step_commit_dump_compare_20260607_154800/`、`core2step_commit_correctness_full_region_20260607_155200/`。
+  - 所有有效 correctness/dump comparison 均为零误差；失败的默认 full correctness run 是 region 安全门触发，不是数值误差。
+- 风险与下一步：
+  - standalone predict+copy commit prototype 不会带来速度提升，因为 `p(t+2)` 仍由额外 kernel 单独计算；它只证明调度正确性。
+  - 默认 strict region 会被 acquisition crop 破坏，后续 fused kernel 必须支持 per-shot region fallback、tile list 或显式 region。
+  - 真正下一步应实现 fused two-step core kernel：在同一 kernel 内计算 `p(t+1)` 与 strict-interior `p(t+2)`，复用 shared/global loads，并避免为已提交区域加载整块 shared tile。
