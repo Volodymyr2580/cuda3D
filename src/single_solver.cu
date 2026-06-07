@@ -1055,7 +1055,7 @@ __global__ void cuda_fd3d_v_pml_tile_ns(const float *__restrict__ p1, float *vy,
 
 
 
-enum { CoreStencilRadius = 7 };
+enum { CoreStencilRadius = CUDA3D_CORE_STENCIL_RADIUS };
 
 __global__ void cuda_fd3d_p_core_ns(float *p0, float *p1, float *cw2,
 				   float _dy2, float _dx2, float _dz2,

@@ -128,6 +128,10 @@ extern "C" {
 #define CorePmlMargin 4
 #endif
 
+#ifndef CUDA3D_CORE_STENCIL_RADIUS
+#define CUDA3D_CORE_STENCIL_RADIUS 7
+#endif
+
 #ifndef _con_stencil
 #define _con_stencil   
 

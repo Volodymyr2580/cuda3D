@@ -61,16 +61,20 @@ Profiler gate：
 
 当前允许的下一阶段 prototype：
 
-1. `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE`
-   - 只处理 pure z-PML face，且 x/y 位于 core 区域。
-   - edge/corner/x-face/y-face/residual 继续走 `zmem_reference` generic path。
+1. `CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE`
+   - 只允许 single GPU / single MPI rank。
+   - 只允许 core strict interior，默认 guard margin 至少 `2 * CUDA3D_CORE_STENCIL_RADIUS`。
+   - 第一阶段只做 dependency map、debug dump、interior compare 和 debug-only `p(t+2)` prediction。
+   - PML、source injection、receiver extraction、`p0/p1` swap 时序必须保持 baseline。
+   - source 或 receiver 落入 blocked region 时，第一版必须停止或新建安全 case。
    - 不默认启用，必须宏控制。
-   - 只有相对 `zmem_reference` 的 `perf_1gpu_6shots repeat >= 5%` 才继续扩展。
 
-2. `CUDA3D_CORE_ZPENCIL_SHARED`
-   - 只在 profiler 显示 `p_core` memory-bound 时启动。
-   - 只做 z-pencil shared-memory prototype，不做完整 temporal blocking。
-   - 要求 `p_core` kernel 自身 `>=10%` 加速，整体 `perf_1gpu_6shots repeat >=2%`。
+已结束或禁止继续的路线：
+
+- `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE`：correctness pass，但相对 `zmem_reference` repeat 变慢。
+- `CUDA3D_PML_FUSED_ZSLAB_SKIP_V_OWNED`：phase 1 已失败，不进入 phase 2。
+- `CUDA3D_CORE_ZPENCIL_SHARED`：source-level NCU gate 发现 baseline 已有 z shared tile，不实现。
+- p_core simple block sweep、PML tile/block/mask/prune sweep、`RECOMPUTE_X/Y/XYZ`、full-domain temporal blocking、MPI temporal blocking。
 
 ## 速度阈值存档规则
 

@@ -1,0 +1,17 @@
+case=core_2step_interior_1gpu
+ny=96
+nx=96
+nz=80
+nt=6
+npml=8
+shots=1
+receivers_per_shot=9
+gpu_count=1
+velocity=vel_core_2step_interior_1gpu_ny96_nx96_nz80.dir
+nav=nav_core_2step_1shot_9rec_shallow.nav
+input=input_core_2step_interior_1gpu.in
+source_z_index=1
+receiver_z_index=1
+source_receiver_policy=shallow_z_outside_default_strict_interior
+default_margin=14
+default_region=z:[26,70),x:[26,86),y:[26,86)
