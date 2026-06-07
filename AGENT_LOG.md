@@ -2455,3 +2455,29 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
 - ??/?????ad993cb6a5cd2301e2bbf077186ec350f3565eab41861ebbc8e5f6fd0f3c4d1e  bin/cuda_3D_FM
 - ?????????? zmem_reference?Stage4 `128x1x2` repeat ?? 1.0018x???? >=2% ??????
 - ????????????????????? profiler-guided region-specialized PML ???? temporal/blocking ???
+
+## 2026-06-07 08:48:00 +0800 - Git synchronization for local and RTX 5090 server
+
+- 操作目标：初始化本地 `E:\cuda3D` 与服务器 `/work/wenzhe/cuda3D` 的 Git 同步，并推送到 `https://github.com/Volodymyr2580/cuda3D.git`。
+- 修改文件：
+  - 新增 `.gitignore`，忽略大模型数据、二进制、目标文件、benchmark runs/profiles/logs、overnight 生成物和备份文件。
+  - 新增 `.gitattributes`，固定源码、脚本、Markdown、配置文件使用 LF，避免 Windows/服务器换行差异。
+  - 新增 `README.md`，记录项目用途和当前 RTX 5090 validated build flags。
+  - 更新 `AGENT_LOG.md`，记录本次 Git 同步。
+- 执行命令摘要：
+  - 本地：`git init`、`git add .`、`git commit`、`git remote add origin`、`git -c http.proxy= -c https.proxy= push -u origin main`。
+  - 本地：通过 `git archive` 和 `git bundle` 生成同步包，上传到服务器 `overnight_20260607/builds/`。
+  - 服务器：展开 tracked 文件、`git init`、从 bundle 建立 `origin/main`、配置 GitHub origin，并执行 `git pull --ff-only`。
+- 测试/验证结果：
+  - GitHub `main` 已推送成功。
+  - 本地最新提交：`3b9f586 chore(git): ignore generated overnight reports`，追加日志后会再生成一个日志提交。
+  - 服务器最新同步时 `git log` 显示 `main` 与 `origin/main` 对齐，`git status --short` 干净。
+  - 服务器 `git ls-remote --heads origin main` 成功返回 GitHub main ref。
+- 输出/哈希摘要：
+  - 初始提交：`7486ea0 chore(init): first commit`。
+  - Git 规则提交：`e6a8ae9 chore(git): ignore backup files`。
+  - 生成报告忽略提交：`3b9f586 chore(git): ignore generated overnight reports`。
+- 风险与下一步：
+  - 根目录 1.4GB `.nav` 与 56MB `.dir` 未纳入 Git，仍保留在本地/服务器文件系统。
+  - perf benchmark 所需大体积 `.dir` 数据也未纳入 Git；clone 后若要跑 perf，需要服务器原始数据或重新生成/复制。
+  - 以后新增重要 benchmark 报告时，如果被 `.gitignore` 忽略，需要显式 `git add -f <path>`。
