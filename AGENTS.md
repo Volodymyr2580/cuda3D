@@ -36,6 +36,31 @@ NVFLAGS="-O3 -arch=sm_120 --use_fast_math \
 - zmem 之后的候选没有达到 `>=2%` repeat speedup 门槛。
 - 后续所有 CUDA 实验必须相对 `zmem_reference` 报告 correctness、`perf_1gpu_6shots` 和 repeat 结果。
 
+当前 stable tag：
+
+```text
+stable-zmem-rtx5090-20260607 -> ea091c5e97b9d00e9f4d7847e5ada1f884de0cab
+```
+
+2026-06-07 同机正式重跑表：
+
+```text
+reports/formal_speed_table_20260607_215057/formal_speed_table.md
+```
+
+该表使用同一台 RTX 5090、同一套 case、同一份当前源码，只切换编译宏：
+
+- `default_no_macro`：可用的 original-like/no-macro 路径，不是已证明未修改的上游原始 tarball。
+- `current_best_reference`：`RECOMPUTE_Z + TILE_LIST + 32x4x2`。
+- `zmem_reference`：`current_best_reference + ZMEM_IN_P`。
+
+正式同机结果：
+
+- `current_best_reference` vs `default_no_macro`：WP `1.082255x`，Gradient `1.080468x`。
+- `zmem_reference` vs `default_no_macro`：WP `1.123747x`，Gradient `1.123155x`。
+- `zmem_reference` vs `current_best_reference`：WP `1.038339x`，Gradient `1.039507x`。
+- 所有 correctness/perf 输出对比均通过，最大 rel L2 为 `0`。
+
 ## 下一阶段架构纪律
 
 下一阶段停止随机 CUDA 微调，进入 profiler-guided 的结构重写阶段。
@@ -62,29 +87,40 @@ Profiler gate：
 已结束或禁止继续的路线：
 
 - `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE`：correctness pass，但相对 `zmem_reference` repeat 变慢。
+- `CUDA3D_PML_FUSED_ZSLAB_SKIP_V_OWNED`：phase 1 已失败，不进入 phase 2。
 - `CUDA3D_CORE_ZPENCIL_SHARED`：source-level NCU gate 发现 baseline 已有 z shared tile，不实现。
 - `CUDA3D_CORE_2STEP_FUSED_COMMIT_V2`：Stage-4 tile budget gate failed，A/D commit ratio 约 `3.2%`，低于 `10%` stop gate。
+- `CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE` standalone：correctness pass，但 `perf_1gpu_6shots repeat` 只有约 `1.0045x` WP / `1.0063x` Gradient，不提升为主基线。
 - standalone predict+copy micro tuning、PML face split、PML block/mask/prune sweep、p_core block sweep、full-domain temporal blocking、MPI temporal blocking。
 
 当前活动路线：
 
 1. `CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE`
-   - 当前阶段只做 design/audit，不直接大规模改 CUDA 源码。
+   - 第一阶段实现已完成，默认关闭。
    - 目标是显式拆分 `p_prev` / `p_curr` / `p_next`，不再让 `p0` 同时作为 old input 和 new output。
-   - 第一阶段文档：
+   - 第一阶段文档和报告：
      - `docs/architecture_decision_log.md`
      - `docs/pressure_pointer_swap_audit.md`
      - `docs/pressure_triple_buffer_pipeline_design.md`
      - `docs/pressure_triple_buffer_memory.md`
      - `docs/post_triple_buffer_temporal_plan.md`
-   - 第一版实现若启动，必须宏控制并默认关闭：
+     - `reports/triple_buffer_3h/final_3h_report.md`
+   - 实现宏必须默认关闭：
      - `CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE`
      - `CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG`
      - `CUDA3D_PRESSURE_TRIPLE_BUFFER_DISABLE_MPI`
      - `CUDA3D_PRESSURE_TRIPLE_BUFFER_DEBUG_FILL`
    - 不能只在 host 侧换指针；`p_core` 和 `p_pml` 当前都读 old `p0` 并写 new `p0`，因此 triple-buffer implementation 必须显式传入 `p_next`、`p_curr`、`p_prev`。
    - correctness gate：debug dump step 0/1/2 对齐、输出 `rel_l2 <= 1e-5`、禁止 NaN/Inf。
-   - performance gate：`perf_1gpu_6shots repeat` slowdown `<=2%` 可作为 disabled dataflow-clean candidate；`>5%` 必须停止并分析内存/数据流开销。
+   - standalone performance 结论：不够快，不继续作为单独优化推进。
+
+2. `CUDA3D_PHASE2_TRIPLE_BUFFER_TEMPORAL_PIPELINE`
+   - phase2 只允许基于 triple-buffer 的 temporal pipeline。
+   - 禁止在 phase2 中重启 PML face split、block sweep、register cap sweep、simple graph/mem-pool、MPI temporal blocking 或 full-domain temporal blocking。
+   - 第一轮只允许 single GPU / single MPI rank。
+   - 必须先跑 meaningful case；若 `perf_1gpu_6shots repeat` 相对 `zmem_reference` 没有 `>=5%` WP speedup，立即停止该 phase2 prototype。
+   - 任何 phase2 候选必须通过 correctness：输出数量/尺寸一致、finite、rel L2 `<=1e-5`。
+   - 详细 gate：`docs/phase2_temporal_pipeline_gate.md`。
 
 ## 速度阈值存档规则
 

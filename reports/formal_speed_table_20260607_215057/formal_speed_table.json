@@ -1,0 +1,57 @@
+{
+  "rows": [
+    {
+      "variant": "default_no_macro",
+      "flags": "-O3 -arch=sm_120 --use_fast_math",
+      "binary_sha": "21df625f8246a9e1309b593fe63d9ca188de0eeb136ed5bde401c3b5a71d4b04",
+      "correctness_run": "/work/wenzhe/cuda3D/benchmarks/runs/correctness_formal_default_no_macro_20260607_215104",
+      "perf1_run": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_formal_default_no_macro_20260607_215107",
+      "perf6_run": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_formal_default_no_macro_20260607_215110",
+      "perf6_repeat_run": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_formal_default_no_macro_repeat_20260607_215116",
+      "correctness_wp": "0.011466",
+      "correctness_gradient": "0.013085",
+      "perf1_wp": "0.547242",
+      "perf1_gradient": "0.576376",
+      "perf6_wp": "2.713933",
+      "perf6_gradient": "2.849678",
+      "perf6_repeat_wp": "2.715355",
+      "perf6_repeat_gradient": "2.852055"
+    },
+    {
+      "variant": "current_best_reference",
+      "flags": "-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2",
+      "binary_sha": "ffceea2433f787334b1bcd48578f4fe7beae1e89e5836f20429b4390e27fa780",
+      "correctness_run": "/work/wenzhe/cuda3D/benchmarks/runs/correctness_formal_current_best_reference_20260607_215128",
+      "perf1_run": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_formal_current_best_reference_20260607_215131",
+      "perf6_run": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_formal_current_best_reference_20260607_215135",
+      "perf6_repeat_run": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_formal_current_best_reference_repeat_20260607_215140",
+      "correctness_wp": "0.012964",
+      "correctness_gradient": "0.014566",
+      "perf1_wp": "0.511066",
+      "perf1_gradient": "0.540409",
+      "perf6_wp": "2.507581",
+      "perf6_gradient": "2.636950",
+      "perf6_repeat_wp": "2.509065",
+      "perf6_repeat_gradient": "2.640144"
+    },
+    {
+      "variant": "zmem_reference",
+      "flags": "-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2",
+      "binary_sha": "b7a5ac86612ff791662f49992538ffeac14eee61d73f739a9f7fe66d6852e867",
+      "correctness_run": "/work/wenzhe/cuda3D/benchmarks/runs/correctness_formal_zmem_reference_20260607_215152",
+      "perf1_run": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_formal_zmem_reference_20260607_215155",
+      "perf6_run": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_formal_zmem_reference_20260607_215159",
+      "perf6_repeat_run": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_formal_zmem_reference_repeat_20260607_215204",
+      "correctness_wp": "0.012843",
+      "correctness_gradient": "0.014520",
+      "perf1_wp": "0.484380",
+      "perf1_gradient": "0.515100",
+      "perf6_wp": "2.416675",
+      "perf6_gradient": "2.541168",
+      "perf6_repeat_wp": "2.414738",
+      "perf6_repeat_gradient": "2.535366"
+    }
+  ],
+  "base_perf6_mean_wp": 2.714644,
+  "base_perf6_mean_gradient": 2.8508665
+}

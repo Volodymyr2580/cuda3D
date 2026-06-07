@@ -25,6 +25,26 @@ p_next write-only
 
 That makes it safe to design future kernels where `p_next` production and `p(t+2)` prediction are reasoned about without old-p0 overwrite races.
 
+## Phase-2 Scope
+
+Phase2 is deliberately narrow:
+
+```text
+Only triple-buffer-based temporal pipeline work is allowed.
+```
+
+Do not restart:
+
+```text
+PML face split
+PML block/mask/prune sweeps
+p_core block/register sweeps
+simple CUDA Graph replay
+simple memory-pool optimization
+MPI temporal blocking
+full-domain temporal blocking
+```
+
 ## Possible Phase-2 Directions
 
 ### Split Out-of-Place Step Kernels
@@ -99,10 +119,15 @@ Triple buffer alone is expected to be neutral or slightly slower.
 
 ## Gate Before Any Phase-2 Implementation
 
-Do not start a new temporal prototype unless triple-buffer baseline passes:
+Triple-buffer standalone has passed correctness, but it did not clear the repeat performance gate by itself. Any phase2 candidate must be judged against `zmem_reference`, not against standalone triple-buffer.
+
+Do not continue a phase2 temporal prototype unless the meaningful case clears:
 
 ```text
+single GPU / single MPI rank first
 correctness rel_l2 <= 1e-5
-perf_1gpu_6shots repeat slowdown <= 2% or accepted by user as a design baseline
-debug dumps step 0/1/2 mapped correctly
+finite outputs, identical output count and sizes
+perf_1gpu_6shots repeat WP speedup >= 5% vs zmem_reference
 ```
+
+If the meaningful case is `<5%`, stop immediately and write the failure report. Do not expand to MPI, full-domain temporal blocking, PML face split, or further block/register sweeps.

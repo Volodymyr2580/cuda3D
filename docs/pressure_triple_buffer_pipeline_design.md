@@ -4,7 +4,15 @@ Date: 2026-06-07
 
 ## Status
 
-Design/audit only. No CUDA implementation has been made in this branch yet.
+Implemented as a macro-gated prototype on branch `exp/pressure-triple-buffer-pipeline`.
+
+The standalone prototype passed correctness but did not clear the meaningful repeat performance gate. It remains default-off and is retained as a dataflow foundation for phase2 temporal pipeline work, not as a promoted baseline.
+
+Final validation report:
+
+```text
+reports/triple_buffer_3h/final_3h_report.md
+```
 
 ## Motivation
 
@@ -241,4 +249,12 @@ slowdown 2% to 5%:
 
 slowdown > 5%:
     stop and report memory/dataflow overhead
+```
+
+Actual standalone result:
+
+```text
+correctness: pass, rel_l2=0
+perf_1gpu_6shots repeat: about 1.0045x WP speedup vs zmem_reference
+decision: keep default-off, do not promote, use only as phase2 temporal-pipeline foundation
 ```

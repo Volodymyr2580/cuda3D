@@ -2695,3 +2695,66 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 当前实现只验证 single GPU / single MPI rank；多 rank 不应默认启用。
   - 该实现应作为后续 temporal pipeline 或 multi-step pressure schedule 的结构地基。
   - 服务器最终 binary 已恢复为 `zmem_reference`，后续稳定测试仍以 zmem flags 为准。
+
+## 2026-06-07 21:55:24 +0800 - Close baseline audit and define phase2 temporal gate
+
+- 操作目标：
+  - 按用户建议先收口：核对 `zmem_reference` stable tag。
+  - 在 RTX 5090 同机重跑 `default_no_macro`、`current_best_reference`、`zmem_reference` 三套构建，生成正式总提速表。
+  - 将今天失败路线写入 architecture decision log，明确禁止后续 agent 重复投入。
+  - 建立更小、更硬的 phase2 gate：只允许 triple-buffer-based temporal pipeline，meaningful case 若无 `>=5%` repeat speedup 立即停止。
+- 修改文件：
+  - `AGENTS.md`
+  - `docs/architecture_decision_log.md`
+  - `docs/post_triple_buffer_temporal_plan.md`
+  - `docs/pressure_triple_buffer_pipeline_design.md`
+  - 新增 `docs/phase2_temporal_pipeline_gate.md`
+  - 新增本地同步报告目录 `reports/formal_speed_table_20260607_215057/`
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地核对：
+    - `git cat-file -t stable-zmem-rtx5090-20260607`
+    - `git show --no-patch --format=fuller stable-zmem-rtx5090-20260607`
+    - `git ls-remote --tags origin stable-zmem-rtx5090-20260607`
+  - 本地 `rg` 搜索因 PowerShell 报 `Access is denied`，按项目约定改用 `Get-ChildItem ... | Select-String`。
+  - 远端状态检查：
+    - `cd /work/wenzhe/cuda3D`
+    - `git status --short --branch`
+    - `git tag --list 'stable-zmem*'`
+    - `nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu --format=csv,noheader`
+  - 远端正式同机重跑：
+    - default/no-macro flags：`-O3 -arch=sm_120 --use_fast_math`
+    - current-best flags：`-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2`
+    - zmem flags：`-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2`
+    - 每个构建均运行 `correctness`、`perf_1gpu`、`perf_1gpu_6shots`、`perf_1gpu_6shots` repeat。
+    - 使用 `tools/compare_outputs.py` 比较 current-best/zmem 对 default，以及 zmem 对 current-best。
+  - 远端最后重新构建 zmem flags，使服务器最终二进制恢复为稳定基线。
+  - 使用 `tools/remote_get.py` 拉取远端小型报告文件到本地 `reports/formal_speed_table_20260607_215057/`。
+- 测试结果：
+  - stable tag 已存在并已在 GitHub：`stable-zmem-rtx5090-20260607 -> ea091c5e97b9d00e9f4d7847e5ada1f884de0cab`。
+  - 远端 GPU 空闲：RTX 5090 memory used `481 MiB`，utilization `0%`。
+  - 三套构建均编译成功，所有 benchmark return code 为 `0`。
+  - 所有输出对比均通过，最大 rel L2 为 `0`，最大绝对误差为 `0`。
+- 输出/哈希/误差摘要：
+  - 正式报告：`reports/formal_speed_table_20260607_215057/formal_speed_table.md`
+  - `default_no_macro`：
+    - binary SHA256：`21df625f8246a9e1309b593fe63d9ca188de0eeb136ed5bde401c3b5a71d4b04`
+    - perf1 WP/Gradient：`0.547242s / 0.576376s`
+    - perf6 mean WP/Gradient：`2.714644s / 2.850866s`
+  - `current_best_reference`：
+    - binary SHA256：`ffceea2433f787334b1bcd48578f4fe7beae1e89e5836f20429b4390e27fa780`
+    - perf1 WP/Gradient：`0.511066s / 0.540409s`
+    - perf6 mean WP/Gradient：`2.508323s / 2.638547s`
+    - vs default speedup：WP `1.082255x`，Gradient `1.080468x`
+  - `zmem_reference`：
+    - binary SHA256：`b7a5ac86612ff791662f49992538ffeac14eee61d73f739a9f7fe66d6852e867`
+    - perf1 WP/Gradient：`0.484380s / 0.515100s`
+    - perf6 mean WP/Gradient：`2.415706s / 2.538267s`
+    - vs default speedup：WP `1.123747x`，Gradient `1.123155x`
+    - vs current-best speedup：WP `1.038339x`，Gradient `1.039507x`
+  - 远端 final zmem binary SHA256：`92d52a83cf8e290924f6e8df11022e48e5769ab84439bd26e665bd80358da502`
+- 风险与下一步：
+  - `default_no_macro` 是当前源码中的可用 original-like/no-macro 路径，不是已证明未修改的上游原始 tarball；正式报告已明确该限制。
+  - 旧 4090 阶段的 `1.8x/2.0x` 数字包含 MPI/rank/调度口径，不能直接混入 RTX 5090 单卡 CUDA kernel 总表。
+  - phase2 只允许 `triple-buffer-based temporal pipeline`；若 meaningful `perf_1gpu_6shots repeat` 相对 `zmem_reference` 没有 `>=5%` WP speedup，必须停止并写报告。
+  - 后续不应继续 PML face split、block/register sweep、simple CUDA Graph/memory-pool、MPI temporal blocking 或 full-domain temporal blocking。

@@ -8,6 +8,12 @@ This file records major CUDA optimization route decisions so future agents do no
 
 `CUDA3D_PML_ZMEM_IN_P` is the stable RTX 5090 baseline.
 
+Stable tag:
+
+```text
+stable-zmem-rtx5090-20260607 -> ea091c5e97b9d00e9f4d7847e5ada1f884de0cab
+```
+
 Stable flags:
 
 ```text
@@ -26,6 +32,32 @@ Reason:
 perf_1gpu_6shots repeat speedup vs current_best_reference was about 1.049x.
 Later micro-routes did not clear the 2% repeat gate.
 ```
+
+Same-machine formal rerun:
+
+```text
+reports/formal_speed_table_20260607_215057/formal_speed_table.md
+```
+
+Formal RTX 5090 results, using identical cases and source with only compile macros changed:
+
+```text
+default_no_macro -> current_best_reference:
+  WP speedup       1.082255x
+  Gradient speedup 1.080468x
+
+default_no_macro -> zmem_reference:
+  WP speedup       1.123747x
+  Gradient speedup 1.123155x
+
+current_best_reference -> zmem_reference:
+  WP speedup       1.038339x
+  Gradient speedup 1.039507x
+```
+
+All formal output comparisons passed with max rel L2 `0`.
+
+Note: `default_no_macro` is the available original-like/no-macro path in the current source tree. It is not proof of a pristine upstream original tarball.
 
 ### Stopped: PML Fused Z-Slab
 
@@ -127,4 +159,104 @@ Initial acceptance target:
 Correctness first.
 perf_1gpu_6shots repeat slowdown <= 2% is acceptable for a disabled dataflow-clean baseline candidate.
 Slowdown > 5% should stop implementation and trigger memory/dataflow overhead analysis.
+```
+
+### Completed: Pressure Triple-Buffer Standalone Prototype
+
+Decision:
+
+```text
+Keep CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE macro-gated and default-off.
+Do not promote it to zmem_reference.
+Do not continue standalone triple-buffer micro-optimization.
+```
+
+Evidence:
+
+```text
+smoke_1gpu: pass, rel_l2=0
+correctness: pass, rel_l2=0
+perf_1gpu_6shots output compare: pass, rel_l2=0
+
+perf_1gpu A/B:
+  WP speedup       about 1.0208x
+  Gradient speedup about 1.0182x
+
+perf_1gpu_6shots repeat A/B:
+  WP speedup       about 1.0045x
+  Gradient speedup about 1.0063x
+```
+
+Reason:
+
+```text
+Triple buffer fixed the pressure dataflow alias and gives a clean p_prev/p_curr/p_next foundation.
+It does not remove enough work by itself to clear the 2% repeat gate on the meaningful 6-shot case.
+Its value is architectural, not standalone speed.
+```
+
+Report:
+
+```text
+reports/triple_buffer_3h/final_3h_report.md
+```
+
+### Consolidated Stop List
+
+Decision:
+
+```text
+Do not reopen these directions unless new profiler evidence directly contradicts the recorded reason.
+```
+
+Stopped or forbidden:
+
+```text
+CUDA3D_PML_ZMEM_V_TILE_PRUNE
+CUDA3D_PML_TILE_MASK_FASTPATH
+CUDA3D_PML_ZFACE_P_SPECIALIZE
+CUDA3D_PML_ZFACE_V_SPECIALIZE
+CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE
+CUDA3D_PML_FUSED_ZSLAB_SKIP_V_OWNED
+RECOMPUTE_X / RECOMPUTE_Y / RECOMPUTE_XYZ
+PML tile block shape sweep
+p_core simple block shape sweep
+-maxrregcount / register cap sweep
+standalone predict+copy micro tuning
+simple CUDA Graph replay
+simple static memory pool
+simple v_pml + p_pml fusion without grid-wide synchronization
+full-domain temporal blocking
+MPI temporal blocking
+```
+
+Reason:
+
+```text
+These routes either already failed correctness, failed the repeat performance gate, duplicated existing baseline behavior, or produced too little eligible work to justify implementation complexity.
+```
+
+### Accepted Next Gate: Phase2 Triple-Buffer Temporal Pipeline
+
+Decision:
+
+```text
+Start a smaller phase2 only for triple-buffer-based temporal pipeline work.
+No other optimization family is allowed in phase2.
+```
+
+Hard gate:
+
+```text
+single GPU / single MPI rank first
+zmem_reference remains the baseline
+correctness rel_l2 <= 1e-5 and finite outputs required
+meaningful perf_1gpu_6shots repeat WP speedup >= 5% required
+if the meaningful case is <5%, stop immediately and write a report
+```
+
+Details:
+
+```text
+docs/phase2_temporal_pipeline_gate.md
 ```
