@@ -143,6 +143,15 @@ static void check_zmem_new_written(float *d_memory_dz_next, size_t count,
 #endif
 #endif
 
+#ifdef CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE
+#ifndef CUDA3D_PML_TILE_LIST_P
+#define CUDA3D_PML_TILE_LIST_P
+#endif
+#ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
+#error "CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE must not be combined with CUDA3D_PML_ZFACE_P_SPECIALIZE"
+#endif
+#endif
+
 #if defined(CUDA3D_PML_TILE_LIST_V) || defined(CUDA3D_PML_TILE_LIST_P)
 static int ceil_div_int(int n, int d) {
   return (n + d - 1) / d;
@@ -248,6 +257,25 @@ static int build_pml_tile_list(PmlTile **tiles_out,
 						    skip3_lo, skip3_hi));
 	int skip = old_skip;
 	if (!old_skip) ++original_ntile;
+#ifdef CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE
+	if (!for_velocity && !skip) {
+	  const int safe2_lo = core2_lo + FusedSafetyRadius;
+	  const int safe3_lo = core3_lo + FusedSafetyRadius;
+	  const int safe2_hi = core2_hi - FusedSafetyRadius;
+	  const int safe3_hi = core3_hi - FusedSafetyRadius;
+	  const int safe_xy_tile =
+	    safe2_hi > safe2_lo && safe3_hi > safe3_lo &&
+	    tile_fully_inside_box(z0, x0, y0,
+				  PmlTileBlockSize1,
+				  PmlTileBlockSize2,
+				  PmlTileBlockSize3,
+				  n1, n2, n3,
+				  0, n1,
+				  safe2_lo, safe2_hi,
+				  safe3_lo, safe3_hi);
+	  if (safe_xy_tile) skip = 1;
+	}
+#endif
 #if defined(CUDA3D_PML_ZMEM_IN_P) && defined(CUDA3D_PML_ZMEM_V_TILE_PRUNE)
 	if (for_velocity) {
 	  const int may_need_vz = 0;
@@ -365,6 +393,60 @@ static int build_pml_zface_tile_list(PmlTile **tiles_out,
   return ntile;
 }
 #endif
+
+#ifdef CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE
+static int build_pml_fused_zslab_tile_list(PmlTile **tiles_out,
+					   int n3, int n2, int n1,
+					   int npml) {
+  const int slab_depth = npml + CorePmlMargin;
+  const int safe2_lo = npml + CorePmlMargin + FusedSafetyRadius;
+  const int safe3_lo = npml + CorePmlMargin + FusedSafetyRadius;
+  const int safe2_hi = n2 - npml - CorePmlMargin - FusedSafetyRadius;
+  const int safe3_hi = n3 - npml - CorePmlMargin - FusedSafetyRadius;
+  const int safe_n2 = safe2_hi - safe2_lo;
+  const int safe_n3 = safe3_hi - safe3_lo;
+  if (slab_depth <= 0 || safe_n2 <= 0 || safe_n3 <= 0) {
+    *tiles_out = NULL;
+    return 0;
+  }
+
+  const int grid1 = ceil_div_int(slab_depth, FusedZSlabBlockSize1);
+  const int grid2 = ceil_div_int(safe_n2, FusedZSlabBlockSize2);
+  const int grid3 = ceil_div_int(safe_n3, FusedZSlabBlockSize3);
+  const int max_tiles = 2 * grid1 * grid2 * grid3;
+  PmlTile *tiles = (PmlTile*)malloc((size_t)max_tiles * sizeof(PmlTile));
+  if (tiles == NULL) {
+    printf("ERROR allocating fused z-slab PML tile list\n");
+    exit(0);
+  }
+
+  int ntile = 0;
+  for (int by = 0; by < grid3; ++by) {
+    const int y0 = safe3_lo + by * FusedZSlabBlockSize3;
+    for (int bx = 0; bx < grid2; ++bx) {
+      const int x0 = safe2_lo + bx * FusedZSlabBlockSize2;
+      for (int bz = 0; bz < grid1; ++bz) {
+	const int z0_lo = bz * FusedZSlabBlockSize1;
+	tiles[ntile].z0 = z0_lo;
+	tiles[ntile].x0 = x0;
+	tiles[ntile].y0 = y0;
+	tiles[ntile].mask = PML_TILE_MASK_Z;
+	++ntile;
+
+	const int z0_hi = n1 - slab_depth + bz * FusedZSlabBlockSize1;
+	tiles[ntile].z0 = z0_hi;
+	tiles[ntile].x0 = x0;
+	tiles[ntile].y0 = y0;
+	tiles[ntile].mask = PML_TILE_MASK_Z;
+	++ntile;
+      }
+    }
+  }
+
+  *tiles_out = tiles;
+  return ntile;
+}
+#endif
 #endif
 
 void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
@@ -415,6 +497,10 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   PmlTile *h_v_pml_tiles = NULL, *h_p_pml_tiles = NULL;
   PmlTile *d_v_pml_tiles = NULL, *d_p_pml_tiles = NULL;
   int n_v_pml_tiles = 0, n_p_pml_tiles = 0;
+#endif
+#ifdef CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE
+  PmlTile *h_fused_zslab_tiles = NULL, *d_fused_zslab_tiles = NULL;
+  int n_fused_zslab_tiles = 0;
 #endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
   PmlTile *h_zface_p_pml_tiles = NULL, *d_zface_p_pml_tiles = NULL;
@@ -553,7 +639,7 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 
   check_gpu_error_2("Error in Memset");
 
-  dim3 dimg_v, dimb_v, dimg_p, dimb_p, dimg_pml, dimb_pml, dimg_pml_zface, dimb_pml_zface, dims, dimbs, dimr, dimbr;// dims(1,1), dimbs(2*nbell+1, 2*nbell+1);
+  dim3 dimg_v, dimb_v, dimg_p, dimb_p, dimg_pml, dimb_pml, dimg_pml_zface, dimb_pml_zface, dimg_fused_zslab, dimb_fused_zslab, dims, dimbs, dimr, dimbr;// dims(1,1), dimbs(2*nbell+1, 2*nbell+1);
   dims.x=1;
   dims.y=1;
   dims.z=1;
@@ -616,6 +702,13 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   cudaMalloc((void**)&d_p_pml_tiles, (size_t)n_p_pml_tiles * sizeof(PmlTile));
   cudaMemcpy(d_p_pml_tiles, h_p_pml_tiles, (size_t)n_p_pml_tiles * sizeof(PmlTile), cudaMemcpyHostToDevice);
 #endif
+#ifdef CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE
+  n_fused_zslab_tiles = build_pml_fused_zslab_tile_list(&h_fused_zslab_tiles, nby, nbx, nbz, nbd);
+  if (n_fused_zslab_tiles > 0) {
+    cudaMalloc((void**)&d_fused_zslab_tiles, (size_t)n_fused_zslab_tiles * sizeof(PmlTile));
+    cudaMemcpy(d_fused_zslab_tiles, h_fused_zslab_tiles, (size_t)n_fused_zslab_tiles * sizeof(PmlTile), cudaMemcpyHostToDevice);
+  }
+#endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
   n_zface_p_pml_tiles = build_pml_zface_tile_list(&h_zface_p_pml_tiles, nby, nbx, nbz, nbd);
   if (n_zface_p_pml_tiles > 0) {
@@ -640,6 +733,14 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   dimg_pml.y=1;
   dimg_pml.z=1;
 #endif
+#ifdef CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE
+  dimb_fused_zslab.x=FusedZSlabBlockSize1;
+  dimb_fused_zslab.y=FusedZSlabBlockSize2;
+  dimb_fused_zslab.z=FusedZSlabBlockSize3;
+  dimg_fused_zslab.x=n_fused_zslab_tiles;
+  dimg_fused_zslab.y=1;
+  dimg_fused_zslab.z=1;
+#endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
   dimb_pml_zface.x=PmlZFaceBlockSize1;
   dimb_pml_zface.y=PmlZFaceBlockSize2;
@@ -652,6 +753,14 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
     printf("PML tile-list enabled: v_tiles=%d, p_tiles=%d, block=%dx%dx%d\n",
 	   n_v_pml_tiles, n_p_pml_tiles,
 	   PmlTileBlockSize1, PmlTileBlockSize2, PmlTileBlockSize3);
+#ifdef CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE
+  if(mytid==0)
+    printf("PML fused z-slab prototype enabled: fused_tiles=%d, block=%dx%dx%d, slab_depth=%d, safety_radius=%d, skip_v_owned=0\n",
+	   n_fused_zslab_tiles,
+	   FusedZSlabBlockSize1, FusedZSlabBlockSize2, FusedZSlabBlockSize3,
+	   nbd + CorePmlMargin,
+	   FusedSafetyRadius);
+#endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
   if(mytid==0)
     printf("PML zface pressure specialize enabled: zface_p_tiles=%d, block=%dx%dx%d\n",
@@ -668,6 +777,9 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 #endif
 #ifdef CUDA3D_PML_TILE_LIST_P
   cudaFuncSetCacheConfig(cuda_fd3d_p_pml_tile_ns, cudaFuncCachePreferL1);
+#endif
+#ifdef CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE
+  cudaFuncSetCacheConfig(cuda_fd3d_p_pml_fused_zslab_ns, cudaFuncCachePreferL1);
 #endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
   cudaFuncSetCacheConfig(cuda_fd3d_p_pml_zface_ns, cudaFuncCachePreferL1);
@@ -735,6 +847,19 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 				       d_memory_dzz, d_memory_dz,
 				       d_zface_p_pml_tiles, n_zface_p_pml_tiles);
       check_gpu_error_loop("compute P pml zface");
+    }
+#endif
+#ifdef CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE
+    if (n_fused_zslab_tiles > 0) {
+      cuda_fd3d_p_pml_fused_zslab_ns<<<dimg_fused_zslab, dimb_fused_zslab >>>(d_p0, d_p1, d_vy, d_vx, d_vz,
+				     d_cw2, tdy, tdx, tdz,
+				     nby, nbx, nbz, nbd, dt2,
+				     d_memory_dzz,
+				     d_memory_dz,
+				     d_memory_dz_next,
+				     d_memory_dx, d_memory_dy,
+				     d_fused_zslab_tiles, n_fused_zslab_tiles);
+      check_gpu_error_loop("compute P pml fused zslab");
     }
 #endif
 #ifdef CUDA3D_PML_TILE_LIST_P
@@ -845,6 +970,10 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   if (d_p_pml_tiles) cudaFree(d_p_pml_tiles);
   if (h_v_pml_tiles) free(h_v_pml_tiles);
   if (h_p_pml_tiles) free(h_p_pml_tiles);
+#endif
+#ifdef CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE
+  if (d_fused_zslab_tiles) cudaFree(d_fused_zslab_tiles);
+  if (h_fused_zslab_tiles) free(h_fused_zslab_tiles);
 #endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
   if (d_zface_p_pml_tiles) cudaFree(d_zface_p_pml_tiles);

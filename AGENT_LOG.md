@@ -2558,3 +2558,38 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - profiler gate 已通过，下一步可进入 `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE`。
   - NCU 证据支持数据流/依赖延迟优化，不支持继续做 block-size 或 register-cap 随机 sweep。
   - `p_core` z-pencil 有依据但暂缓，优先做 PML z-slab；若 PML prototype 低于 5% repeat speedup，再转向 p_core 或重新评估。
+
+## 2026-06-07 10:24:52 +0800 - PML fused z-slab prototype implemented and stopped
+
+- 操作目标：按照 Pro 路线实现并验证 `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE`，判断是否达到继续做 velocity prune 或 region-wide fusion 的 5% repeat speedup 门槛。
+- 修改文件：
+  - `include/inc3D/cu_common.h`：新增 fused z-slab block 默认宏、`FusedSafetyRadius`、宏依赖护栏。
+  - `include/inc3D/single_solver.h`：新增 `cuda_fd3d_p_pml_fused_zslab_ns` 原型。
+  - `src/single_solver.cu`：新增 fused-owned 点判断、新 fused z-slab pressure kernel，并让 generic `p_pml_tile` 跳过 fused-owned pressure 点。
+  - `src/rem_fd.cu`：新增 fused z-slab tile-list 构建、launch、cache config、tile count 打印；residual fix 版减少 generic pressure tile list。
+  - `docs/pml_fused_zslab_result.md`：新增完整实现、验证、NCU 和决策报告。
+  - `docs/pml_fusion_result.md`、`docs/final_arch_report.md`：更新 PML fusion 结论为停止。
+- 执行命令摘要：
+  - 本地先尝试 `python tools/remote_put.py ...`，因 Windows Python 缺少 `paramiko` 失败；随后切换到 WSL Python 执行远程同步成功。
+  - 服务器编译默认 stable flags，确认不开 fused 宏时仍能通过。
+  - 服务器编译 fused phase-1 flags：`ZMEM_IN_P + TILE_LIST + FUSED_ZSLAB_PROTOTYPE + FusedSafetyRadius=8 + FusedZSlabBlockSize=32x4x2`。
+  - 运行 `build_and_test_variant.sh` 的 debug、correctness、`perf_1gpu`、`perf_1gpu_6shots`、repeat。
+  - 使用 Nsight Compute 采集 fused residual fix 版的 `SpeedOfLight/MemoryWorkloadAnalysis/SchedulerStats/Occupancy/LaunchStats` 和 `WarpStateStats`。
+- 测试结果：
+  - strict z-PML face 版：correctness 和 perf 输出对比通过，但 repeat WP speedup 仅 `0.855143x`，明显变慢。
+  - residual-skipping 初版：`correctness` 通过，但 `perf_1gpu` 输出失败；原因是 expanded z margin 中 lower margin 被 `else` 误当作 upper PML memory 更新。
+  - residual fix 版：correctness、`perf_1gpu`、`perf_1gpu_6shots`、repeat 全部通过。
+  - debug dump step 0/1/2 通过；注意 smoke case 中 `fused_tiles=0`，主要验证 fallback/default path，真正 fused 区域由 perf/correctness 覆盖。
+- 输出/哈希/误差摘要：
+  - residual fix tag：`fused_zslab_phase1_residual_fix_32x4x2`。
+  - correctness：6 个输出 rel L2 全为 `0.0`。
+  - `perf_1gpu`：rel L2 `7.147390e-07`。
+  - `perf_1gpu_6shots_repeat`：max rel L2 `6.290364e-07`。
+  - residual fix repeat timing：baseline WP `2.390644s`，candidate WP `2.498462s`，WP speedup `0.956846x`；baseline Gradient `2.514458s`，candidate Gradient `2.615939s`，Gradient speedup `0.961207x`。
+  - NCU main report：`benchmarks/profiles/fused_zslab_residual_fix_ncu_main_20260607.ncu-rep`。
+  - NCU warp report：`benchmarks/profiles/fused_zslab_residual_fix_ncu_warpstates_20260607.ncu-rep`。
+  - NCU key result：generic `p_pml_tile` 从 baseline `189.366us` 降到 `87.091us`，但新增 `p_pml_fused_zslab` 为 `109.104us`，p-side sampled cost 合计约 `196.195us`，略慢于 baseline。
+- 风险与下一步：
+  - PML z-slab split 正确但未达到 `>=1.05x` continuation threshold，且 repeat 实际变慢；按计划停止该方向。
+  - 不启用 `CUDA3D_PML_FUSED_ZSLAB_SKIP_V_OWNED`，避免在一个已经低收益的 split 上继续增加正确性风险。
+  - 下一步建议转向 `p_core` z-pencil/shared-memory 或更整体的数据复用重写。

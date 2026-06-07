@@ -120,12 +120,33 @@ extern "C" {
 #ifndef PmlZFaceBlockSize3
 #define PmlZFaceBlockSize3   4
 #endif
+#ifndef FusedZSlabBlockSize1
+#define FusedZSlabBlockSize1   32
+#endif
+#ifndef FusedZSlabBlockSize2
+#define FusedZSlabBlockSize2   4
+#endif
+#ifndef FusedZSlabBlockSize3
+#define FusedZSlabBlockSize3   2
+#endif
 #define BlockSize 256
 #define MAX_BLOCK_SZ 256
 #endif
 
 #ifndef CorePmlMargin
 #define CorePmlMargin 4
+#endif
+
+#ifndef FusedSafetyRadius
+#define FusedSafetyRadius 8
+#endif
+
+#if defined(CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE) && !defined(CUDA3D_PML_ZMEM_IN_P)
+#error "CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE requires CUDA3D_PML_ZMEM_IN_P"
+#endif
+
+#if defined(CUDA3D_PML_FUSED_ZSLAB_SKIP_V_OWNED) && !defined(CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE)
+#error "CUDA3D_PML_FUSED_ZSLAB_SKIP_V_OWNED requires CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE"
 #endif
 
 #ifndef _con_stencil

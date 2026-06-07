@@ -74,4 +74,11 @@ The profiler gate is now satisfied. The data confirms that more blind block-size
 - `p_pml_tile` and `v_pml_tile` both show long-scoreboard dominated stalls and moderate DRAM throughput, which supports a dataflow/reuse prototype.
 - `p_core` also shows long scoreboard and high compute/memory throughput, but p_core work should follow PML z-slab unless PML fails its 5% repeat threshold or p_core becomes dominant.
 
-Next action: implement `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE` as a macro-gated pure z-PML face prototype, with debug dump step 0/1/2, correctness, `perf_1gpu`, `perf_1gpu_6shots`, and repeat validation.
+`CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE` has now been implemented and validated. It was correct but slower than `zmem_reference`:
+
+```text
+best validated perf_1gpu_6shots_repeat WP speedup = 0.956846x
+required continuation threshold                  = 1.05x
+```
+
+Next action: stop the limited PML z-slab split and shift to the next architecture direction, likely `CUDA3D_CORE_ZPENCIL_SHARED` or a broader algorithmic rewrite with a stronger data-reuse model. See `docs/pml_fused_zslab_result.md`.
