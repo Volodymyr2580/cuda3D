@@ -2506,3 +2506,27 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 当前只有静态资源信息，没有 memory throughput、occupancy、stall reason，不能据此启动大结构重写。
   - 需要管理员把 NVIDIA profiling counter 权限打开，目标是 `RmProfilingAdminOnly: 0`。
   - 权限打开后，先重跑 `docs/profiler_inventory.md` 中的 NCU 命令，再决定是否进入 PML z-slab fusion 或 p_core z-pencil。
+
+## 2026-06-07 09:18:00 +0800 - NVIDIA profiler permission configuration written
+
+- 操作目标：使用管理员权限为 RTX 5090 服务器开放 NVIDIA GPU performance counters，以便 Nsight Compute 采集硬件级 profiler 数据。
+- 修改文件：
+  - 服务器系统文件：`/etc/modprobe.d/nvidia-profiler.conf`。
+  - 服务器 initramfs：执行 `update-initramfs -u` 更新启动镜像。
+  - 项目文件：仅追加本日志条目。
+- 执行命令摘要：
+  - 先执行 `sudo -S true` 验证 sudo 密码可用。
+  - 写入 `/etc/modprobe.d/nvidia-profiler.conf`：
+    `options nvidia NVreg_RestrictProfilingToAdminUsers=0`
+  - 执行 `update-initramfs -u`。
+  - 检查 `/proc/driver/nvidia/params` 中的 runtime 参数。
+- 测试结果：
+  - sudo 验证通过。
+  - 配置文件写入成功。
+  - `update-initramfs` 成功生成 `/boot/initrd.img-6.17.0-29-generic`。
+  - 当前 runtime 参数仍为 `RmProfilingAdminOnly: 1`，说明需要重启或重新加载 NVIDIA 驱动模块后生效。
+- 输出/哈希摘要：
+  - 配置文件内容：`options nvidia NVreg_RestrictProfilingToAdminUsers=0`。
+- 风险与下一步：
+  - 尚未重启服务器，当前 Nsight Compute 仍会因 `ERR_NVGPUCTRPERM` 失败。
+  - 下一步需要用户确认是否允许重启服务器；重启后重新检查 `RmProfilingAdminOnly` 是否变为 `0`，然后重跑 NCU。
