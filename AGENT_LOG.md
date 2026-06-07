@@ -2591,3 +2591,47 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 曾按旧文档尝试 `benchmarks/cases/smoke_1gpu`，远程当前不存在该 case；改用现有最小 `profile_1gpu` 做 sanity check。
   - 结论：不实现 `CUDA3D_CORE_ZPENCIL_SHARED`，因为当前 baseline 已经包含该 z-pencil shared-memory 路径。继续做同类宏只会重复现有代码，缺少达到 `p_core >=10%` 的可信路径。
   - 下一步应转向更大尺度数据流重构，例如 core-interior temporal blocking feasibility，而不是继续 p_core block-size sweep 或重复 shared-memory variant。
+
+## 2026-06-07 11:45:37 +0800 - Core 2-step interior prototype scaffolding
+
+- 操作目标：根据最新架构反馈，冻结 `ZMEM_IN_P` 稳定基线，停止 PML z-slab 与 p_core z-pencil 路线，启动 `CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE` 的 dependency map、debug harness 和最小安全 case。
+- 修改文件：
+  - 更新 `AGENTS.md`，把允许 prototype 顺序改为 core strict-interior two-step temporal/dataflow。
+  - 新增 `docs/architecture_decision_20260607.md`、`docs/architecture_decision_log.md`。
+  - 新增 `docs/core_2step_dependency_map.md`、`docs/core_2step_interior_design.md`、`docs/core_2step_interior_result.md`。
+  - 更新 `include/inc3D/cu_common.h`，新增 `CUDA3D_CORE_STENCIL_RADIUS=7`。
+  - 更新 `src/single_solver.cu`，让 `CoreStencilRadius` 由 `CUDA3D_CORE_STENCIL_RADIUS` 派生。
+  - 更新 `src/rem_fd.cu`，新增 `CUDA3D_CORE_2STEP_DEBUG_DUMP` / `CUDA3D_CORE_2STEP_INTERIOR_COMPARE` 下的 strict core interior p0/p1 dump harness。
+  - 新增 `tools/create_core_2step_case.py`、`tools/compare_core_interior_dumps.py`。
+  - 新增 `benchmarks/cases/core_2step_interior_1gpu/` 的 input/nav/manifest；大体积 `.dir` 由生成脚本重建，不进 Git。
+- 执行命令摘要：
+  - 本地打 tag：`stable-zmem-rtx5090-20260607`，并推送到 GitHub。
+  - 新建并推送分支：`exp/core-2step-interior-prototype`。
+  - 本地执行 `python -m py_compile tools/create_core_2step_case.py tools/compare_core_interior_dumps.py`。
+  - 本地与服务器执行 `python3 tools/create_core_2step_case.py` 生成最小 case。
+  - 服务器默认 zmem build：`make -B -f makefile.rtx5090 test`，使用稳定 baseline flags。
+  - 服务器 debug build：额外加入 `-DCUDA3D_CORE_2STEP_DEBUG_DUMP`。
+  - 服务器运行 `benchmarks/cases/core_2step_interior_1gpu/input_core_2step_interior_1gpu.in`。
+  - 服务器执行 `tools/compare_core_interior_dumps.py` 对 debug dump 目录做 self-compare。
+  - 服务器最后重新编译不带 debug 宏的 zmem binary，并跑最小 case sanity check。
+- 测试结果：
+  - Python 工具语法检查通过。
+  - 默认 zmem build 通过，初次 scaffolding binary SHA256：`496e09b9021ea03c1461b242cee400b90d5782970b3dafaccc86a8601c9a0d45`。
+  - 初始 `xpad=0.05` 的 debug run 失败，错误为 strict interior 在 x/y 裁剪后为空：`n=(96,25,25)`，region x/y 上界为 `-1`。
+  - 修复 case generator：默认 `xpad=0.5`，避免 acquisition crop 过小。
+  - debug build 通过，debug binary SHA256：`afa215446262be563c2a753a79c04f115afd050aff4bfe0bf4ce7e7b19d8d244`。
+  - 修复后的 debug run 通过：`Gradient TIME all=0.004658s`，`WP computing time=0.003526s`，日志包含 `ALL DONE`。
+  - debug dump 生成 18 个文件：6 个 timestep，每步 `p0_core.bin`、`p1_core.bin`、`core_meta.txt`。
+  - meta 样例：`source_in_region=0`，`receivers_in_region=0`，region `z=[26,70)`、`x=[26,35)`、`y=[26,35)`，count `3564`。
+  - self-compare 通过：`benchmarks/reports/core2step_debug_self_compare_xpad_20260607/comparison.md`，12 个 `.bin` 全部 pass。
+  - 恢复不带 debug 宏的 zmem binary 后，SHA256：`e2e48089353443fbbf3088ef7e1131bec9023e4721f25e9ff4a1f3e90a8a045a`。
+  - post-restore 最小 case sanity check 通过：`Gradient TIME all=0.002856s`，`WP computing time=0.001342s`，日志包含 `ALL DONE`。
+- 输出/哈希/误差摘要：
+  - stable tag：`stable-zmem-rtx5090-20260607`。
+  - 分支：`exp/core-2step-interior-prototype`。
+  - remote run artifacts：`benchmarks/runs/core_2step_debug_dump_xpad_20260607/`、`benchmarks/reports/core2step_debug_self_compare_xpad_20260607/`、`benchmarks/build_logs/core2step_default_build_20260607.log`、`core2step_debug_build_20260607.log`、`core2step_restore_default_20260607.log`。
+  - 本阶段未实现 `p(t+2)` prediction kernel，因此没有 candidate-vs-baseline 数值误差；当前验证目标是 dump harness 正确生成并可比较。
+- 风险与下一步：
+  - acquisition-based subdomain crop 会改变实际 `nby/nbx/nbz`，不能只按输入全域判断 strict interior；后续必须以 dump meta 中的实际 region 为准。
+  - debug dump 通过并不代表 temporal blocking 已经正确，只说明第一阶段的 dependency map、safe case 和 per-step dump/compare 工具可用。
+  - 下一步可以实现 debug-only `p(t+2)` strict-interior prediction，但仍不得改变主计算输出或 source/receiver 时序。
