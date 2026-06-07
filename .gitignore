@@ -4,6 +4,7 @@ bin/
 *.a
 *.so
 *.exe
+*.bak.*
 
 # Python cache
 __pycache__/
