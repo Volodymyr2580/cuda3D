@@ -143,6 +143,13 @@ __global__ void cuda_core2step_copy_region(float *dst, const float *src,
 				int z0, int z1, int x0, int x1, int y0, int y1);
 #endif
 
+#ifdef CUDA3D_CORE_2STEP_FUSED_INTERIOR
+__global__ void cuda_fd3d_p_core_2step_fused_predict_ns(float *p2, const float *prev, const float *curr, const float *cw2,
+				float _dy2, float _dx2, float _dz2,
+				int n3, int n2, int n1, int npml, float dt,
+				int z0, int z1, int x0, int x1, int y0, int y1);
+#endif
+
 
 __global__ void cuda_fd3d_v_pml2(float *p1, float *vy, float *vx, float *vz,
 				float _dy2, float _dx2, float _dz2, 

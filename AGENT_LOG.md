@@ -2732,3 +2732,43 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 报告总结了 `248ebba` 与 `616280f` 两个 commit 的验证结果。
 - 风险与下一步：
   - 报告明确当前 commit prototype 不是 speedup 路线，下一步应要求 Pro 设计 fused two-step core temporal blocking kernel。
+
+## 2026-06-07 16:42:56 +0800 - Validate debug-only fused core two-step predictor
+
+- 操作目标：按照 Pro 反馈停止 standalone predict+copy 性能路线，启动 `CUDA3D_CORE_2STEP_FUSED_INTERIOR`，先完成 design doc、meaningful case、debug-only fused p2 predictor，并在 RTX 5090 上验证 `p2(it)` 与 baseline 下一步 `p0(it+1)` 一致。
+- 修改文件：
+  - 新增 `docs/core_2step_fused_design.md`，记录 fused two-step 设计约束、tile/inner/outer/halo、cross-CTA 依赖、commit/skip 与 benchmark gate。
+  - 新增 `docs/core_2step_fused_result.md`，记录本阶段 meaningful case、编译 flags、p2-shift 和输出对比结果。
+  - 更新 `AGENTS.md`，把 `CUDA3D_CORE_2STEP_FUSED_INTERIOR` 标记为当前 active architecture path，并记录 debug 阶段通过但尚无 speedup 结论。
+  - 新增 `tools/create_core_2step_meaningful_case.py` 与 `benchmarks/cases/core_2step_meaningful_1gpu/` case 文件。
+  - 更新 `include/inc3D/single_solver.h`，声明 `cuda_fd3d_p_core_2step_fused_predict_ns`。
+  - 更新 `src/single_solver.cu`，新增 correctness-only fused p2 predictor；它在 baseline `p_core` 前使用 `p(t-1), p(t)` 局部重算第一步依赖，不读取其他 CTA 未同步的 `p(t+1)`。
+  - 更新 `src/rem_fd.cu`，接入 fused region 初始化、source/receiver exclusion、debug dump 辅助 buffer、`CUDA3D_CORE_2STEP_FUSED_DEBUG` dump-step gate。
+- 执行命令摘要：
+  - 本地执行 `python -m py_compile tools/create_core_2step_meaningful_case.py tools/compare_core_interior_dumps.py`。
+  - 本地执行 `git diff --check`。
+  - 本地执行 `python tools/create_core_2step_meaningful_case.py` 生成 meaningful case。
+  - 通过 WSL Python 的 `remote_put.py` / `remote_upload.py` 上传明确文件到 `/work/wenzhe/cuda3D`；Windows Python 因缺少 `paramiko` 不能运行这些脚本，未改全局 Python 环境。
+  - 服务器执行 `python3 tools/create_core_2step_meaningful_case.py` 复核 case manifest。
+  - 服务器 debug build flags：稳定 zmem flags 加 `-DCUDA3D_CORE_2STEP_FUSED_INTERIOR -DCUDA3D_CORE_2STEP_FUSED_DEBUG -DCUDA3D_CORE_2STEP_DEBUG_DUMP -DCUDA3D_DEBUG_CHECKS`。
+  - 服务器运行 meaningful case 两次：`CUDA3D_CORE_2STEP_DUMP_STEP=0` dump fused `p2`，`CUDA3D_CORE_2STEP_DUMP_STEP=1` dump baseline `p0`，手动配对后运行 `tools/compare_core_interior_dumps.py --mode p2-shift --rel-tol 1e-6`。
+  - 服务器重新编译 non-debug zmem build，运行同一 meaningful case，并用 `tools/compare_outputs.py` 对比 fused-debug 输出与 zmem baseline 输出。
+- 测试结果：
+  - meaningful case 生成通过：`core_points=2033152`，`fused_eligible_points=922560`，`eligible_ratio=0.453758`，`source_in_fused_region=no`，`receivers_in_fused_region=0`，fused region `30:90,30:154,30:154`。
+  - debug build 通过；debug binary SHA256：`593e58ccc415e60f9a5700c40280ed8bd4c2a77c945f67588668c582c9f5e42b`。
+  - meaningful debug run 通过，日志包含 `ALL DONE`；dump it=0：`Gradient TIME all=0.085542s`，`WP computing time=0.078205s`，elapsed `0:02.66`；dump it=1：`Gradient TIME all=0.085960s`，`WP computing time=0.078484s`，elapsed `0:02.16`。
+  - p2-shift 比较通过：`benchmarks/reports/core2step_fused_p2_shift_meaningful_20260607_163942/comparison.md`，`count=922560`，`rel_l2=0.0`，`max_abs=0.0`，`max_rel=0.0`。
+  - 恢复 zmem build 通过；restored zmem binary SHA256：`86617a8a4bb549e916c0681d7833b85b8516ceb8293104b9f1b2cd734a6f77ba`。
+  - meaningful 输出对比通过：`benchmarks/reports/core2step_fused_output_meaningful_20260607_163942/comparison.md`，1 个 `.dir` 文件 `rel_l2=0.0`，`max_abs=0.0`。
+  - restored zmem meaningful baseline timing：`Gradient TIME all=0.073288s`，`WP computing time=0.064357s`，elapsed `0:02.57`。
+- 输出/哈希/误差摘要：
+  - run：`benchmarks/runs/core_2step_fused_debug_meaningful_20260607_163942`。
+  - p2-shift report：`benchmarks/reports/core2step_fused_p2_shift_meaningful_20260607_163942/`。
+  - output report：`benchmarks/reports/core2step_fused_output_meaningful_20260607_163942/`。
+  - debug-only fused predictor 没有修改主输出，输出相对 zmem baseline 为零误差。
+  - 本地工具经验总结：`rg.exe` 在当前 PowerShell 中被系统拒绝执行时，立即切换 `Get-ChildItem | Select-String`；PowerShell `Select-Object -Index 560..760` 会把 range 当字符串，后续用 `-Skip/-First` 更稳。
+  - 远端命令经验总结：`source ./env_5090.sh` 这类环境脚本不要配 `set -u`，oneAPI/CUDA 环境脚本可能引用未定义变量；后续远端 bash 默认用 `set -eo pipefail`。
+- 风险与下一步：
+  - 当前 fused predictor 只是 correctness probe，不是性能路径；debug timing 变慢是预期结果，不能作为 speedup 结论。
+  - 下一步应实现真正 `CUDA3D_CORE_2STEP_FUSED_COMMIT`：同一 kernel 计算 `p(t+1)` 与 strict-inner `p(t+2)`，下一步对已提交 inner tile 做 block-level early skip，避免 shared-memory fill。
+  - commit 版本必须先在 meaningful case 上通过 correctness；若 repeat speedup `<5%`，应停止 fused two-step route；若 meaningful `>=5%` 但 `perf_1gpu_6shots repeat <2%`，则保持 disabled 并报告适用性受 cropped domains 限制。

@@ -8,7 +8,14 @@
 #error "CUDA3D_CORE_2STEP_COMMIT_INTERIOR requires CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE"
 #endif
 
-#if defined(CUDA3D_PML_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_INTERIOR_COMPARE) || defined(CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE) || defined(CUDA3D_CORE_2STEP_COMMIT_INTERIOR)
+#if defined(CUDA3D_CORE_2STEP_FUSED_COMMIT) && !defined(CUDA3D_CORE_2STEP_FUSED_INTERIOR)
+#error "CUDA3D_CORE_2STEP_FUSED_COMMIT requires CUDA3D_CORE_2STEP_FUSED_INTERIOR"
+#endif
+#if defined(CUDA3D_CORE_2STEP_FUSED_DEBUG) && !defined(CUDA3D_CORE_2STEP_DEBUG_DUMP)
+#error "CUDA3D_CORE_2STEP_FUSED_DEBUG requires CUDA3D_CORE_2STEP_DEBUG_DUMP"
+#endif
+
+#if defined(CUDA3D_PML_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_INTERIOR_COMPARE) || defined(CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE) || defined(CUDA3D_CORE_2STEP_COMMIT_INTERIOR) || defined(CUDA3D_CORE_2STEP_FUSED_INTERIOR)
 #include <sys/stat.h>
 #endif
 
@@ -26,7 +33,7 @@ void check_gpu_error_2(const char *msg){
 #define check_gpu_error_loop(msg) ((void)0)
 #endif
 
-#if defined(CUDA3D_PML_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_INTERIOR_COMPARE) || defined(CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE) || defined(CUDA3D_CORE_2STEP_COMMIT_INTERIOR)
+#if defined(CUDA3D_PML_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_INTERIOR_COMPARE) || defined(CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE) || defined(CUDA3D_CORE_2STEP_COMMIT_INTERIOR) || defined(CUDA3D_CORE_2STEP_FUSED_INTERIOR)
 static void dump_device_float_array(const char *dump_dir, const char *name,
 				    int mytid, int snum, int it,
 				    const float *dptr, size_t count) {
@@ -104,7 +111,7 @@ static void dump_pml_debug_state(const char *dump_dir,
 }
 #endif
 
-#if defined(CUDA3D_CORE_2STEP_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_INTERIOR_COMPARE) || defined(CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE) || defined(CUDA3D_CORE_2STEP_COMMIT_INTERIOR)
+#if defined(CUDA3D_CORE_2STEP_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_INTERIOR_COMPARE) || defined(CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE) || defined(CUDA3D_CORE_2STEP_COMMIT_INTERIOR) || defined(CUDA3D_CORE_2STEP_FUSED_INTERIOR)
 static int parse_core2step_region(const char *text,
 				  int *z0, int *z1, int *x0, int *x1, int *y0, int *y1) {
   if (text == NULL || text[0] == '\0') return 0;
@@ -647,7 +654,7 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 
   //wavefields
   float *d_p0, *d_p1, *ptr, *d_vx, *d_vy, *d_vz;
-#ifdef CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE
+#if defined(CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE) || defined(CUDA3D_CORE_2STEP_FUSED_INTERIOR)
   float *d_p2_core_debug = NULL;
 #endif
   // pml
@@ -754,7 +761,7 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
  
   cudaMalloc((void**)&d_p0, nxyzpad*sizeof(float));
   cudaMalloc((void**)&d_p1, nxyzpad*sizeof(float));
-#ifdef CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE
+#if defined(CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE) || defined(CUDA3D_CORE_2STEP_FUSED_INTERIOR)
   cudaMalloc((void**)&d_p2_core_debug, nxyzpad*sizeof(float));
 #endif
   cudaMalloc((void**)&d_vy, nxyzpad*sizeof(float));
@@ -762,7 +769,7 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   cudaMalloc((void**)&d_vz, nxyzpad*sizeof(float));
   cudaMemset(d_p0, 0, nxyzpad*sizeof(float));
   cudaMemset(d_p1, 0, nxyzpad*sizeof(float));
-#ifdef CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE
+#if defined(CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE) || defined(CUDA3D_CORE_2STEP_FUSED_INTERIOR)
   cudaMemset(d_p2_core_debug, 0, nxyzpad*sizeof(float));
 #endif
   cudaMemset(d_vy, 0, nxyzpad*sizeof(float));
@@ -874,6 +881,33 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   }
 #endif
 
+#ifdef CUDA3D_CORE_2STEP_FUSED_INTERIOR
+  Core2StepRegion core2step_fused_region;
+  init_core2step_region(&core2step_fused_region, "fused",
+			nby, nbx, nbz, nbd, yl, xl,
+			indxy, indxx, indxz, rec0_indx, nr);
+  if (core2step_fused_region.source_in_region || core2step_fused_region.receivers_in_region) {
+    printf("ERROR CUDA3D_CORE_2STEP_FUSED_INTERIOR requires source/receivers outside region: source=%d receivers=%zu\n",
+	   core2step_fused_region.source_in_region, core2step_fused_region.receivers_in_region);
+    exit(0);
+  }
+  dim3 dimg_core2step_fused_region;
+  dim3 dimb_core2step_fused_region;
+  dimb_core2step_fused_region.x = PBlockSize1;
+  dimb_core2step_fused_region.y = PBlockSize2;
+  dimb_core2step_fused_region.z = PBlockSize3;
+  dimg_core2step_fused_region.x = (core2step_fused_region.z1 - core2step_fused_region.z0 + PBlockSize1 - 1) / PBlockSize1;
+  dimg_core2step_fused_region.y = (core2step_fused_region.x1 - core2step_fused_region.x0 + PBlockSize2 - 1) / PBlockSize2;
+  dimg_core2step_fused_region.z = (core2step_fused_region.y1 - core2step_fused_region.y0 + PBlockSize3 - 1) / PBlockSize3;
+  if (mytid == 0) {
+    printf("CUDA3D core 2-step fused debug enabled: region z=[%d,%d) x=[%d,%d) y=[%d,%d), block=%dx%dx%d\n",
+	   core2step_fused_region.z0, core2step_fused_region.z1,
+	   core2step_fused_region.x0, core2step_fused_region.x1,
+	   core2step_fused_region.y0, core2step_fused_region.y1,
+	   PBlockSize1, PBlockSize2, PBlockSize3);
+  }
+#endif
+
   dimg_pml.x=(int)((nbz+PmlBlockSize1-1)/PmlBlockSize1);
   dimg_pml.y=(int)((nbx+PmlBlockSize2-1)/PmlBlockSize2);
   dimg_pml.z=(int)((nby+PmlBlockSize3-1)/PmlBlockSize3);
@@ -942,6 +976,9 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   cudaFuncSetCacheConfig(cuda_fd3d_p_core_ns_skip_region, cudaFuncCachePreferL1);
   cudaFuncSetCacheConfig(cuda_core2step_copy_region, cudaFuncCachePreferL1);
 #endif
+#ifdef CUDA3D_CORE_2STEP_FUSED_INTERIOR
+  cudaFuncSetCacheConfig(cuda_fd3d_p_core_2step_fused_predict_ns, cudaFuncCachePreferL1);
+#endif
   cudaFuncSetCacheConfig(cuda_fd3d_p_pml_ns, cudaFuncCachePreferL1);
 #ifdef CUDA3D_PML_TILE_LIST_V
   cudaFuncSetCacheConfig(cuda_fd3d_v_pml_tile_ns, cudaFuncCachePreferL1);
@@ -983,6 +1020,11 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
     //    fflush(stdout);
     if(it%500==0 && mytid==0)
       printf("FP it=%d\n", it);
+#if defined(CUDA3D_CORE_2STEP_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_INTERIOR_COMPARE)
+    const int core2step_should_dump =
+      core2step_dump_dir != NULL && core2step_dump_dir[0] != '\0' &&
+      (core2step_dump_step < 0 || core2step_dump_step == it);
+#endif
     // this is 2nd order time
 #ifdef CUDA3D_PML_TILE_LIST_V
     cuda_fd3d_v_pml_tile_ns<<<dimg_v, dimb_v>>>(d_p1, d_vy, d_vx, d_vz,
@@ -999,6 +1041,23 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 				    d_memory_dy, d_memory_dx, d_memory_dz);
 #endif
     check_gpu_error_loop("compute V");
+#ifdef CUDA3D_CORE_2STEP_FUSED_INTERIOR
+#ifdef CUDA3D_CORE_2STEP_FUSED_DEBUG
+    const int core2step_fused_predict_this_step = core2step_should_dump && (it + 1 < nt);
+#else
+    const int core2step_fused_predict_this_step = it + 1 < nt;
+#endif
+    if (core2step_fused_predict_this_step) {
+      cuda_fd3d_p_core_2step_fused_predict_ns<<<dimg_core2step_fused_region, dimb_core2step_fused_region>>>(
+	  d_p2_core_debug, d_p0, d_p1, d_cw2,
+	  tdy, tdx, tdz,
+	  nby, nbx, nbz, nbd, dt2,
+	  core2step_fused_region.z0, core2step_fused_region.z1,
+	  core2step_fused_region.x0, core2step_fused_region.x1,
+	  core2step_fused_region.y0, core2step_fused_region.y1);
+      check_gpu_error_loop("predict core 2step fused region");
+    }
+#endif
 #ifdef CUDA3D_CORE_2STEP_COMMIT_INTERIOR
     if (core2step_have_prediction) {
       cuda_fd3d_p_core_ns_skip_region<<<dimg_p, dimb_p >>>(d_p0, d_p1, d_cw2,
@@ -1136,12 +1195,11 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 #endif
 
 #if defined(CUDA3D_CORE_2STEP_DEBUG_DUMP) || defined(CUDA3D_CORE_2STEP_INTERIOR_COMPARE)
-    if (core2step_dump_dir != NULL && core2step_dump_dir[0] != '\0' &&
-	(core2step_dump_step < 0 || core2step_dump_step == it)) {
+    if (core2step_should_dump) {
       cudaDeviceSynchronize();
       check_gpu_error_2("sync before core 2step debug dump");
       float *d_p2_for_dump = NULL;
-#ifdef CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE
+#if defined(CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE) || defined(CUDA3D_CORE_2STEP_FUSED_INTERIOR)
       if (it + 1 < nt) d_p2_for_dump = d_p2_core_debug;
 #endif
       dump_core2step_debug_state(core2step_dump_dir, mytid, snum, it,
@@ -1189,7 +1247,7 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   if (h_zface_p_pml_tiles) free(h_zface_p_pml_tiles);
 #endif
   cudaFree(d_p0); cudaFree(d_p1);
-#ifdef CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE
+#if defined(CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE) || defined(CUDA3D_CORE_2STEP_FUSED_INTERIOR)
   cudaFree(d_p2_core_debug);
 #endif
   cudaFree(d_vy); cudaFree(d_vx); cudaFree(d_vz); 

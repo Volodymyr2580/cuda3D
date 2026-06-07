@@ -71,6 +71,16 @@ Profiler gate：
    - source 或 receiver 落入 blocked region 时，第一版必须停止或新建安全 case。
    - 不默认启用，必须宏控制。
 
+2. `CUDA3D_CORE_2STEP_FUSED_INTERIOR`
+   - 当前 active architecture path。
+   - stage 1-3 已完成：design doc、meaningful 1GPU case、debug-only fused p2 predictor。
+   - meaningful case `core_2step_meaningful_1gpu` 的 fused eligible ratio 为 `0.453758`，source/receiver 均不在 fused region。
+   - debug-only p2-shift 已通过：`922560` 点，`rel_l2=0.0`，`max_abs=0.0`。
+   - 当前 fused predictor 只是正确性探针，不是性能路线；它不替换 baseline `p_core`，也不提交 `p(t+2)`。
+   - `CUDA3D_CORE_2STEP_FUSED_DEBUG` 必须只在 dump 验证时启用，并且需要 `CUDA3D_CORE_2STEP_DEBUG_DUMP`。
+   - 下一步只允许实现真正 fused commit：同一 core kernel 内计算 `p(t+1)` 与 strict-inner `p(t+2)`，并在下一 timestep 用 block-level early skip 避免已提交区域的 shared-memory fill。
+   - `CUDA3D_CORE_2STEP_FUSED_COMMIT` 通过 meaningful repeat `>=5%` 前不得进入主线；通过 `perf_1gpu_6shots repeat >=2%` 前不得作为真实候选。
+
 已结束或禁止继续的路线：
 
 - `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE`：correctness pass，但相对 `zmem_reference` repeat 变慢。

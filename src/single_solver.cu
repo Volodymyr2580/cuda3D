@@ -1243,6 +1243,109 @@ __global__ void cuda_core2step_copy_region(float *dst, const float *src,
 }
 #endif
 
+#ifdef CUDA3D_CORE_2STEP_FUSED_INTERIOR
+__device__ __forceinline__ float cuda_core2step_first_step_value(const float *prev, const float *curr, const float *cw2,
+								 float _dy2, float _dx2, float _dz2,
+								 int n3, int n2, int n1, float dt,
+								 int gtid1, int gtid2, int gtid3) {
+  const int stride2 = n1 + 2 * radius;
+  const int stride3 = stride2 * (n2 + 2 * radius);
+  const int t1 = gtid1 + radius;
+  const int t2 = gtid2 + radius;
+  const int t3 = gtid3 + radius;
+  const size_t base = (size_t)t3 * stride3 + (size_t)t2 * stride2 + t1;
+
+  const float z2 = _dz2 * _dz2;
+  const float x2 = _dx2 * _dx2;
+  const float y2 = _dy2 * _dy2;
+  const float center = curr[base];
+  float lap = -2.8751201527567405f * (z2 + x2 + y2) * center;
+
+  lap += 1.6234617233276367f *
+    (z2 * (curr[base + 1] + curr[base - 1]) +
+     x2 * (curr[base + stride2] + curr[base - stride2]) +
+     y2 * (curr[base + stride3] + curr[base - stride3]));
+  lap += -0.21382331848144528f *
+    (z2 * (curr[base + 2] + curr[base - 2]) +
+     x2 * (curr[base + 2 * stride2] + curr[base - 2 * stride2]) +
+     y2 * (curr[base + 2 * stride3] + curr[base - 2 * stride3]));
+  lap += 0.030927128261990015f *
+    (z2 * (curr[base + 3] + curr[base - 3]) +
+     x2 * (curr[base + 3 * stride2] + curr[base - 3 * stride2]) +
+     y2 * (curr[base + 3 * stride3] + curr[base - 3 * stride3]));
+  lap += -0.003195444742838541f *
+    (z2 * (curr[base + 4] + curr[base - 4]) +
+     x2 * (curr[base + 4 * stride2] + curr[base - 4 * stride2]) +
+     y2 * (curr[base + 4 * stride3] + curr[base - 4 * stride3]));
+  lap += 0.0002028528849283854f *
+    (z2 * (curr[base + 5] + curr[base - 5]) +
+     x2 * (curr[base + 5 * stride2] + curr[base - 5 * stride2]) +
+     y2 * (curr[base + 5 * stride3] + curr[base - 5 * stride3]));
+  lap += -0.000013351440429687502f *
+    (z2 * (curr[base + 6] + curr[base - 6]) +
+     x2 * (curr[base + 6 * stride2] + curr[base - 6 * stride2]) +
+     y2 * (curr[base + 6 * stride3] + curr[base - 6 * stride3]));
+  lap += 0.000000486568528778699f *
+    (z2 * (curr[base + 7] + curr[base - 7]) +
+     x2 * (curr[base + 7 * stride2] + curr[base - 7 * stride2]) +
+     y2 * (curr[base + 7 * stride3] + curr[base - 7 * stride3]));
+
+  return 2.0f * center - prev[base] + cw2[base] * dt * lap;
+}
+
+__global__ void cuda_fd3d_p_core_2step_fused_predict_ns(float *p2, const float *prev, const float *curr, const float *cw2,
+							float _dy2, float _dx2, float _dz2,
+							int n3, int n2, int n1, int npml, float dt,
+							int z0, int z1, int x0, int x1, int y0, int y1){
+  int gtid1 = z0 + blockIdx.x * blockDim.x + threadIdx.x;
+  int gtid2 = x0 + blockIdx.y * blockDim.y + threadIdx.y;
+  int gtid3 = y0 + blockIdx.z * blockDim.z + threadIdx.z;
+
+  if (gtid1 >= z1 || gtid2 >= x1 || gtid3 >= y1) return;
+
+  const int stride2 = n1 + 2 * radius;
+  const int stride3 = stride2 * (n2 + 2 * radius);
+  const int t1 = gtid1 + radius;
+  const int t2 = gtid2 + radius;
+  const int t3 = gtid3 + radius;
+  const size_t base = (size_t)t3 * stride3 + (size_t)t2 * stride2 + t1;
+
+  const float z2 = _dz2 * _dz2;
+  const float x2 = _dx2 * _dx2;
+  const float y2 = _dy2 * _dy2;
+  const float center = cuda_core2step_first_step_value(prev, curr, cw2, _dy2, _dx2, _dz2,
+						       n3, n2, n1, dt, gtid1, gtid2, gtid3);
+  float lap = -2.8751201527567405f * (z2 + x2 + y2) * center;
+
+  for (int r = 1; r <= CoreStencilRadius; ++r) {
+    float coef = 0.0f;
+    if (r == 1) coef = 1.6234617233276367f;
+    else if (r == 2) coef = -0.21382331848144528f;
+    else if (r == 3) coef = 0.030927128261990015f;
+    else if (r == 4) coef = -0.003195444742838541f;
+    else if (r == 5) coef = 0.0002028528849283854f;
+    else if (r == 6) coef = -0.000013351440429687502f;
+    else if (r == 7) coef = 0.000000486568528778699f;
+
+    const float zp = cuda_core2step_first_step_value(prev, curr, cw2, _dy2, _dx2, _dz2,
+						     n3, n2, n1, dt, gtid1 + r, gtid2, gtid3);
+    const float zm = cuda_core2step_first_step_value(prev, curr, cw2, _dy2, _dx2, _dz2,
+						     n3, n2, n1, dt, gtid1 - r, gtid2, gtid3);
+    const float xp = cuda_core2step_first_step_value(prev, curr, cw2, _dy2, _dx2, _dz2,
+						     n3, n2, n1, dt, gtid1, gtid2 + r, gtid3);
+    const float xm = cuda_core2step_first_step_value(prev, curr, cw2, _dy2, _dx2, _dz2,
+						     n3, n2, n1, dt, gtid1, gtid2 - r, gtid3);
+    const float yp = cuda_core2step_first_step_value(prev, curr, cw2, _dy2, _dx2, _dz2,
+						     n3, n2, n1, dt, gtid1, gtid2, gtid3 + r);
+    const float ym = cuda_core2step_first_step_value(prev, curr, cw2, _dy2, _dx2, _dz2,
+						     n3, n2, n1, dt, gtid1, gtid2, gtid3 - r);
+    lap += coef * (z2 * (zp + zm) + x2 * (xp + xm) + y2 * (yp + ym));
+  }
+
+  p2[base] = 2.0f * center - curr[base] + cw2[base] * dt * lap;
+}
+#endif
+
 #ifdef CUDA3D_CORE_2STEP_INTERIOR_PROTOTYPE
 __global__ void cuda_fd3d_p_core_2step_predict_ns(float *p2, const float *prev, const float *curr, const float *cw2,
 						  float _dy2, float _dx2, float _dz2,
