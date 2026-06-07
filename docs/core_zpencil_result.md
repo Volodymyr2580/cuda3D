@@ -1,40 +1,80 @@
-# Core Z-Pencil Prototype Result
+# Core Z-Pencil Result
+
+Date: 2026-06-07
 
 ## Status
 
-Deferred.
+Stopped before implementation.
 
-## Reason
+## Summary
 
-`CUDA3D_CORE_ZPENCIL_SHARED` is gated on Nsight Compute evidence that `p_core` is memory-bound or dominated by z-neighbor reloads. On 2026-06-07, NCU counters became available after the profiler permission fix.
+`CUDA3D_CORE_ZPENCIL_SHARED` was proposed as the next controlled experiment after the PML fused z-slab prototype failed its continuation threshold. The source-level NCU gate was completed first, as required.
 
-NCU shows `p_core` has very high compute/memory throughput (`~96.94%`), moderate DRAM throughput (`~42.44%`), and long-scoreboard stalls. This makes a z-pencil/shared-memory prototype technically plausible.
+The gate failed the hypothesis: the current `p_core` kernel already implements the proposed z/fast-dimension shared-memory pencil.
 
-However, PML tile kernels remain the first target because `p_pml_tile` is the largest sampled launch and PML fusion has the clearer dataflow-reuse hypothesis. Start `p_core` z-pencil only after the PML z-slab prototype fails its 5% threshold or shifts the bottleneck toward `p_core`.
+## Evidence
 
-## Prototype Definition For Later
+Current `cuda_fd3d_p_core_ns` contains:
 
-Macro:
-
-```text
-CUDA3D_CORE_ZPENCIL_SHARED
+```cpp
+enum { CoreStencilRadius = 7 };
+__shared__ float z_tile[PBlockSize3][PBlockSize2][PBlockSize1 + 2 * CoreStencilRadius];
 ```
 
-Scope:
+The stencil lines for z-neighbor terms read from `z_tile`, and source-level NCU reports them as shared-memory loads:
 
-- z-pencil shared-memory prototype for `p_core`.
-- x/y neighbors remain global loads.
-- No full temporal blocking.
-- No numerical order change.
+```text
+line 1110: z_tile local1 +/- 1 -> Shared(2), Load(2)
+line 1114: z_tile local1 +/- 2 -> Shared(2), Load(2)
+line 1118: z_tile local1 +/- 3 -> Shared(2), Load(2)
+line 1122: z_tile local1 +/- 4 -> Shared(2), Load(2)
+line 1126: z_tile local1 +/- 5 -> Shared(2), Load(2)
+line 1130: z_tile local1 +/- 6 -> Shared(2), Load(2)
+line 1134: z_tile local1 +/- 7 -> Shared(2), Load(2)
+```
 
-Validation required:
+The remaining source-level long-scoreboard pressure is mostly:
 
-- correctness
-- `perf_1gpu_6shots repeat`
-- kernel-level timing from NCU or Nsight Systems
+- center/global fill into the existing shared tile;
+- x/y global neighbor loads;
+- final pressure update traffic.
 
-Acceptance:
+The strongest barrier stall is attributed after the existing `__syncthreads()` and before the core-boundary return. This confirms that the current shared-memory path already has a synchronization cost.
 
-- `p_core` kernel itself must improve by `>=10%`.
-- whole-job `perf_1gpu_6shots repeat` must improve by `>=2%`.
-- Otherwise revert or keep macro-gated and disabled.
+See `docs/pcore_source_profile.md` for the detailed source counters.
+
+## Decision
+
+Do not add a `CUDA3D_CORE_ZPENCIL_SHARED` macro that duplicates the current kernel behavior.
+
+Rejected variants:
+
+- macro alias around the existing implementation;
+- another z-only shared-memory tile with the same ownership model;
+- candidate block shapes that only change `PBlockSize*` without adding new data reuse;
+- p_core block-size sweep under the name of z-pencil.
+
+## Validation
+
+No candidate binary was created because the source-profile gate rejected the implementation premise.
+
+After profiling, the server binary was restored to the stable non-`-lineinfo` zmem baseline:
+
+```text
+cfc502cf8a27038e54a1bdf1c3665b057a3b306046bd547a1baf70a204e17293  bin/cuda_3D_FM
+```
+
+Post-restore sanity run:
+
+```text
+case: benchmarks/cases/profile_1gpu
+Gradient TIME all = 0.189999 s
+WP computing time = 0.161748 s
+ALL DONE
+```
+
+## Recommendation
+
+Local `p_core` z-pencil work should be closed. Further `p_core` work should only proceed if it targets a genuinely different reuse axis, such as x/y plane reuse, register-streamed stencil restructuring, or a larger temporal/dataflow prototype.
+
+The immediate fallback is recorded in `docs/temporal_blocking_feasibility.md`.

@@ -2558,3 +2558,36 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - profiler gate 已通过，下一步可进入 `CUDA3D_PML_FUSED_ZSLAB_PROTOTYPE`。
   - NCU 证据支持数据流/依赖延迟优化，不支持继续做 block-size 或 register-cap 随机 sweep。
   - `p_core` z-pencil 有依据但暂缓，优先做 PML z-slab；若 PML prototype 低于 5% repeat speedup，再转向 p_core 或重新评估。
+
+## 2026-06-07 11:00:05 +0800 - p_core source-level profile and z-pencil gate decision
+
+- 操作目标：根据 Pro 反馈停止 PML fused z-slab 方向，在 `exp/core-zpencil-shared` 分支上对 `p_core` 做 source-level NCU，判断是否实现 `CUDA3D_CORE_ZPENCIL_SHARED`。
+- 修改文件：
+  - 新增 `docs/pcore_source_profile.md`，记录 `p_core` 行级 NCU 热点与判断。
+  - 更新 `docs/core_zpencil_result.md`，把状态从 deferred 改为 stopped before implementation。
+  - 新增 `docs/temporal_blocking_feasibility.md`，记录失败后的数据流/temporal blocking 可行性分析。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地切换并确认分支：`git checkout -B exp/core-zpencil-shared`。
+  - 服务器在 `/work/wenzhe/cuda3D` 使用 zmem baseline flags 加 `-lineinfo` 编译。
+  - 服务器执行 `ncu --target-processes all --section SpeedOfLight --section MemoryWorkloadAnalysis --section SchedulerStats --section Occupancy --section SourceCounters --section WarpStateStats --kernel-name regex:".*p_core.*" --launch-skip 10 --launch-count 20 ...`。
+  - 导出 `benchmarks/profiles/pcore_zmem_lineinfo_20260607_source_cuda_sass.csv`。
+  - 服务器重新用不带 `-lineinfo` 的 zmem baseline flags 编译，恢复正式 binary。
+  - 服务器运行 `benchmarks/cases/profile_1gpu` 做 post-restore sanity check。
+- 测试结果：
+  - NCU return code `0`，profile run 日志包含 `ALL DONE`。
+  - `p_core` 20-launch source profile：Duration avg `93.630 us`，DRAM throughput avg `42.40%`，L2 throughput avg `96.83%`，achieved occupancy avg `66.51%`。
+  - source-level counters 显示 z-neighbor stencil 行 `1110/1114/1118/1122/1126/1130/1134` 均为 `Shared(2)` load，没有 global L1 tag 或 L2 global sector 计数。
+  - 主要 long-scoreboard 热点：line 1086 `z_tile[...] = p1[base]`，long SB `25483`；line 1116 y-neighbor global load，long SB `17627`；line 1111 x-neighbor global load，long SB `8713`。
+  - barrier stall 主要归因到 line 1101 的 core-boundary return 附近，结合 line 1097 `__syncthreads()`，说明现有 shared tile 已经带来同步成本。
+  - post-restore sanity check：`Gradient TIME all=0.189999s`，`WP computing time=0.161748s`，日志包含 `ALL DONE`。
+- 输出/哈希/误差摘要：
+  - lineinfo profiling binary SHA256：`019e615560c090aa849ac84a9075cc5baff017cfe801eb85af917f1f9ea896ce`。
+  - restored zmem binary SHA256：`cfc502cf8a27038e54a1bdf1c3665b057a3b306046bd547a1baf70a204e17293`。
+  - 关键 remote artifacts：`benchmarks/profiles/pcore_zmem_lineinfo_20260607.ncu-rep`、`.csv`、`_raw.csv`、`_source_cuda_sass.csv`、`benchmarks/runs/profile_1gpu_after_pcore_profile_20260607/run.log`。
+  - 本轮未生成 candidate 输出，因此无 correctness 误差对比。
+- 风险与下一步：
+  - 本地 Windows Python 缺少 `paramiko`，直接运行 `tools/remote_exec.py` 会报 `ModuleNotFoundError: No module named 'paramiko'`；本轮改用 WSL Python helper，未修改全局 Python 环境。
+  - 曾按旧文档尝试 `benchmarks/cases/smoke_1gpu`，远程当前不存在该 case；改用现有最小 `profile_1gpu` 做 sanity check。
+  - 结论：不实现 `CUDA3D_CORE_ZPENCIL_SHARED`，因为当前 baseline 已经包含该 z-pencil shared-memory 路径。继续做同类宏只会重复现有代码，缺少达到 `p_core >=10%` 的可信路径。
+  - 下一步应转向更大尺度数据流重构，例如 core-interior temporal blocking feasibility，而不是继续 p_core block-size sweep 或重复 shared-memory variant。
