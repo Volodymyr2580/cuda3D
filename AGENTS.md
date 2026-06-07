@@ -80,6 +80,14 @@ Profiler gate：
    - `CUDA3D_CORE_2STEP_FUSED_DEBUG` 必须只在 dump 验证时启用，并且需要 `CUDA3D_CORE_2STEP_DEBUG_DUMP`。
    - 下一步只允许实现真正 fused commit：同一 core kernel 内计算 `p(t+1)` 与 strict-inner `p(t+2)`，并在下一 timestep 用 block-level early skip 避免已提交区域的 shared-memory fill。
    - `CUDA3D_CORE_2STEP_FUSED_COMMIT` 通过 meaningful repeat `>=5%` 前不得进入主线；通过 `perf_1gpu_6shots repeat >=2%` 前不得作为真实候选。
+   - stage 4.0 tile budget gate 已执行：A/D first-implementation plans 的 commit ratio 分别约 `3.19%` / `3.20%`，低于 `10%` gate。
+   - 因此禁止继续实现 `CUDA3D_CORE_2STEP_FUSED_COMMIT_V2`，除非后续重新定义 tile plan 或放宽 gate 并给出新的架构依据。
+
+当前建议的下一条大路线：
+
+- `CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE`
+  - 目标是显式拆分 `p_prev` / `p_curr` / `p_next`，不再让 `p0` 同时作为 old input 和 output。
+  - 这是更大范围的数据流重构，必须先写 design doc、pointer-swap audit、PML/source/receiver ordering audit，再进入实现。
 
 已结束或禁止继续的路线：
 

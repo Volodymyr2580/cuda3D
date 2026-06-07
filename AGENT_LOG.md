@@ -2790,3 +2790,34 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
 - 风险与下一步：
   - 如果直接在 `p_core` 内读取 global old `p0` 计算 `p2`，同时写 global `p0(t+1)`，会有跨 CTA 读写竞态，不能作为正确实现。
   - 下一步应先拿到或制定明确 tile/shared-memory budget，再实现 `CUDA3D_CORE_2STEP_FUSED_COMMIT`。
+
+## 2026-06-07 17:19:17 +0800 - Run stage-4 tile budget gate
+
+- 操作目标：按 Pro 最新反馈执行 Stage-4 Architecture Gate，先计算 M/O/C tile budget 和 meaningful case commit ratio，再决定是否实现 `CUDA3D_CORE_2STEP_FUSED_COMMIT_V2`。
+- 修改文件：
+  - 新增 `tools/core2step_tile_budget.py`。
+  - 新增 `docs/core_2step_stage4_tile_budget.md`。
+  - 新增 `feedback/codex_report_20260607_171200_stage4_tile_budget.md`。
+  - 更新 `AGENTS.md`，记录 stage 4.0 gate 失败，禁止继续 naive 或 V2 fused commit，下一条建议路线转向 `CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE` 设计。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地执行 `python -m py_compile tools/core2step_tile_budget.py`。
+  - 本地执行 `python tools/core2step_tile_budget.py --json-out benchmarks/reports/core2step_stage4_tile_budget_local.json --markdown-out docs/core_2step_stage4_tile_budget.md`。
+  - 本地执行 `git diff --check`。
+  - 通过 WSL Python `remote_put.py` 上传明确文件 `tools/core2step_tile_budget.py` 到 `/work/wenzhe/cuda3D/tools/core2step_tile_budget.py`。
+  - 服务器执行 `python3 tools/core2step_tile_budget.py --json-out benchmarks/reports/core2step_stage4_tile_budget_remote_20260607_171200.json --markdown-out benchmarks/reports/core2step_stage4_tile_budget_remote_20260607_171200.md`。
+- 测试结果：
+  - 本地和服务器 budget gate 输出一致。
+  - A：`M=[32,24,20]`，`C=[18,10,6]`，kept tiles `60`，commit points `64800`，commit/core `0.0319`，estimated CTA/SM `2`。
+  - D：`M=[40,24,24]`，`C=[26,10,10]`，kept tiles `25`，commit points `65000`，commit/core `0.0320`，estimated CTA/SM `1`。
+  - A/D first-implementation plans 均低于 Pro 设定的 `10%` commit-ratio gate。
+  - 输出结论：`GATE=STOP commit_ratio_lt_10_percent`。
+- 输出/哈希/误差摘要：
+  - 文档：`docs/core_2step_stage4_tile_budget.md`。
+  - 反馈：`feedback/codex_report_20260607_171200_stage4_tile_budget.md`。
+  - 本地 JSON 运行产物：`benchmarks/reports/core2step_stage4_tile_budget_local.json`，该目录被 `.gitignore` 忽略，不进入 commit。
+  - 服务器 JSON/Markdown 运行产物位于 `benchmarks/reports/`，同样为 ignored artifact。
+- 风险与下一步：
+  - 按 gate 停止：不实现 `CUDA3D_CORE_RETILED_RESIDUAL`，不实现 `CUDA3D_CORE_2STEP_FUSED_COMMIT_V2`。
+  - 当前 CTA-local two-step route 的主要瓶颈是 `R=7` erosion 后的 surface/volume loss，而不是单个 kernel 微调。
+  - 下一步如继续大结构路线，应先写 `CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE` design doc，系统性拆分 `p_prev/p_curr/p_next`，再审 PML/source/receiver/pointer swap。
