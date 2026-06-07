@@ -4,6 +4,7 @@ nx=96
 nz=80
 nt=6
 npml=8
+xpad=0.5
 shots=1
 receivers_per_shot=9
 gpu_count=1

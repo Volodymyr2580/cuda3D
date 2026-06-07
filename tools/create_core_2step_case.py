@@ -39,7 +39,7 @@ def build_nav(nx, ny, dx, dy, dz):
     return nav
 
 
-def input_text(nav_name, vel_name, trace_count, ny, nx, nz, nt, npml, gpu_count):
+def input_text(nav_name, vel_name, trace_count, ny, nx, nz, nt, npml, xpad, gpu_count):
     return f"""./d_obs/d_obs_core_2step_shot_
 1.
 noinput
@@ -70,7 +70,7 @@ out.dir
 0.025
 {npml}
 0.1
-0.05
+{xpad}
 0
 6
 {gpu_count}
@@ -84,6 +84,7 @@ def main():
     parser.add_argument("--nz", type=int, default=80)
     parser.add_argument("--nt", type=int, default=6)
     parser.add_argument("--npml", type=int, default=8)
+    parser.add_argument("--xpad", type=float, default=0.5)
     parser.add_argument("--gpu-count", type=int, default=1)
     parser.add_argument("--case-name", default="core_2step_interior_1gpu")
     parser.add_argument("--root", default=None)
@@ -103,7 +104,7 @@ def main():
     write_float32(case_dir / vel_name, vel)
     write_float32(case_dir / nav_name, nav)
     (case_dir / input_name).write_text(
-        input_text(nav_name, vel_name, len(nav) // 6, args.ny, args.nx, args.nz, args.nt, args.npml, args.gpu_count),
+        input_text(nav_name, vel_name, len(nav) // 6, args.ny, args.nx, args.nz, args.nt, args.npml, args.xpad, args.gpu_count),
         encoding="utf-8",
     )
 
@@ -129,6 +130,7 @@ def main():
         f"nz={args.nz}",
         f"nt={args.nt}",
         f"npml={args.npml}",
+        f"xpad={args.xpad}",
         "shots=1",
         "receivers_per_shot=9",
         "gpu_count=1",
