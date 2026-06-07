@@ -16,8 +16,20 @@
 #error "CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY requires CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL"
 #endif
 
+#if defined(CUDA3D_PML_ZFACE_SHARED_VP_DEBUG) && !defined(CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL)
+#error "CUDA3D_PML_ZFACE_SHARED_VP_DEBUG requires CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL"
+#endif
+
+#if defined(CUDA3D_PML_ZFACE_SHARED_VP_DEBUG) && defined(CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY)
+#error "CUDA3D_PML_ZFACE_SHARED_VP_DEBUG replaces the direct fused zface prototype; do not enable both"
+#endif
+
 #if defined(CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY) && defined(CUDA3D_PML_ZFACE_P_SPECIALIZE)
 #error "CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY replaces the old pressure-only zface specialize path"
+#endif
+
+#if defined(CUDA3D_PML_ZFACE_SHARED_VP_DEBUG) && defined(CUDA3D_PML_ZFACE_P_SPECIALIZE)
+#error "CUDA3D_PML_ZFACE_SHARED_VP_DEBUG replaces the old pressure-only zface specialize path"
 #endif
 
 #ifdef CUDA3D_PML_DEBUG_DUMP
@@ -612,7 +624,7 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 
   check_gpu_error_2("Error in Memset");
 
-  dim3 dimg_v, dimb_v, dimg_p, dimb_p, dimg_pml, dimb_pml, dimg_pml_zface, dimb_pml_zface, dims, dimbs, dimr, dimbr;// dims(1,1), dimbs(2*nbell+1, 2*nbell+1);
+  dim3 dimg_v, dimb_v, dimg_p, dimb_p, dimg_pml, dimb_pml, dimg_pml_zface, dimb_pml_zface, dimg_pml_zface_shared, dimb_pml_zface_shared, dims, dimbs, dimr, dimbr;// dims(1,1), dimbs(2*nbell+1, 2*nbell+1);
   dims.x=1;
   dims.y=1;
   dims.z=1;
@@ -663,6 +675,24 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   dimb_pml.x=PmlBlockSize1;
   dimb_pml.y=PmlBlockSize2;
   dimb_pml.z=PmlBlockSize3;
+
+#ifdef CUDA3D_PML_ZFACE_SHARED_VP_DEBUG
+  const size_t pml_zface_shared_smem =
+    (size_t)(PmlZFaceSharedOut1 + 2 * PmlZFaceSharedHalo) *
+    (size_t)(PmlZFaceSharedOut2 + 2 * PmlZFaceSharedHalo) *
+    (size_t)(PmlZFaceSharedOut3 + 2 * PmlZFaceSharedHalo) * sizeof(float)
+#ifdef CUDA3D_PML_ZFACE_SHARED_VP_STAGE_V
+    + ((size_t)PmlZFaceSharedOut1 * (size_t)(PmlZFaceSharedOut2 + 2 * radius - 1) * (size_t)PmlZFaceSharedOut3 +
+       (size_t)PmlZFaceSharedOut1 * (size_t)PmlZFaceSharedOut2 * (size_t)(PmlZFaceSharedOut3 + 2 * radius - 1)) * sizeof(float)
+#endif
+    ;
+  dimb_pml_zface_shared.x = PmlZFaceSharedThreads;
+  dimb_pml_zface_shared.y = 1;
+  dimb_pml_zface_shared.z = 1;
+  dimg_pml_zface_shared.x = ceil_div_int(core_nx, PmlZFaceSharedOut2);
+  dimg_pml_zface_shared.y = ceil_div_int(core_ny, PmlZFaceSharedOut3);
+  dimg_pml_zface_shared.z = 2;
+#endif
 
 #if defined(CUDA3D_PML_TILE_LIST_V) || defined(CUDA3D_PML_TILE_LIST_P)
 #ifdef CUDA3D_PML_TILE_LIST_V
@@ -717,6 +747,19 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 	   n_zface_p_pml_tiles,
 	   PmlZFaceBlockSize1, PmlZFaceBlockSize2, PmlZFaceBlockSize3);
 #endif
+#ifdef CUDA3D_PML_ZFACE_SHARED_VP_DEBUG
+  if(mytid==0)
+    printf("PML zface shared VP debug enabled: grid=%dx%dx%d out=%dx%dx%d threads=%d smem=%zu stage_v=%d\n",
+	   (int)dimg_pml_zface_shared.x, (int)dimg_pml_zface_shared.y, (int)dimg_pml_zface_shared.z,
+	   PmlZFaceSharedOut1, PmlZFaceSharedOut2, PmlZFaceSharedOut3,
+	   PmlZFaceSharedThreads, pml_zface_shared_smem,
+#ifdef CUDA3D_PML_ZFACE_SHARED_VP_STAGE_V
+	   1
+#else
+	   0
+#endif
+	   );
+#endif
 #endif
 
   cudaFuncSetCacheConfig(cuda_fd3d_v_pml_ns, cudaFuncCachePreferL1);
@@ -730,6 +773,12 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 #endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
   cudaFuncSetCacheConfig(cuda_fd3d_p_pml_zface_ns, cudaFuncCachePreferL1);
+#endif
+#ifdef CUDA3D_PML_ZFACE_SHARED_VP_DEBUG
+  cudaFuncSetAttribute(cuda_fd3d_pml_zface_shared_vp_debug_ns,
+		       cudaFuncAttributeMaxDynamicSharedMemorySize,
+		       (int)pml_zface_shared_smem);
+  cudaFuncSetCacheConfig(cuda_fd3d_pml_zface_shared_vp_debug_ns, cudaFuncCachePreferShared);
 #endif
 
   //  dim3 dimgu, dimbu;
@@ -808,6 +857,16 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 				       d_zface_p_pml_tiles, n_zface_p_pml_tiles);
       check_gpu_error_loop("compute P pml zface");
     }
+#endif
+#ifdef CUDA3D_PML_ZFACE_SHARED_VP_DEBUG
+    cuda_fd3d_pml_zface_shared_vp_debug_ns<<<dimg_pml_zface_shared, dimb_pml_zface_shared,
+					     pml_zface_shared_smem >>>(d_p0, d_p1,
+								       d_cw2, tdy, tdx, tdz,
+								       nby, nbx, nbz, nbd, dt2,
+								       d_memory_dzz,
+								       d_memory_dz,
+								       d_memory_dz_next);
+    check_gpu_error_loop("compute P pml zface shared VP debug");
 #endif
 #ifdef CUDA3D_PML_TILE_LIST_P
     cuda_fd3d_p_pml_tile_ns<<<dimg_pml, dimb_pml >>>(d_p0, d_p1, d_vy, d_vx, d_vz,

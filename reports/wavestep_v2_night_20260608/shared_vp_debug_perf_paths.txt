@@ -1,0 +1,2 @@
+shared_perf_a=/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_shared_vp_debug_perf6_a_20260608_020137
+shared_perf_b=/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_shared_vp_debug_perf6_b_20260608_020144

@@ -1,4 +1,4 @@
-# AGENTS.md
+﻿# AGENTS.md
 
 ## 项目目标
 
@@ -47,6 +47,7 @@ NVFLAGS="-O3 -arch=sm_120 --use_fast_math \
 - `CUDA3D_PML_ZFACE_P_SPECIALIZE`
 - `CUDA3D_PML_ZFACE_V_SPECIALIZE`
 - `CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY` with direct p1 x/y second derivatives replacing `vx/vy`
+- `CUDA3D_PML_ZFACE_SHARED_VP_DEBUG` p-only S2/S4 and S4 staged-V variants
 - `RECOMPUTE_X` / `RECOMPUTE_Y` / `RECOMPUTE_XYZ`
 - PML tile block shape sweep
 - `p_core` simple block shape sweep
@@ -80,7 +81,18 @@ Profiler gate：
    - separate fused z-face kernel：correctness pass，但 mean WP `2.660077s`，慢于 zmem mean WP `2.434461s`。
    - inline p_pml fused branch：correctness pass，但 mean WP `2.692579s`，慢于 zmem mean WP `2.434461s`。
    - 禁止继续重复 direct p1 x/y second-derivative 替代 `vx/vy` global round trip。
-   - 只有在新设计能把 velocity intermediates 保持在 CTA-local shared memory 中，或有新的 Nsight Compute 证据证明总 memory stall 下降时，才允许重开 PML z-face fusion。
+
+3. `CUDA3D_PML_ZFACE_SHARED_VP_DEBUG` 已停止
+   - S2 p-only shared pressure tile：correctness pass，但 mean WP `3.007605s`，相对同机 zmem mean WP `2.448577s` 只有 `0.814129x`。
+   - S4 p-only shared pressure tile：correctness pass，但 WP `3.039426s`，相对同机 zmem mean WP 只有 `0.805605x`。
+   - S4 staged-V shared velocity intermediate：correctness pass，但 mean WP `3.090552s`，相对同机 zmem mean WP 只有 `0.792278x`。
+   - 禁止继续重复当前 shared-tile z-face VP 形态；问题不是数值，而是 1 CTA/SM 大 shared tile、额外同步和 shared velocity staging 开销吞掉了 global traffic savings。
+   - 后续 PML z-face fusion 只有在新的 profiler/source-counter 证据证明不同 tile/dataflow 能显著降低 pressure critical path 时才允许重开。
+
+当前下一步建议：
+
+- 保留 `CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL` 作为 ownership scaffold。
+- 停止 z-face fusion 局部路线，转入更大粒度的 global-region temporal pipeline 或 PML compact-state audit。
 
 ## 速度阈值存档规则
 

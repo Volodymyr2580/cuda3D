@@ -1,4 +1,4 @@
-# Architecture Decision Log
+﻿# Architecture Decision Log
 
 This file records CUDA3D optimization route decisions so future agents do not reopen failed paths without new evidence.
 
@@ -157,4 +157,82 @@ Report:
 
 ```text
 reports/wavestep_engine_v2_phase2_fused_zface_20260608_010000/phase2_fused_zface_report.md
+```
+
+## 2026-06-08 - Stop Shared-Tile PML Z-Face VP Prototype
+
+Decision:
+
+```text
+Stop CUDA3D_PML_ZFACE_SHARED_VP_DEBUG in the tested S2/S4 forms.
+Do not repeat p-only shared pressure tile or S4 staged-V shared velocity intermediate without a new source-level profiler reason.
+```
+
+Implemented variants:
+
+```text
+1. S2 p-only shared pressure tile
+   output tile: 12x16x12
+   shared p tile: 26x30x26
+   shared memory: 81,120 bytes
+   threads: 256
+
+2. S4 p-only shared pressure tile
+   output tile: 12x12x12
+   shared p tile: 26x26x26
+   shared memory: 70,304 bytes
+   threads: 256
+
+3. S4 staged-V shared velocity intermediate
+   output tile: 12x12x12
+   shared p + vx + vy memory: 92,192 bytes
+   threads: 256
+```
+
+Correctness evidence:
+
+```text
+S2 p-only smoke/correctness/perf repeat output compare: pass
+S4 p-only correctness/perf output compare: pass
+S4 staged-V correctness/perf repeat output compare: pass
+all compared output rel_l2: 0
+```
+
+Performance evidence on RTX 5090 same-session A/B:
+
+```text
+zmem mean WP:                  2.448577s
+S2 p-only mean WP:             3.007605s, speed ratio 0.814129x
+S4 p-only WP:                  3.039426s, speed ratio 0.805605x
+S4 staged-V mean WP:           3.090552s, speed ratio 0.792278x
+
+zmem mean Gradient:            2.560774s
+S2 p-only mean Gradient:       3.169876s, speed ratio 0.807847x
+S4 p-only Gradient:            3.188930s, speed ratio 0.803020x
+S4 staged-V mean Gradient:     3.236345s, speed ratio 0.791255x
+```
+
+Reason:
+
+```text
+The shared z-face VP idea is numerically valid but not performance viable in the tested CTA shape.
+The p-only version reuses global p1 through shared memory but repeatedly recomputes vx/vy per output.
+The staged-V version reduces repeated vx/vy recompute, but its 92KB dynamic shared footprint, extra staging loops, synchronization, and 1 CTA/SM occupancy are still too expensive.
+The pressure critical path becomes slower than the saved vx/vy global round trip.
+```
+
+Reports:
+
+```text
+docs/wavestep_v2/phase2_fused_zface_forensics.md
+docs/wavestep_v2/pml_zface_shared_tile_budget.md
+docs/wavestep_v2/pml_zface_shared_vp_design.md
+reports/wavestep_v2_night_20260608/final_report.md
+```
+
+Next allowed route:
+
+```text
+Keep CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL as scaffold.
+Move away from local z-face fusion and evaluate global-region temporal pipeline or PML compact-state audit.
 ```

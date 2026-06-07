@@ -1,0 +1,74 @@
+{
+  "date": "2026-06-08",
+  "platform": "rtx5090",
+  "remote_workdir": "/work/wenzhe/cuda3D",
+  "branch": "exp/wavestep-v2-shared-vp-night",
+  "baseline": {
+    "name": "zmem_reference",
+    "wp_mean_s": 2.448577,
+    "gradient_mean_s": 2.560774,
+    "runs": [
+      "benchmarks/runs/perf_1gpu_6shots_zmem_reference_night_perf6_a_20260608_013209",
+      "benchmarks/runs/perf_1gpu_6shots_zmem_reference_night_perf6_b_20260608_013215"
+    ]
+  },
+  "cpml_double_buffer": {
+    "decision": "continue_as_scaffold",
+    "wp_mean_s": 2.36918,
+    "wp_speed_ratio": 1.033512,
+    "gradient_mean_s": 2.486222,
+    "gradient_speed_ratio": 1.029986,
+    "correctness": "pass_rel_l2_0"
+  },
+  "direct_zface_forensics": {
+    "decision": "stop",
+    "p_pml_duration_us_zmem": 188.856,
+    "p_pml_duration_us_direct_inline": 248.2,
+    "duration_ratio_direct_vs_zmem": 1.314
+  },
+  "shared_vp_debug": {
+    "decision": "stop",
+    "variants": [
+      {
+        "name": "S2_p_only",
+        "wp_mean_s": 3.007605,
+        "wp_speed_ratio": 0.814129,
+        "gradient_mean_s": 3.169875,
+        "gradient_speed_ratio": 0.807847,
+        "correctness": "pass_rel_l2_0"
+      },
+      {
+        "name": "S4_p_only",
+        "wp_s": 3.039426,
+        "wp_speed_ratio": 0.805605,
+        "gradient_s": 3.18893,
+        "gradient_speed_ratio": 0.80302,
+        "correctness": "pass_rel_l2_0"
+      },
+      {
+        "name": "S4_staged_v",
+        "wp_mean_s": 3.090552,
+        "wp_speed_ratio": 0.792278,
+        "gradient_mean_s": 3.236344,
+        "gradient_speed_ratio": 0.791255,
+        "correctness": "pass_rel_l2_0"
+      }
+    ]
+  },
+  "final_restore": {
+    "binary": "zmem_reference",
+    "sha256": "0e54c4938ea60bdb606fa67e450a5fc992b71ffe5823d2238a1414e0f30e9d6d",
+    "smoke_run": "/work/wenzhe/cuda3D/benchmarks/runs/smoke_1gpu_final_restored_zmem_smoke_20260608_020705",
+    "smoke_returncode": 0,
+    "smoke_outputs": 3
+  },
+  "next_allowed": [
+    "pml_compact_state_audit",
+    "global_region_temporal_pipeline_design"
+  ],
+  "do_not_repeat": [
+    "CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY direct p1 x/y second derivatives",
+    "CUDA3D_PML_ZFACE_SHARED_VP_DEBUG p-only S2/S4",
+    "CUDA3D_PML_ZFACE_SHARED_VP_STAGE_V S4"
+  ]
+}

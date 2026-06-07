@@ -1,0 +1,2 @@
+s4_correctness=/work/wenzhe/cuda3D/benchmarks/runs/correctness_shared_vp_debug_s4_correctness_20260608_020235
+s4_perf=/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_shared_vp_debug_s4_perf6_20260608_020238

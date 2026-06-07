@@ -17,8 +17,20 @@
 #error "CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY requires CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL"
 #endif
 
+#if defined(CUDA3D_PML_ZFACE_SHARED_VP_DEBUG) && !defined(CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL)
+#error "CUDA3D_PML_ZFACE_SHARED_VP_DEBUG requires CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL"
+#endif
+
+#if defined(CUDA3D_PML_ZFACE_SHARED_VP_DEBUG) && defined(CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY)
+#error "CUDA3D_PML_ZFACE_SHARED_VP_DEBUG replaces the direct fused zface prototype; do not enable both"
+#endif
+
 #if defined(CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY) && defined(CUDA3D_PML_ZFACE_P_SPECIALIZE)
 #error "CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY replaces the old pressure-only zface specialize path"
+#endif
+
+#if defined(CUDA3D_PML_ZFACE_SHARED_VP_DEBUG) && defined(CUDA3D_PML_ZFACE_P_SPECIALIZE)
+#error "CUDA3D_PML_ZFACE_SHARED_VP_DEBUG replaces the old pressure-only zface specialize path"
 #endif
 
 __constant__ float c_ay_pml[CUDA3D_MAX_PML];
@@ -51,7 +63,7 @@ void upload_pml_constants(int nbd,
   cudaMemcpyToSymbol(c_bz_h_pml, bz_h, nbd*sizeof(float));
 }
 
-#ifdef CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY
+#if defined(CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY) || defined(CUDA3D_PML_ZFACE_SHARED_VP_DEBUG)
 __device__ __forceinline__ bool pml_fused_zface_pressure_point(int gtid1, int gtid2, int gtid3,
 							       int n3, int n2, int n1, int npml) {
   const int core2_lo = npml + CorePmlMargin;
@@ -874,7 +886,7 @@ __global__ void cuda_fd3d_v_pml_ns(const float *__restrict__ p1, float *vy, floa
     bool need_vy = !((gtid1 >= core1_lo) && (gtid1 < core1_hi) &&
 		     (gtid2 >= core2_lo) && (gtid2 < core2_hi) &&
 		     (gtid3 >= core3_lo + 3) && (gtid3 < core3_hi - 4));
-#ifdef CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY
+#if defined(CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY) || defined(CUDA3D_PML_ZFACE_SHARED_VP_DEBUG)
     if (need_vx && pml_fused_zface_vx_global_point(gtid1, gtid2, gtid3, n3, n2, n1, npml))
       need_vx = false;
     if (need_vy && pml_fused_zface_vy_global_point(gtid1, gtid2, gtid3, n3, n2, n1, npml))
@@ -1051,7 +1063,7 @@ __global__ void cuda_fd3d_v_pml_tile_ns(const float *__restrict__ p1, float *vy,
     bool need_vy = !((gtid1 >= core1_lo) && (gtid1 < core1_hi) &&
 		     (gtid2 >= core2_lo) && (gtid2 < core2_hi) &&
 		     (gtid3 >= core3_lo + 3) && (gtid3 < core3_hi - 4));
-#ifdef CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY
+#if defined(CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY) || defined(CUDA3D_PML_ZFACE_SHARED_VP_DEBUG)
     if (need_vx && pml_fused_zface_vx_global_point(gtid1, gtid2, gtid3, n3, n2, n1, npml))
       need_vx = false;
     if (need_vy && pml_fused_zface_vy_global_point(gtid1, gtid2, gtid3, n3, n2, n1, npml))
@@ -1521,6 +1533,8 @@ __global__ void cuda_fd3d_p_pml_ns(float *p0, const float *__restrict__ p1, cons
 				       gtid3, gtid2, gtid1);
       return;
     }
+#elif defined(CUDA3D_PML_ZFACE_SHARED_VP_DEBUG)
+    if (pml_fused_zface_pressure_point(gtid1, gtid2, gtid3, n3, n2, n1, npml)) return;
 #endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
     if (pml_zface_p_special_point(gtid1, gtid2, gtid3, n3, n2, n1, npml)) return;
@@ -1696,6 +1710,8 @@ __global__ void cuda_fd3d_p_pml_tile_ns(float *p0, const float *__restrict__ p1,
 				       gtid3, gtid2, gtid1);
       return;
     }
+#elif defined(CUDA3D_PML_ZFACE_SHARED_VP_DEBUG)
+    if (pml_fused_zface_pressure_point(gtid1, gtid2, gtid3, n3, n2, n1, npml)) return;
 #endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
     const bool tile_may_hit_zface = ((tile.z0 < npml) || (tile.z0 + (int)blockDim.x > n1 - npml)) &&
@@ -2014,6 +2030,203 @@ __global__ void cuda_fd3d_pml_fused_vp_zface_ns(float *p0,
 
   p0[base]=2*__ldg(p1+base)-p0[base]
     +__ldg(cw2+base)*dt*(c1+c2+c3);
+}
+#endif
+
+#ifdef CUDA3D_PML_ZFACE_SHARED_VP_DEBUG
+__device__ __forceinline__ int pml_zface_shared_index(int lz, int lx, int ly) {
+  const int sz = PmlZFaceSharedOut1 + 2 * PmlZFaceSharedHalo;
+  const int sx = PmlZFaceSharedOut2 + 2 * PmlZFaceSharedHalo;
+  return (ly * sx + lx) * sz + lz;
+}
+
+__device__ __forceinline__ float pml_zface_shared_p(const float *__restrict__ tile,
+						    int lz, int lx, int ly) {
+  return tile[pml_zface_shared_index(lz, lx, ly)];
+}
+
+__device__ __forceinline__ float pml_zface_shared_vx(const float *__restrict__ tile,
+						     int lz, int lx, int ly,
+						     float _dx2) {
+  return _dx2 *
+    (stencil[1] * (pml_zface_shared_p(tile, lz, lx + 1, ly) - pml_zface_shared_p(tile, lz, lx,     ly)) +
+     stencil[2] * (pml_zface_shared_p(tile, lz, lx + 2, ly) - pml_zface_shared_p(tile, lz, lx - 1, ly)) +
+     stencil[3] * (pml_zface_shared_p(tile, lz, lx + 3, ly) - pml_zface_shared_p(tile, lz, lx - 2, ly)) +
+     stencil[4] * (pml_zface_shared_p(tile, lz, lx + 4, ly) - pml_zface_shared_p(tile, lz, lx - 3, ly)));
+}
+
+__device__ __forceinline__ float pml_zface_shared_vy(const float *__restrict__ tile,
+						     int lz, int lx, int ly,
+						     float _dy2) {
+  return _dy2 *
+    (stencil[1] * (pml_zface_shared_p(tile, lz, lx, ly + 1) - pml_zface_shared_p(tile, lz, lx, ly    )) +
+     stencil[2] * (pml_zface_shared_p(tile, lz, lx, ly + 2) - pml_zface_shared_p(tile, lz, lx, ly - 1)) +
+     stencil[3] * (pml_zface_shared_p(tile, lz, lx, ly + 3) - pml_zface_shared_p(tile, lz, lx, ly - 2)) +
+     stencil[4] * (pml_zface_shared_p(tile, lz, lx, ly + 4) - pml_zface_shared_p(tile, lz, lx, ly - 3)));
+}
+
+#ifdef CUDA3D_PML_ZFACE_SHARED_VP_STAGE_V
+__device__ __forceinline__ int pml_zface_stage_vx_index(int oz, int ox, int oy) {
+  const int sx = PmlZFaceSharedOut2 + 2 * radius - 1;
+  return (oy * sx + ox) * PmlZFaceSharedOut1 + oz;
+}
+
+__device__ __forceinline__ int pml_zface_stage_vy_index(int oz, int ox, int oy) {
+  const int sy = PmlZFaceSharedOut3 + 2 * radius - 1;
+  return (oy * PmlZFaceSharedOut2 + ox) * PmlZFaceSharedOut1 + oz;
+}
+#endif
+
+__global__ void cuda_fd3d_pml_zface_shared_vp_debug_ns(float *p0,
+						       const float *__restrict__ p1,
+						       float *cw2, float _dy2, float _dx2, float _dz2,
+						       int n3, int n2, int n1, int npml, float dt,
+						       float *mem_dzz,
+						       const float *__restrict__ mem_dz_v,
+						       float *mem_dz_next_v) {
+  extern __shared__ float shared_p[];
+  const int sz = PmlZFaceSharedOut1 + 2 * PmlZFaceSharedHalo;
+  const int sx = PmlZFaceSharedOut2 + 2 * PmlZFaceSharedHalo;
+  const int sy = PmlZFaceSharedOut3 + 2 * PmlZFaceSharedHalo;
+  const int shared_count = sz * sx * sy;
+  const int tid = threadIdx.x;
+#ifdef CUDA3D_PML_ZFACE_SHARED_VP_STAGE_V
+  float *shared_vx = shared_p + shared_count;
+  const int vx_count = PmlZFaceSharedOut1 * (PmlZFaceSharedOut2 + 2 * radius - 1) * PmlZFaceSharedOut3;
+  float *shared_vy = shared_vx + vx_count;
+  const int vy_count = PmlZFaceSharedOut1 * PmlZFaceSharedOut2 * (PmlZFaceSharedOut3 + 2 * radius - 1);
+#endif
+
+  const int core2_lo = npml + CorePmlMargin;
+  const int core3_lo = npml + CorePmlMargin;
+  const int core2_hi = n2 - npml - CorePmlMargin;
+  const int core3_hi = n3 - npml - CorePmlMargin;
+
+  const int tile_z0 = (blockIdx.z == 0) ? 0 : n1 - npml;
+  const int tile_x0 = core2_lo + blockIdx.x * PmlZFaceSharedOut2;
+  const int tile_y0 = core3_lo + blockIdx.y * PmlZFaceSharedOut3;
+  const int stride2 = n1 + 2 * radius;
+  const int stride3 = stride2 * (n2 + 2 * radius);
+
+  for (int idx = tid; idx < shared_count; idx += blockDim.x) {
+    const int lz = idx % sz;
+    const int t = idx / sz;
+    const int lx = t % sx;
+    const int ly = t / sx;
+    const int gz = tile_z0 + lz - PmlZFaceSharedHalo;
+    const int gx = tile_x0 + lx - PmlZFaceSharedHalo;
+    const int gy = tile_y0 + ly - PmlZFaceSharedHalo;
+    float value = 0.0f;
+    if (gz >= -radius && gz < n1 + radius &&
+	gx >= -radius && gx < n2 + radius &&
+	gy >= -radius && gy < n3 + radius) {
+      value = __ldg(p1 + (size_t)(gy + radius) * stride3 +
+		    (size_t)(gx + radius) * stride2 + (gz + radius));
+    }
+    shared_p[idx] = value;
+  }
+  __syncthreads();
+
+#ifdef CUDA3D_PML_ZFACE_SHARED_VP_STAGE_V
+  for (int idx = tid; idx < vx_count; idx += blockDim.x) {
+    const int oz = idx % PmlZFaceSharedOut1;
+    const int t = idx / PmlZFaceSharedOut1;
+    const int ox = t % (PmlZFaceSharedOut2 + 2 * radius - 1);
+    const int oy = t / (PmlZFaceSharedOut2 + 2 * radius - 1);
+    const int lz = oz + PmlZFaceSharedHalo;
+    const int lx = ox + PmlZFaceSharedHalo - radius;
+    const int ly = oy + PmlZFaceSharedHalo;
+    shared_vx[idx] = pml_zface_shared_vx(shared_p, lz, lx, ly, _dx2);
+  }
+  for (int idx = tid; idx < vy_count; idx += blockDim.x) {
+    const int oz = idx % PmlZFaceSharedOut1;
+    const int t = idx / PmlZFaceSharedOut1;
+    const int ox = t % PmlZFaceSharedOut2;
+    const int oy = t / PmlZFaceSharedOut2;
+    const int lz = oz + PmlZFaceSharedHalo;
+    const int lx = ox + PmlZFaceSharedHalo;
+    const int ly = oy + PmlZFaceSharedHalo - radius;
+    shared_vy[idx] = pml_zface_shared_vy(shared_p, lz, lx, ly, _dy2);
+  }
+  __syncthreads();
+#endif
+
+  const int output_count = PmlZFaceSharedOut1 * PmlZFaceSharedOut2 * PmlZFaceSharedOut3;
+  for (int out = tid; out < output_count; out += blockDim.x) {
+    const int oz = out % PmlZFaceSharedOut1;
+    const int tx = out / PmlZFaceSharedOut1;
+    const int ox = tx % PmlZFaceSharedOut2;
+    const int oy = tx / PmlZFaceSharedOut2;
+    const int gtid1 = tile_z0 + oz;
+    const int gtid2 = tile_x0 + ox;
+    const int gtid3 = tile_y0 + oy;
+
+    if (!pml_fused_zface_pressure_point(gtid1, gtid2, gtid3, n3, n2, n1, npml)) continue;
+    if (gtid2 >= core2_hi || gtid3 >= core3_hi) continue;
+
+    const int lz = oz + PmlZFaceSharedHalo;
+    const int lx = ox + PmlZFaceSharedHalo;
+    const int ly = oy + PmlZFaceSharedHalo;
+    const size_t base = (size_t)(gtid3 + radius) * stride3 +
+      (size_t)(gtid2 + radius) * stride2 + (gtid1 + radius);
+
+    const float vz0 = recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2,
+							     n3, n2, n1, npml, gtid3, gtid2, gtid1, true);
+    float c1 = stencil[1] * (vz0 -
+			     recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1 - 1, false))
+      + stencil[2] * (recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1 + 1, false) -
+		      recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1 - 2, false))
+      + stencil[3] * (recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1 + 2, false) -
+		      recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1 - 3, false))
+      + stencil[4] * (recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1 + 3, false) -
+		      recompute_vz_after_update_from_old_mem(p1, mem_dz_v, mem_dz_next_v, _dz2, n3, n2, n1, npml, gtid3, gtid2, gtid1 - 4, false));
+    c1 *= _dz2;
+
+#ifdef CUDA3D_PML_ZFACE_SHARED_VP_STAGE_V
+    const int vx_base = ox + radius;
+    float c2 = stencil[1] * (shared_vx[pml_zface_stage_vx_index(oz, vx_base,     oy)] - shared_vx[pml_zface_stage_vx_index(oz, vx_base - 1, oy)])
+      + stencil[2] * (shared_vx[pml_zface_stage_vx_index(oz, vx_base + 1, oy)] - shared_vx[pml_zface_stage_vx_index(oz, vx_base - 2, oy)])
+      + stencil[3] * (shared_vx[pml_zface_stage_vx_index(oz, vx_base + 2, oy)] - shared_vx[pml_zface_stage_vx_index(oz, vx_base - 3, oy)])
+      + stencil[4] * (shared_vx[pml_zface_stage_vx_index(oz, vx_base + 3, oy)] - shared_vx[pml_zface_stage_vx_index(oz, vx_base - 4, oy)]);
+#else
+    float c2 = stencil[1] * (pml_zface_shared_vx(shared_p, lz, lx,     ly, _dx2) - pml_zface_shared_vx(shared_p, lz, lx - 1, ly, _dx2))
+      + stencil[2] * (pml_zface_shared_vx(shared_p, lz, lx + 1, ly, _dx2) - pml_zface_shared_vx(shared_p, lz, lx - 2, ly, _dx2))
+      + stencil[3] * (pml_zface_shared_vx(shared_p, lz, lx + 2, ly, _dx2) - pml_zface_shared_vx(shared_p, lz, lx - 3, ly, _dx2))
+      + stencil[4] * (pml_zface_shared_vx(shared_p, lz, lx + 3, ly, _dx2) - pml_zface_shared_vx(shared_p, lz, lx - 4, ly, _dx2));
+#endif
+    c2 *= _dx2;
+
+#ifdef CUDA3D_PML_ZFACE_SHARED_VP_STAGE_V
+    const int vy_base = oy + radius;
+    float c3 = stencil[1] * (shared_vy[pml_zface_stage_vy_index(oz, ox, vy_base    )] - shared_vy[pml_zface_stage_vy_index(oz, ox, vy_base - 1)])
+      + stencil[2] * (shared_vy[pml_zface_stage_vy_index(oz, ox, vy_base + 1)] - shared_vy[pml_zface_stage_vy_index(oz, ox, vy_base - 2)])
+      + stencil[3] * (shared_vy[pml_zface_stage_vy_index(oz, ox, vy_base + 2)] - shared_vy[pml_zface_stage_vy_index(oz, ox, vy_base - 3)])
+      + stencil[4] * (shared_vy[pml_zface_stage_vy_index(oz, ox, vy_base + 3)] - shared_vy[pml_zface_stage_vy_index(oz, ox, vy_base - 4)]);
+#else
+    float c3 = stencil[1] * (pml_zface_shared_vy(shared_p, lz, lx, ly,     _dy2) - pml_zface_shared_vy(shared_p, lz, lx, ly - 1, _dy2))
+      + stencil[2] * (pml_zface_shared_vy(shared_p, lz, lx, ly + 1, _dy2) - pml_zface_shared_vy(shared_p, lz, lx, ly - 2, _dy2))
+      + stencil[3] * (pml_zface_shared_vy(shared_p, lz, lx, ly + 2, _dy2) - pml_zface_shared_vy(shared_p, lz, lx, ly - 3, _dy2))
+      + stencil[4] * (pml_zface_shared_vy(shared_p, lz, lx, ly + 3, _dy2) - pml_zface_shared_vy(shared_p, lz, lx, ly - 4, _dy2));
+#endif
+    c3 *= _dy2;
+
+    size_t pind, ic;
+    if (gtid1 < npml) {
+      pind = (size_t)gtid3 * npml * n2 + (size_t)gtid2 * npml + gtid1;
+      const float coef = c_bz_pml[gtid1];
+      mem_dzz[pind] = mem_dzz[pind] * coef + c1 * (coef - 1);
+      c1 += mem_dzz[pind];
+    } else {
+      ic = gtid1 - n1 + npml;
+      pind = (size_t)n3 * n2 * npml + (size_t)gtid3 * npml * n2 + (size_t)gtid2 * npml + ic;
+      const float coef = c_az_pml[ic];
+      mem_dzz[pind] = mem_dzz[pind] * coef + c1 * (coef - 1);
+      c1 += mem_dzz[pind];
+    }
+
+    p0[base] = 2 * __ldg(p1 + base) - p0[base] +
+      __ldg(cw2 + base) * dt * (c1 + c2 + c3);
+  }
 }
 #endif
 

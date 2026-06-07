@@ -2697,3 +2697,72 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 直接用 p1 x/y second derivatives 替代 `vx/vy` global round trip 的 z-face fusion 已停止。
   - 后续不要重复 separate zface kernel 或 inline p_pml direct recompute。
   - 只有新设计使用 CTA-local shared-memory velocity intermediates，或有新的 NCU 证据说明总 memory stall 下降，才允许重开 PML z-face fusion。
+
+## 2026-06-08 02:12:39 +08:00 - WAVESTEP V2 shared VP night sprint
+
+- 操作目标：
+  - 按 Pro 路线继续推进 `/work/wenzhe/cuda3D` 上的 CUDA 性能优化。
+  - 固化 zmem baseline，执行 NCU forensic、CPML double-buffer 复测、z-face shared VP 预算与 prototype 验收。
+  - 所有候选必须对比 `zmem_reference`，并在失败后恢复服务器 binary。
+- 修改文件：
+  - 新增 `tools/pml_zface_shared_tile_budget.py`。
+  - 新增 `tools/ncu_csv_summary.py`。
+  - 更新 `include/inc3D/cu_common.h`。
+  - 更新 `include/inc3D/single_solver.h`。
+  - 更新 `src/single_solver.cu`。
+  - 更新 `src/rem_fd.cu`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 新增 `docs/wavestep_v2/pml_zface_shared_tile_budget.md`。
+  - 新增 `docs/wavestep_v2/pml_zface_shared_vp_design.md`。
+  - 新增 `docs/wavestep_v2/cpml_vmem_double_buffer_all_result.md`。
+  - 新增 `docs/wavestep_v2/ncu_forensics_summary.md`。
+  - 新增 `docs/wavestep_v2/phase2_fused_zface_forensics.md`。
+  - 新增 `docs/wavestep_v2/shared_vp_debug_result.md`。
+  - 新增 `docs/wavestep_v2/post_shared_vp_fallback_plan.md`。
+  - 新增 `reports/wavestep_v2_night_20260608/final_report.md`。
+  - 新增 `reports/wavestep_v2_night_20260608/final_summary.json`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地 `git checkout -B exp/wavestep-v2-shared-vp-night`。
+  - 远端 `git checkout -B exp/wavestep-v2-shared-vp-night`。
+  - 远端构建 zmem baseline：
+    - `-O3 -arch=sm_120 --use_fast_math`
+    - `-DCUDA3D_PML_RECOMPUTE_Z`
+    - `-DCUDA3D_PML_TILE_LIST`
+    - `-DCUDA3D_PML_ZMEM_IN_P`
+    - `-DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2`
+  - 远端运行：
+    - `smoke_1gpu`
+    - `correctness`
+    - `perf_1gpu_6shots` x2
+  - 远端构建并运行 `CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL` release A/B。
+  - 远端使用 Nsight Compute 2025.3.0 对 zmem、CPML double-buffer、direct inline fused zface 执行短 profile。
+  - 远端构建并运行 `CUDA3D_PML_ZFACE_SHARED_VP_DEBUG`：
+    - S2 p-only：`12x16x12`，smem `81120`。
+    - S4 p-only：`12x12x12`，smem `70304`。
+    - S4 staged-V：`12x12x12`，smem `92192`。
+  - 使用 `tools/compare_outputs.py` 对 smoke/correctness/perf 输出进行 rel L2 对比。
+  - 远端最终重建 zmem 并运行 final smoke。
+- 测试结果：
+  - zmem baseline 复跑通过。
+  - CPML double-buffer correctness 通过，保留为 scaffold。
+  - NCU forensic 完成，direct inline fused zface 的 `p_pml_tile` sampled duration 从 `188.856us` 增至 `248.200us`。
+  - S2 p-only shared VP correctness 通过，但性能失败。
+  - S4 p-only shared VP correctness 通过，但性能失败。
+  - S4 staged-V shared VP correctness 通过，但性能失败。
+  - 服务器最终 binary 已恢复为 zmem，final smoke 通过。
+- 输出/哈希/误差摘要：
+  - zmem same-session mean：WP `2.448577s`，Gradient `2.560774s`。
+  - CPML double-buffer mean：WP `2.369180s`，speed `1.033512x`；Gradient `2.486222s`，speed `1.029986x`；rel L2 `0`。
+  - S2 p-only shared VP mean：WP `3.007605s`，speed `0.814129x`；Gradient `3.169875s`，speed `0.807847x`；rel L2 `0`。
+  - S4 p-only shared VP：WP `3.039426s`，speed `0.805605x`；Gradient `3.188930s`，speed `0.803020x`；rel L2 `0`。
+  - S4 staged-V shared VP mean：WP `3.090552s`，speed `0.792278x`；Gradient `3.236344s`，speed `0.791255x`；rel L2 `0`。
+  - S2 binary SHA256：`143a3a19fa7e57ddadb0c1cb80b10397c7e2b4b6263df2723c5f621f7ac7b324`。
+  - S4 binary SHA256：`e7cdd11d3d0de5654d836679dbef5242b0adc6232deaa2b28a0b0f570c960ef4`。
+  - S4 staged-V binary SHA256：`288103e236d3c4bba160073f372a2b9bc61cf6486fcf8c439d8b094dd3e2202b`。
+  - final restored zmem SHA256：`0e54c4938ea60bdb606fa67e450a5fc992b71ffe5823d2238a1414e0f30e9d6d`。
+- 风险与下一步：
+  - `CUDA3D_PML_ZFACE_SHARED_VP_DEBUG` 当前形态已停止；禁止继续重复 S2/S4 p-only 或 S4 staged-V。
+  - 新增 shared VP 代码全部默认关闭，仅保留为 traceable failed prototype。
+  - 后续建议保留 CPML double-buffer scaffold，转向 PML compact-state audit 或 global-region temporal pipeline 的 byte-budget/profiler 设计。

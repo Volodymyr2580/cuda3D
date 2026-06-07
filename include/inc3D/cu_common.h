@@ -120,6 +120,21 @@ extern "C" {
 #ifndef PmlZFaceBlockSize3
 #define PmlZFaceBlockSize3   4
 #endif
+#ifndef PmlZFaceSharedOut1
+#define PmlZFaceSharedOut1   12
+#endif
+#ifndef PmlZFaceSharedOut2
+#define PmlZFaceSharedOut2   16
+#endif
+#ifndef PmlZFaceSharedOut3
+#define PmlZFaceSharedOut3   12
+#endif
+#ifndef PmlZFaceSharedHalo
+#define PmlZFaceSharedHalo   7
+#endif
+#ifndef PmlZFaceSharedThreads
+#define PmlZFaceSharedThreads 256
+#endif
 #define BlockSize 256
 #define MAX_BLOCK_SZ 256
 #endif

@@ -126,17 +126,26 @@ __global__ void cuda_fd3d_p_pml_zface_ns(float *p0, const float *__restrict__ p1
 
 #ifdef CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY
 __global__ void cuda_fd3d_pml_fused_vp_zface_ns(float *p0,
-				const float *__restrict__ p1,
-				float *cw2, float _dy2, float _dx2, float _dz2,
-				int n3, int n2, int n1, int npml, float dt,
-				float *mem_dzz,
-				const float *__restrict__ mem_dz_v,
-				float *mem_dz_next_v,
-				const PmlTile *__restrict__ tiles, int ntile);
+						const float *__restrict__ p1,
+						float *cw2, float _dy2, float _dx2, float _dz2,
+						int n3, int n2, int n1, int npml, float dt,
+						float *mem_dzz,
+						const float *__restrict__ mem_dz_v,
+						float *mem_dz_next_v,
+						const PmlTile *__restrict__ tiles, int ntile);
+#endif
+#ifdef CUDA3D_PML_ZFACE_SHARED_VP_DEBUG
+__global__ void cuda_fd3d_pml_zface_shared_vp_debug_ns(float *p0,
+						       const float *__restrict__ p1,
+						       float *cw2, float _dy2, float _dx2, float _dz2,
+						       int n3, int n2, int n1, int npml, float dt,
+						       float *mem_dzz,
+						       const float *__restrict__ mem_dz_v,
+						       float *mem_dz_next_v);
 #endif
 
 __global__ void cuda_fd3d_p_pml_shared_ns(float *p0, float *p1, float *vy, float *vx, float *vz,
-				float *cw2, float _dy2, float _dx2, float _dz2,
+				  float *cw2, float _dy2, float _dx2, float _dz2,
 				int n3, int n2, int n1, int npml, float dt,
 				float *ay, float *by, float *ax, float *bx, float *az, float *bz,
 				float *mem_dyy, float *mem_dxx, float *mem_dzz);
