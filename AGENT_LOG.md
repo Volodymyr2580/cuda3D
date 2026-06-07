@@ -2592,3 +2592,21 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 当前分支只完成 design/audit/memory estimate；下一步若实现，必须宏控制且默认关闭。
   - 第一版 implementation 应只覆盖 single GPU，先实现 `p_core` 与启用路径的 `p_pml_tile`/generic PML triple variants，再做 debug dump step 0/1/2 与 correctness/perf gate。
   - 已保存的 stash 仅用于保留旧无关 `AGENT_LOG.md` 残留，不能误合入本分支 commit。
+
+## 2026-06-07 18:18:38 +0800 - Write Pro feedback for pressure triple-buffer design
+
+- 操作目标：根据用户请求，整理一份可直接交给 Pro 的反馈报告，总结 `CUDA3D_PRESSURE_TRIPLE_BUFFER_PIPELINE` design/audit 阶段成果、关键审计结论、内存估算和下一步最小实现请求。
+- 修改文件：
+  - 新增 `feedback/codex_report_20260607_181718_pressure_triple_buffer_design.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 检查当前分支状态和 `feedback/` 目录已有报告命名。
+  - 新增综合反馈 Markdown。
+- 测试结果：
+  - 未修改 CUDA 源码。
+  - 未运行新的编译或数值测试。
+- 输出/哈希/误差摘要：
+  - 报告引用 commit `11c46a4`、pointer audit 关键结论、memory estimate 数值和建议的 minimal implementation gate。
+- 风险与下一步：
+  - 该文档是交接/决策反馈，不是新的性能实验。
+  - 若 Pro 同意，下一步应实现 macro-gated minimal triple-buffer correctness prototype，不应在同一轮启动 temporal blocking。
