@@ -2772,3 +2772,21 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 当前 fused predictor 只是 correctness probe，不是性能路径；debug timing 变慢是预期结果，不能作为 speedup 结论。
   - 下一步应实现真正 `CUDA3D_CORE_2STEP_FUSED_COMMIT`：同一 kernel 计算 `p(t+1)` 与 strict-inner `p(t+2)`，下一步对已提交 inner tile 做 block-level early skip，避免 shared-memory fill。
   - commit 版本必须先在 meaningful case 上通过 correctness；若 repeat speedup `<5%`，应停止 fused two-step route；若 meaningful `>=5%` 但 `perf_1gpu_6shots repeat <2%`，则保持 disabled 并报告适用性受 cropped domains 限制。
+
+## 2026-06-07 16:49:30 +0800 - Write Pro feedback for fused debug stage and stage-4 race
+
+- 操作目标：根据用户要求整理面向 Pro 的阶段反馈，汇报 `CUDA3D_CORE_2STEP_FUSED_INTERIOR` stage 1-3 验收结果，并指出 stage 4 不能直接把 debug helper 塞进 in-place `p_core` 的竞态风险。
+- 修改文件：
+  - 新增 `feedback/codex_report_20260607_164600_core2step_fused_debug.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 审查 `src/single_solver.cu` 中 `cuda_fd3d_p_core_ns` 与 `cuda_fd3d_p_core_ns_skip_region` 的 shared z-tile 加载位置和 skip 判断位置。
+  - 编写反馈报告，记录 `p0` 同时作为 old field 输入与 new field 输出时，在单 kernel fused commit 中会产生无 grid sync 的 old/new 竞态。
+- 测试结果：
+  - 未新增编译或运行测试。
+  - 反馈报告明确当前 stage 1-3 已验证通过，但 stage 4 需要先确定 shared-staged CTA tile、old-p0 read-only buffer 或其他安全设计。
+- 输出/哈希/误差摘要：
+  - 报告引用 commit `9115859`、meaningful case stats、p2-shift 零误差结果、输出零误差结果和 restored zmem binary hash。
+- 风险与下一步：
+  - 如果直接在 `p_core` 内读取 global old `p0` 计算 `p2`，同时写 global `p0(t+1)`，会有跨 CTA 读写竞态，不能作为正确实现。
+  - 下一步应先拿到或制定明确 tile/shared-memory budget，再实现 `CUDA3D_CORE_2STEP_FUSED_COMMIT`。
