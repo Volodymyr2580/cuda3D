@@ -674,3 +674,39 @@ Do not retry plain local new_mem accumulation for p_pml_tile CPML updates.
 Future pressure-PML work should target larger divergence or CPML traffic
 structure, not this expression-level rewrite.
 ```
+
+## 2026-06-08 - Reject Final P0 LDG Read
+
+Decision:
+
+```text
+Reject pml_p0_ldg, which replaces the old p0[outIndex] read in the
+cuda_fd3d_p_pml_tile_ns final pressure update with __ldg(p0+outIndex).
+```
+
+Evidence:
+
+```text
+pml_p0_ldg:
+  correctness rel L2                     0 for 6 outputs
+  perf6 output compares                  pass
+  mean WP speedup vs direct-fill         1.000054x
+  mean Gradient speedup vs direct-fill   1.000694x
+```
+
+Reason:
+
+```text
+SourceCounters marked the final p0 writeback/update line as hot, but making
+the old p0 operand a read-only-cache load does not change the dominant memory
+dependency enough to matter.  The result is correctness-safe but inside
+measurement noise, so it fails the >=2% small-candidate gate.
+```
+
+Rejected boundary:
+
+```text
+Do not retry __ldg(p0+outIndex) for the pressure-PML final update without
+new profiler evidence.  Future pressure-PML work should move to larger
+region/dataflow restructuring.
+```

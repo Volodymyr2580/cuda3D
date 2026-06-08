@@ -1,0 +1,58 @@
+{
+  "rows": [
+    {
+      "round": 1,
+      "direct_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_pml_p0_ldg_directfill_r1_20260608_124522",
+      "candidate_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_pml_p0_ldg_candidate_r1_20260608_124534",
+      "compare_dir": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/reports/day_20260608/pml_p0_ldg_perf6_repeat_20260608_124515/compare_r1",
+      "direct": {
+        "wp": 2.208778,
+        "gradient": 2.321201
+      },
+      "candidate": {
+        "wp": 2.208617,
+        "gradient": 2.317286
+      },
+      "wp_speedup_vs_direct": 1.0000728962966419,
+      "gradient_speedup_vs_direct": 1.0016894763960942,
+      "compare_pass": true
+    },
+    {
+      "round": 2,
+      "direct_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_pml_p0_ldg_directfill_r2_20260608_124546",
+      "candidate_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_pml_p0_ldg_candidate_r2_20260608_124558",
+      "compare_dir": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/reports/day_20260608/pml_p0_ldg_perf6_repeat_20260608_124515/compare_r2",
+      "direct": {
+        "wp": 2.191094,
+        "gradient": 2.307412
+      },
+      "candidate": {
+        "wp": 2.190333,
+        "gradient": 2.307792
+      },
+      "wp_speedup_vs_direct": 1.0003474357552027,
+      "gradient_speedup_vs_direct": 0.9998353404466259,
+      "compare_pass": true
+    },
+    {
+      "round": 3,
+      "direct_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_pml_p0_ldg_directfill_r3_20260608_124610",
+      "candidate_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_pml_p0_ldg_candidate_r3_20260608_124622",
+      "compare_dir": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/reports/day_20260608/pml_p0_ldg_perf6_repeat_20260608_124515/compare_r3",
+      "direct": {
+        "wp": 2.188848,
+        "gradient": 2.308949
+      },
+      "candidate": {
+        "wp": 2.189415,
+        "gradient": 2.30766
+      },
+      "wp_speedup_vs_direct": 0.9997410267126151,
+      "gradient_speedup_vs_direct": 1.0005585744867096,
+      "compare_pass": true
+    }
+  ],
+  "mean_wp_speedup_vs_direct": 1.00005378625482,
+  "mean_gradient_speedup_vs_direct": 1.0006944637764765,
+  "all_compare_pass": true
+}

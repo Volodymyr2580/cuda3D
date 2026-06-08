@@ -305,3 +305,49 @@ Decision:
 Reject local new_mem accumulation.  It is numerically safe but performance
 neutral, so it fails the >=2% small-candidate gate.
 ```
+
+## Rejected P0 LDG Candidate
+
+Tested:
+
+```text
+pml_p0_ldg
+```
+
+The candidate changed the old pressure read in the final pressure-PML update
+from:
+
+```text
+p0[outIndex]
+```
+
+to:
+
+```text
+__ldg(p0+outIndex)
+```
+
+Result:
+
+```text
+correctness                    pass, rel L2 = 0 for 6 outputs
+perf6 repeat compares          pass
+mean WP speedup vs direct-fill 1.000054x
+mean Gradient speedup          1.000694x
+```
+
+Perf repeat table:
+
+| round | direct WP | candidate WP | WP speedup | direct Gradient | candidate Gradient | Gradient speedup |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 2.208778 | 2.208617 | 1.000073 | 2.321201 | 2.317286 | 1.001689 |
+| 2 | 2.191094 | 2.190333 | 1.000347 | 2.307412 | 2.307792 | 0.999835 |
+| 3 | 2.188848 | 2.189415 | 0.999741 | 2.308949 | 2.307660 | 1.000559 |
+
+Decision:
+
+```text
+Reject pml_p0_ldg.  The final p0 update line is hot in SourceCounters, but
+changing only the old p0 operand to a read-only-cache load is noise-level
+neutral and fails the >=2% small-candidate gate.
+```

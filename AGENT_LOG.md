@@ -3370,3 +3370,40 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 决策：拒绝 local `new_mem` accumulation，未达到 `>=2%` gate。
   - direct-fill best 仍是当前主线。
   - 下一步应考虑更大粒度结构：降低 pressure PML divergence / active-thread loss，或重新组织 CPML memory traffic；不要继续重复 z-cache fill、warp-range、plain `new_mem` 表达式优化。
+
+## 2026-06-08 12:58:00 +08:00 - Reject p0 __ldg final pressure read
+
+- 操作目标：
+  - 根据 SourceCounters 中 final `p0[outIndex]` pressure update 热点，测试把旧 `p0` 读取改成 read-only-cache load 是否能降低 pressure-PML latency。
+  - 候选名：`pml_p0_ldg`。
+- 修改文件：
+  - 临时修改 `src/single_solver.cu`：只在 `cuda_fd3d_p_pml_tile_ns` 的 final pressure update 中把旧 `p0[outIndex]` 读改成 `__ldg(p0+outIndex)`。
+  - 测试后已恢复到 commit `68de1a7` 的 direct-fill best 形态；本地 `git diff -- src/single_solver.cu` 为空。
+  - 新增报告：
+    - `reports/day_20260608/pml_p0_ldg_correctness_comparison.md`
+    - `reports/day_20260608/pml_p0_ldg_perf6_repeat_summary.md`
+    - `reports/day_20260608/pml_p0_ldg_perf6_repeat_summary.json`
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 更新 `docs/day_20260608/pressure_pml_zrecomp_cache_prototype.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 上传临时 `src/single_solver.cu` 到 `/work/wenzhe/cuda3D_codex_day_20260608_68de1a7`。
+  - 编译 direct-fill combo + `pml_p0_ldg` 临时源码。
+  - 运行 correctness，对比 zmem baseline outputs。
+  - 运行 `perf_1gpu_6shots` direct-fill vs `pml_p0_ldg` 3 轮 A/B，每轮输出对比。
+  - 恢复本地与远端源码到 direct-fill best。
+- 测试结果：
+  - 编译通过。
+  - correctness 通过，6 个输出 rel L2 全部 `0`。
+  - `perf_1gpu_6shots` repeat 3 轮输出对比全部通过。
+  - mean WP speedup vs direct-fill：`1.000054x`。
+  - mean Gradient speedup vs direct-fill：`1.000694x`。
+- 输出/哈希/误差摘要：
+  - round 1：direct WP `2.208778s`，candidate WP `2.208617s`，speedup `1.000073x`；Gradient speedup `1.001689x`。
+  - round 2：direct WP `2.191094s`，candidate WP `2.190333s`，speedup `1.000347x`；Gradient speedup `0.999835x`。
+  - round 3：direct WP `2.188848s`，candidate WP `2.189415s`，speedup `0.999741x`；Gradient speedup `1.000559x`。
+- 风险与下一步：
+  - 决策：拒绝 `pml_p0_ldg`，未达到 `>=2%` small-candidate gate。
+  - 不再重复 final `p0` read-only load 方向，除非出现新的 profiler 证据。
+  - 下一步应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构，而不是继续做表达式级小修。

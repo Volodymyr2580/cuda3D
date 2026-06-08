@@ -314,7 +314,12 @@ Phase 4.8 direct-fill SourceCounters profile 已完成：
   - `perf_1gpu_6shots` repeat mean WP speedup vs direct-fill：`1.000647x`。
   - mean Gradient speedup vs direct-fill：`0.998957x`。
   - 结论：编译器已基本处理好写后使用表达式，显式 `new_mem` 不满足 `>=2%` gate。
-- 下一步不要继续抠 z-cache fill 或 `new_mem` 表达式，应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构。
+- `pml_p0_ldg` 已测试并拒绝：
+  - correctness pass，6 个输出 rel L2 全部 `0`。
+  - `perf_1gpu_6shots` repeat mean WP speedup vs direct-fill：`1.000054x`。
+  - mean Gradient speedup vs direct-fill：`1.000694x`。
+  - 结论：把 final pressure update 中旧 `p0[outIndex]` 读取改成 `__ldg(p0+outIndex)` 只有噪声级收益，不满足 `>=2%` gate。
+- 下一步不要继续抠 z-cache fill、`new_mem` 表达式或 final `p0` read-only load，应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构。
 
 ## 速度阈值存档规则
 
