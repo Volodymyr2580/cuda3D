@@ -458,8 +458,34 @@ Phase 4.11 exact active-point / compact descriptor budget 已完成并拒绝 CUD
   - 不写 exact active-point / compact descriptor CUDA prototype。
   - 不写简单 length-23 active-point prototype。
   - compact descriptor 只有在新设计证明扣除 descriptor/control overhead 后仍有 `>=5%` `perf_1gpu_6shots` repeat speedup ceiling 时才允许重开。
-- 当前下一步：
+  - 当前下一步：
   - 优先做 `cuda_fd3d_p_pml_len16_halfwarp_ns` source-level drill-down，或转向 v-PML memory layout/coalescing 设计。
+
+Phase 4.12 len16 source-level NCU profile 已完成：
+
+- 报告：`docs/day_20260608/len16_halfwarp_source_profile.md`。
+- artifacts：
+  - `reports/day_20260608/len16_source_profile_20260608_1646/details.csv`
+  - `reports/day_20260608/len16_source_profile_20260608_1646/details_summary.md`
+  - `reports/day_20260608/len16_source_profile_20260608_1646/details_summary.json`
+  - `reports/day_20260608/len16_source_profile_20260608_1646/source_hotlines.md`
+  - `reports/day_20260608/len16_source_profile_20260608_1646/source_hotlines.json`
+- kernel-level signal:
+  - No Eligible：`73.545%`。
+  - eligible warps/scheduler：`0.427`。
+  - warp cycles/issued instruction：`33.970`。
+  - Branch efficiency：`65.220%`。
+  - NCU CPI stall：L1TEX scoreboard dependency 约 `24.6 cycles/warp`。
+- source hot lines：
+  - final `p0[base]` update + `cw2` line：约 `60.78%` parsed samples。
+  - z-CPML `mem_dzz` update：约 `26.82%` parsed samples。
+  - z-cache shared loads 已不是主导。
+- 决策：
+  - 不写 len16-only `p0 __ldg`、local `new_mem`、branch-only lower/upper/margin specialization、或 z-cache/shared-memory 小修 prototype。
+  - 原因：直接 fill 路线已拒绝过 `p0 __ldg` 和 `new_mem`，当前 source profile 也显示是 final writeback / CPML state dependency，不是语法写法问题。
+- 当前下一步：
+  - 转向 v-PML memory layout / coalescing design。
+  - 或提出更大粒度 pressure-PML memory-ownership design，但必须先证明 `>=5%` repeat speedup ceiling。
 
 ## 速度阈值存档规则
 

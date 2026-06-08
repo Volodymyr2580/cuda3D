@@ -1176,3 +1176,61 @@ Report:
 docs/day_20260608/pml_compact_descriptor_budget.md
 reports/day_20260608/pml_compact_descriptor_budget.json
 ```
+
+## 2026-06-08 - Reject Len16 Source-Syntax Micro Prototypes
+
+Decision:
+
+```text
+Do not implement len16-only p0 __ldg, explicit local new_mem, branch-only
+lower/upper specialization, or z-cache/shared-memory micro prototypes.
+```
+
+Evidence:
+
+```text
+cuda_fd3d_p_pml_len16_halfwarp_ns SourceCounters:
+  No Eligible                         73.545%
+  Eligible warps/scheduler             0.427
+  Warp cycles/issued instruction      33.970
+  Branch efficiency                   65.220%
+  L1TEX scoreboard stall              about 24.6 cycles/warp
+
+source hot lines:
+  final p0 update and cw2 load         about 60.78% parsed samples
+  z-CPML mem_dzz update                about 26.82% parsed samples
+  z-cache shared loads                 not dominant
+```
+
+Reason:
+
+```text
+The accepted len16 packed kernel is limited by final pressure writeback and
+z-CPML memory dependency, not by z-cache fill.  The previously tested p0 __ldg
+and local new_mem variants were noise-level on the direct-fill path, and this
+profile does not provide a new reason to repeat them only inside len16.
+Branch-only specialization also lacks a >=5% ceiling and would add tile-list and
+launch overhead.
+```
+
+Boundary:
+
+```text
+Do not repeat len16 source-syntax micro tuning without new profiler evidence and
+a modeled >=5% perf_1gpu_6shots repeat speedup ceiling.
+```
+
+Next allowed routes:
+
+```text
+1. v-PML memory layout / coalescing design.
+2. A broader pressure-PML memory-ownership design that reduces final p0/cw2
+   traffic or CPML z-state dependency with a proven >=5% ceiling.
+```
+
+Report:
+
+```text
+docs/day_20260608/len16_halfwarp_source_profile.md
+reports/day_20260608/len16_source_profile_20260608_1646/source_hotlines.md
+```

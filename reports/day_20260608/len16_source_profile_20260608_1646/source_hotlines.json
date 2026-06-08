@@ -1,0 +1,206 @@
+{
+  "source_page": "reports/day_20260608/len16_source_profile_20260608_1646/source_page_cuda_sass.txt",
+  "parsed_total_samples": 15712,
+  "top_lines": [
+    {
+      "line": 1813,
+      "samples": 5660,
+      "not_issued_samples": 4643,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.36023421588594706,
+      "text": "p0[base]=2*__ldg(p1+base)-p0[base]"
+    },
+    {
+      "line": 1814,
+      "samples": 3890,
+      "not_issued_samples": 3161,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.24758146639511203,
+      "text": "+__ldg(cw2+base)*dt*(c1+c2+c3);"
+    },
+    {
+      "line": 1810,
+      "samples": 3287,
+      "not_issued_samples": 2612,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.2092031568228106,
+      "text": "mem_dzz[pind]=mem_dzz[pind]*coef+c1*(coef-1);"
+    },
+    {
+      "line": 1804,
+      "samples": 927,
+      "not_issued_samples": 660,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.05899949083503055,
+      "text": "mem_dzz[pind]=mem_dzz[pind]*coef+c1*(coef-1);"
+    },
+    {
+      "line": 1778,
+      "samples": 266,
+      "not_issued_samples": 156,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.016929735234215888,
+      "text": "const size_t ts2 = (size_t)(gtid2 + radius) * stride2;"
+    },
+    {
+      "line": 1815,
+      "samples": 233,
+      "not_issued_samples": 190,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.014829429735234215,
+      "text": "}"
+    },
+    {
+      "line": 1737,
+      "samples": 186,
+      "not_issued_samples": 132,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.011838085539714868,
+      "text": "if (blockIdx.x >= ntile) return;"
+    },
+    {
+      "line": 1738,
+      "samples": 180,
+      "not_issued_samples": 109,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.011456211812627291,
+      "text": "const PmlTile tile = tiles[blockIdx.x];"
+    },
+    {
+      "line": 1751,
+      "samples": 113,
+      "not_issued_samples": 46,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.007191955193482688,
+      "text": "const int gtid1 = active_z0 + local_z;"
+    },
+    {
+      "line": 1784,
+      "samples": 111,
+      "not_issued_samples": 59,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.007064663951120163,
+      "text": "vz_line_cache[cbase-2])"
+    },
+    {
+      "line": 1806,
+      "samples": 88,
+      "not_issued_samples": 57,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.00560081466395112,
+      "text": "} else if (gtid1>=n1-npml) {"
+    },
+    {
+      "line": 1811,
+      "samples": 80,
+      "not_issued_samples": 46,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.0050916496945010185,
+      "text": "c1+=mem_dzz[pind];"
+    },
+    {
+      "line": 1748,
+      "samples": 69,
+      "not_issued_samples": 26,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.004391547861507129,
+      "text": "const int core1_hi = n1 - npml - CorePmlMargin;"
+    },
+    {
+      "line": 1770,
+      "samples": 64,
+      "not_issued_samples": 31,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.004073319755600814,
+      "text": "if (local_z < 3) {"
+    },
+    {
+      "line": 1788,
+      "samples": 60,
+      "not_issued_samples": 23,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.0038187372708757637,
+      "text": "vz_line_cache[cbase-4]);"
+    },
+    {
+      "line": 1760,
+      "samples": 59,
+      "not_issued_samples": 23,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.0037550916496945012,
+      "text": "const int stride3 = stride2 * (n2 + 2 * radius);"
+    },
+    {
+      "line": 1783,
+      "samples": 42,
+      "not_issued_samples": 22,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.0026731160896130346,
+      "text": "+stencil[2]*(vz_line_cache[cbase+1]-"
+    },
+    {
+      "line": 1782,
+      "samples": 41,
+      "not_issued_samples": 19,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.0026094704684317717,
+      "text": "vz_line_cache[cbase-1])"
+    },
+    {
+      "line": 1749,
+      "samples": 30,
+      "not_issued_samples": 7,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.0019093686354378818,
+      "text": "const int tile_z1 = min(tile.z0 + PmlTileBlockSize1, n1);"
+    },
+    {
+      "line": 1779,
+      "samples": 30,
+      "not_issued_samples": 2,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.0019093686354378818,
+      "text": "const size_t base = ts3 + ts2 + gtid1 + radius;"
+    },
+    {
+      "line": 1743,
+      "samples": 27,
+      "not_issued_samples": 14,
+      "occurrences": 9,
+      "sample_share_of_parsed": 0.0017184317718940936,
+      "text": "const int local_x = local_line & (PmlTileBlockSize2 - 1);"
+    },
+    {
+      "line": 1803,
+      "samples": 26,
+      "not_issued_samples": 12,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.001654786150712831,
+      "text": "const float coef = c_bz_pml[gtid1];"
+    },
+    {
+      "line": 1785,
+      "samples": 25,
+      "not_issued_samples": 15,
+      "occurrences": 9,
+      "sample_share_of_parsed": 0.0015911405295315683,
+      "text": "+stencil[3]*(vz_line_cache[cbase+2]-"
+    },
+    {
+      "line": 1786,
+      "samples": 23,
+      "not_issued_samples": 5,
+      "occurrences": 9,
+      "sample_share_of_parsed": 0.0014638492871690428,
+      "text": "vz_line_cache[cbase-3])"
+    },
+    {
+      "line": 1747,
+      "samples": 22,
+      "not_issued_samples": 12,
+      "occurrences": 10,
+      "sample_share_of_parsed": 0.00140020366598778,
+      "text": "const int core1_lo = npml + CorePmlMargin;"
+    }
+  ]
+}

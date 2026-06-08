@@ -1,0 +1,70 @@
+{
+  "profiles": [
+    {
+      "label": "len16_source",
+      "path": "reports/day_20260608/len16_source_profile_20260608_1646/details.csv",
+      "kernels": {
+        "cuda_fd3d_p_pml_len16_halfwarp_ns": {
+          "launches": 10,
+          "metrics": {
+            "achieved_active_warps_per_sm": 35.958,
+            "achieved_occupancy_pct": 74.912,
+            "active_warps_per_scheduler": 8.986,
+            "avg_active_threads_per_warp": 26.38,
+            "avg_divergent_branches": 316.61,
+            "avg_not_predicated_off_threads_per_warp": 24.91,
+            "block_limit_registers": 10.0,
+            "block_limit_shared_mem": 18.0,
+            "branch_efficiency_pct": 65.22,
+            "branch_instructions": 1264864.0,
+            "eligible_warps_per_scheduler": 0.427,
+            "issued_warp_per_scheduler": 0.264,
+            "l1tex_hit_rate_pct": 61.537,
+            "l2_hit_rate_pct": 54.157,
+            "mem_busy_pct": 47.333,
+            "mem_pipes_busy_pct": 28.451,
+            "memory_throughput_bytes_per_s": 1.0470000000000002,
+            "no_eligible_pct": 73.545,
+            "one_or_more_eligible_pct": 26.455,
+            "theoretical_occupancy_pct": 83.33,
+            "warp_cycles_per_issued_instruction": 33.97
+          },
+          "rules": [
+            {
+              "section": "SchedulerStats",
+              "rule": "IssueSlotUtilization",
+              "type": "OPT",
+              "estimated_speedup_type": "local",
+              "estimated_speedup": "74",
+              "description": "Every scheduler is capable of issuing one instruction per cycle, but for this workload each scheduler only issues an instruction every 3.8 cycles. This might leave hardware resources underutilized and may lead to less optimal performance. Out of the maximum of 12 warps per scheduler, this workload allocates an average of 8.89 active warps per scheduler, but only an average of 0.42 warps were eligible per cycle. Eligible warps are the subset of active warps that are ready to issue their next instruction. Every cycle with no eligible warp results in no instruction being issued and the issue slot remains unused. To increase the number of eligible warps, avoid possible load imbalances due to highly different execution durations per warp. Reducing stalls indicated on the Warp State Statistics and Source Counters sections can help, too."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "OPT",
+              "estimated_speedup_type": "global",
+              "estimated_speedup": "72.03",
+              "description": "On average, each warp of this workload spends 24.6 cycles being stalled waiting for a scoreboard dependency on a L1TEX (local, global, surface, texture) operation. Find the instruction producing the data being waited upon to identify the culprit. To reduce the number of cycles waiting on L1TEX data accesses verify the memory access patterns are optimal for the target architecture, attempt to increase cache hit rates by increasing data locality (coalescing), or by changing the cache configuration. Consider moving frequently used data to shared memory. This stall type represents about 72.0% of the total average of 34.2 cycles between issuing two instructions."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "INF",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "Check the Warp Stall Sampling (All Samples) table for the top stall locations in your source based on sampling data. The Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#metrics-reference) provides more details on each stall reason."
+            },
+            {
+              "section": "SchedulerStats",
+              "rule": "IssueSlotUtilization",
+              "type": "OPT",
+              "estimated_speedup_type": "local",
+              "estimated_speedup": "73.87",
+              "description": "Every scheduler is capable of issuing one instruction per cycle, but for this workload each scheduler only issues an instruction every 3.8 cycles. This might leave hardware resources underutilized and may lead to less optimal performance. Out of the maximum of 12 warps per scheduler, this workload allocates an average of 8.95 active warps per scheduler, but only an average of 0.42 warps were eligible per cycle. Eligible warps are the subset of active warps that are ready to issue their next instruction. Every cycle with no eligible warp results in no instruction being issued and the issue slot remains unused. To increase the number of eligible warps, avoid possible load imbalances due to highly different execution durations per warp. Reducing stalls indicated on the Warp State Statistics and Source Counters sections can help, too."
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -3978,3 +3978,80 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 原因：len16 已消化主要 lane waste，剩余 length-23 lane savings 的 optimistic sampled-main ceiling 也不到 `2%`，低于 `>=5%` prototype gate；descriptor/control overhead 还未计入，真实收益会更低。
   - 只有新 descriptor/ownership 设计证明扣除 overhead 后仍有 `>=5%` `perf_1gpu_6shots` repeat speedup ceiling，才允许重开。
   - 下一步转向 `cuda_fd3d_p_pml_len16_halfwarp_ns` source-level drill-down 或 v-PML memory layout/coalescing 设计。
+
+## 2026-06-08 16:58:00 +08:00 - Len16 source-level NCU profile and micro-route rejection
+
+- 操作目标：
+  - 对 accepted len16 packed kernel `cuda_fd3d_p_pml_len16_halfwarp_ns` 做 source-level Nsight Compute drill-down。
+  - 找出 `No Eligible 73%+` 的具体源代码热点。
+  - 决定是否打开 len16-only 微优化 prototype。
+- 修改文件：
+  - 新增报告：`docs/day_20260608/len16_halfwarp_source_profile.md`。
+  - 新增 artifacts：
+    - `reports/day_20260608/len16_source_profile_20260608_1646/details.csv`
+    - `reports/day_20260608/len16_source_profile_20260608_1646/details_summary.md`
+    - `reports/day_20260608/len16_source_profile_20260608_1646/details_summary.json`
+    - `reports/day_20260608/len16_source_profile_20260608_1646/source_hotlines.md`
+    - `reports/day_20260608/len16_source_profile_20260608_1646/source_hotlines.json`
+    - `reports/day_20260608/len16_source_profile_20260608_1646/lineinfo_bin.sha256`
+    - `reports/day_20260608/len16_source_profile_20260608_1646/final_release_bin.sha256`
+    - `reports/day_20260608/len16_source_profile_20260608_1646/ncu_run.log`
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 远端隔离 worktree：`/work/wenzhe/cuda3D/.codex_worktrees/sprint_0648`。
+  - 检查 GPU：RTX 5090，约 `481 MiB` 显存占用，`0%` util。
+  - 编译 accepted len16 candidate + `-lineinfo`。
+  - 运行 Nsight Compute：
+    - `--section SourceCounters`
+    - `--section SchedulerStats`
+    - `--section WarpStateStats`
+    - `--section MemoryWorkloadAnalysis`
+    - `--section Occupancy`
+    - `--launch-skip 10`
+    - `--launch-count 10`
+    - `--kernel-name regex:.*cuda_fd3d_p_pml_len16_halfwarp.*`
+  - 导出：
+    - details CSV。
+    - raw CSV。
+    - source page。
+    - `cuda,sass` source page with `--resolve-source-file src/single_solver.cu`。
+  - 远端解析 `source_page_cuda_sass.txt`，生成 `source_hotlines.md/json`；大原始 `.ncu-rep` 和 source page 留在服务器，不提交。
+  - profile 后重新编译无 `-lineinfo` release len16 binary，并运行 smoke。
+- 测试结果：
+  - NCU source profile 成功，profiled `cuda_fd3d_p_pml_len16_halfwarp_ns` 10 launches，每个 15 passes。
+  - details CSV 生成成功，`431` 行。
+  - source page 生成成功，`cuda,sass` source page 可解析到 `src/single_solver.cu` 行号。
+  - final release rebuild 成功。
+  - post-profile smoke 通过：
+    - run：`benchmarks/runs/smoke_1gpu_len16_after_source_profile_restore_20260608_165211`
+    - 输出包含 `ALL DONE`
+- 输出/哈希/误差摘要：
+  - lineinfo binary SHA256：见 `reports/day_20260608/len16_source_profile_20260608_1646/lineinfo_bin.sha256`。
+  - final release binary SHA256：`77ba44c3f94fc5992b07b01ee786bfadf6c2a4671fc8e755dace2bcef9b31c58`。
+  - kernel summary：
+    - No Eligible：`73.545%`
+    - issued warp/scheduler：`0.264`
+    - active warps/scheduler：`8.986`
+    - eligible warps/scheduler：`0.427`
+    - warp cycles/issued instruction：`33.970`
+    - avg active threads/warp：`26.380`
+    - avg not-predicated threads/warp：`24.910`
+    - branch efficiency：`65.220%`
+    - avg divergent branches：`316.610`
+    - achieved occupancy：`74.912%`
+    - L1/TEX hit：`61.537%`
+    - L2 hit：`54.157%`
+    - NCU CPI stall：L1TEX scoreboard dependency 约 `24.6 cycles/warp`
+  - parsed source hot lines，total parsed samples `15,712`：
+    - line 1813 `p0[base]=2*__ldg(p1+base)-p0[base]`：`5,660` samples，`36.02%`
+    - line 1814 `+__ldg(cw2+base)*dt*(c1+c2+c3);`：`3,890` samples，`24.76%`
+    - line 1810 upper z `mem_dzz[pind]=mem_dzz[pind]*coef+c1*(coef-1);`：`3,287` samples，`20.92%`
+    - line 1804 lower z `mem_dzz[pind]=mem_dzz[pind]*coef+c1*(coef-1);`：`927` samples，`5.90%`
+    - z-cache shared-load lines each below `1%` parsed samples.
+- 风险与下一步：
+  - 决策：不写 len16-only `p0 __ldg`、local `new_mem`、branch-only lower/upper/margin specialization、或 z-cache/shared-memory 小修 prototype。
+  - 原因：direct-fill 路线已经拒绝过 `p0 __ldg` 与 `new_mem`，当前 source profile 显示瓶颈仍是 final pressure writeback 与 CPML z-state dependency，不是简单表达式写法。
+  - branch efficiency 虽低，但热点行不是 branch 本身；branch-only specialization 没有 `>=5%` speedup ceiling 且会增加 tile-list/launch overhead。
+  - 下一步转向 v-PML memory layout/coalescing design，或提出更大粒度 pressure-PML memory-ownership design，但必须先证明 `>=5%` repeat speedup ceiling。
