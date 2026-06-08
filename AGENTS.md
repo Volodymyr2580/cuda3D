@@ -92,7 +92,54 @@ Profiler gate：
 当前下一步建议：
 
 - 保留 `CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL` 作为 ownership scaffold。
-- 停止 z-face fusion 局部路线，转入更大粒度的 global-region temporal pipeline 或 PML compact-state audit。
+- PML compact-state audit 已完成，当前 gate 失败，不进入 compact-state CUDA prototype。
+- 停止 z-face fusion 局部路线，转入更大粒度的 global-region temporal pipeline 设计/原型。
+
+### 2026-06-08 day sprint gate 结果
+
+Phase 1 `CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL` 复验通过：
+
+- 三轮 `perf_1gpu_6shots` A/B 均在每个候选运行前重建 binary。
+- all-mean WP speedup：`1.032329x`。
+- all-mean Gradient speedup：`1.028370x`。
+- correctness 与三轮 perf 输出对比均通过，max rel L2 `0`。
+- 结论：保留为后续 wave-step ownership scaffold，但不视为大突破。
+
+Phase 2 PML compact-state gate 已停止：
+
+- 当前 CPML memory 已经是 axis-slab allocation，不是 full padded-domain state。
+- `cpml_dbuf` 状态 footprint：`72.391 MiB`；六个 padded wavefield/cw2 array floor：`503.039 MiB`。
+- safe z-face compact 只能覆盖 `memory_dz` 的 `84.93%`，剩余 edge/corner state 仍需保留。
+- 静态 estimated WP speedup ceiling：`1.005x`，低于 `>=1.05x` meaningful prototype gate。
+- NCU 短 profile 显示 pressure PML duration 基本不变：
+  - zmem `cuda_fd3d_p_pml_tile_ns`：`189.840us`
+  - CPML dbuf `cuda_fd3d_p_pml_tile_ns`：`190.293us`
+  - velocity PML 改善：
+    - zmem `cuda_fd3d_v_pml_tile_ns`：`71.493us`
+    - CPML dbuf `cuda_fd3d_v_pml_tile_ns`：`66.000us`
+- 结论：不要写 `CUDA3D_PML_COMPACT_STATE_*` prototype，除非后续 profiler 证明 CPML state layout 成为主瓶颈。
+
+Day sprint 关键报告：
+
+- `docs/day_20260608/cpml_vmem_dbuf_revalidation.md`
+- `docs/day_20260608/pml_compact_state_audit.md`
+- `docs/day_20260608/pml_state_ncu_summary.md`
+- `docs/day_20260608/phase2_compact_state_gate_decision.md`
+- `docs/day_20260608/global_temporal_pipeline_phase4_design.md`
+- `reports/day_20260608/cpml_vmem_dbuf_summary.json`
+- `reports/day_20260608/phase2_compact_state_gate_summary.json`
+- `reports/day_20260608/phase4_global_temporal_pipeline_design_summary.json`
+
+Phase 4 已开启 global temporal pipeline 设计门：
+
+- zmem 短 NCU 中，sampled main kernels：
+  - `cuda_fd3d_p_pml_tile_ns`：`189.562us`，约 `53.43%`。
+  - `cuda_fd3d_p_core_ns`：`93.670us`，约 `26.40%`。
+  - `cuda_fd3d_v_pml_tile_ns`：`71.610us`，约 `20.18%`。
+- 单独优化 `p_core` 若要让 sampled main kernels 达到 `>=5%` speedup，至少需要 `18.04%` 的 `p_core` reduction。
+- K=2 deep-core temporal geometry 约覆盖原 core `77.7%`；K=3 约 `58.1%`，当前先只考虑 K=2。
+- 普通 CUDA kernel 没有 grid-wide barrier，不能写会跨 CTA 读取半更新 `p(t+1)` 的 fused two-step kernel。
+- 下一步必须先做 K=2 deep-core byte/synchronization model；未证明依赖锥安全前，不写 temporal CUDA kernel。
 
 ## 速度阈值存档规则
 

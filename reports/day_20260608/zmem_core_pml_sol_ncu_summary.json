@@ -1,0 +1,145 @@
+{
+  "profiles": [
+    {
+      "label": "zmem_core_pml",
+      "path": "benchmarks/profiles/day_20260608/zmem_core_pml_sol_ncu.csv",
+      "kernels": {
+        "cuda_fd3d_p_core_ns": {
+          "launches": 10,
+          "metrics": {
+            "duration_ns": 93670.4,
+            "sol_compute_throughput_pct": 58.483,
+            "sol_dram_throughput_pct": 42.257,
+            "sol_l1tex_throughput_pct": 60.146,
+            "sol_l2_throughput_pct": 96.81,
+            "sol_memory_throughput_pct": 96.81
+          },
+          "rules": [
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "INF",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload is utilizing greater than 80.0% of the available compute or memory performance of the device. To further improve performance, work will likely need to be shifted from the most utilized to another unit. Start by analyzing L2 in the Memory Workload Analysis section."
+            },
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "INF",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload is utilizing greater than 80.0% of the available compute or memory performance of the device. To further improve performance, work will likely need to be shifted from the most utilized to another unit. Start by analyzing L2 in the Memory Workload Analysis section."
+            },
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "INF",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload is utilizing greater than 80.0% of the available compute or memory performance of the device. To further improve performance, work will likely need to be shifted from the most utilized to another unit. Start by analyzing L2 in the Memory Workload Analysis section."
+            },
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "INF",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload is utilizing greater than 80.0% of the available compute or memory performance of the device. To further improve performance, work will likely need to be shifted from the most utilized to another unit. Start by analyzing L2 in the Memory Workload Analysis section."
+            }
+          ]
+        },
+        "cuda_fd3d_p_pml_tile_ns": {
+          "launches": 10,
+          "metrics": {
+            "duration_ns": 189561.6,
+            "sol_compute_throughput_pct": 56.021,
+            "sol_dram_throughput_pct": 40.457,
+            "sol_l1tex_throughput_pct": 57.494,
+            "sol_l2_throughput_pct": 33.863,
+            "sol_memory_throughput_pct": 56.021
+          },
+          "rules": [
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload exhibits low compute throughput and memory bandwidth utilization relative to the peak performance of this device. Achieved compute throughput and/or memory bandwidth below 60.0% of peak typically indicate latency issues. Look at Scheduler Statistics and Warp State Statistics for potential reasons."
+            },
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload exhibits low compute throughput and memory bandwidth utilization relative to the peak performance of this device. Achieved compute throughput and/or memory bandwidth below 60.0% of peak typically indicate latency issues. Look at Scheduler Statistics and Warp State Statistics for potential reasons."
+            },
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload exhibits low compute throughput and memory bandwidth utilization relative to the peak performance of this device. Achieved compute throughput and/or memory bandwidth below 60.0% of peak typically indicate latency issues. Look at Scheduler Statistics and Warp State Statistics for potential reasons."
+            },
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload exhibits low compute throughput and memory bandwidth utilization relative to the peak performance of this device. Achieved compute throughput and/or memory bandwidth below 60.0% of peak typically indicate latency issues. Look at Scheduler Statistics and Warp State Statistics for potential reasons."
+            }
+          ]
+        },
+        "cuda_fd3d_v_pml_tile_ns": {
+          "launches": 10,
+          "metrics": {
+            "duration_ns": 71609.6,
+            "sol_compute_throughput_pct": 44.572,
+            "sol_dram_throughput_pct": 45.121,
+            "sol_l1tex_throughput_pct": 46.61,
+            "sol_l2_throughput_pct": 55.251,
+            "sol_memory_throughput_pct": 55.251
+          },
+          "rules": [
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload exhibits low compute throughput and memory bandwidth utilization relative to the peak performance of this device. Achieved compute throughput and/or memory bandwidth below 60.0% of peak typically indicate latency issues. Look at Scheduler Statistics and Warp State Statistics for potential reasons."
+            },
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload exhibits low compute throughput and memory bandwidth utilization relative to the peak performance of this device. Achieved compute throughput and/or memory bandwidth below 60.0% of peak typically indicate latency issues. Look at Scheduler Statistics and Warp State Statistics for potential reasons."
+            },
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload exhibits low compute throughput and memory bandwidth utilization relative to the peak performance of this device. Achieved compute throughput and/or memory bandwidth below 60.0% of peak typically indicate latency issues. Look at Scheduler Statistics and Warp State Statistics for potential reasons."
+            },
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload exhibits low compute throughput and memory bandwidth utilization relative to the peak performance of this device. Achieved compute throughput and/or memory bandwidth below 60.0% of peak typically indicate latency issues. Look at Scheduler Statistics and Warp State Statistics for potential reasons."
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

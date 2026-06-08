@@ -1,0 +1,141 @@
+{
+  "variant": "cpml_dbuf",
+  "geometry": {
+    "case_dir": "/work/wenzhe/cuda3D/benchmarks/cases/perf_1gpu_6shots",
+    "ny": 384,
+    "nx": 384,
+    "nz": 95,
+    "nt": 1501,
+    "shots": 6,
+    "receivers_per_shot": 441,
+    "npml": 12,
+    "radius": 4,
+    "core_pml_margin": 4,
+    "n3": 408,
+    "n2": 408,
+    "n1": 119,
+    "nypad": 416,
+    "nxpad": 416,
+    "nzpad": 127,
+    "domain_points": 19809216,
+    "padded_wavefield_points": 21978112,
+    "core_work_points": 12299712,
+    "pml_work_points": 7509504
+  },
+  "state_arrays": [
+    {
+      "name": "memory_dy",
+      "axis": "y",
+      "elements": 1165248,
+      "bytes": 4660992,
+      "formula": "2*npml*n2*n1",
+      "owner": "v_pml"
+    },
+    {
+      "name": "memory_dx",
+      "axis": "x",
+      "elements": 1165248,
+      "bytes": 4660992,
+      "formula": "n3*2*npml*n1",
+      "owner": "v_pml"
+    },
+    {
+      "name": "memory_dz",
+      "axis": "z",
+      "elements": 3995136,
+      "bytes": 15980544,
+      "formula": "n3*n2*2*npml",
+      "owner": "p_pml zmem old"
+    },
+    {
+      "name": "memory_dyy",
+      "axis": "y",
+      "elements": 1165248,
+      "bytes": 4660992,
+      "formula": "2*npml*n2*n1",
+      "owner": "p_pml"
+    },
+    {
+      "name": "memory_dxx",
+      "axis": "x",
+      "elements": 1165248,
+      "bytes": 4660992,
+      "formula": "n3*2*npml*n1",
+      "owner": "p_pml"
+    },
+    {
+      "name": "memory_dzz",
+      "axis": "z",
+      "elements": 3995136,
+      "bytes": 15980544,
+      "formula": "n3*n2*2*npml",
+      "owner": "p_pml"
+    },
+    {
+      "name": "memory_dz_next",
+      "axis": "z",
+      "elements": 3995136,
+      "bytes": 15980544,
+      "formula": "n3*n2*2*npml",
+      "owner": "p_pml zmem next"
+    },
+    {
+      "name": "memory_dy_next",
+      "axis": "y",
+      "elements": 1165248,
+      "bytes": 4660992,
+      "formula": "2*npml*n2*n1",
+      "owner": "v_pml next"
+    },
+    {
+      "name": "memory_dx_next",
+      "axis": "x",
+      "elements": 1165248,
+      "bytes": 4660992,
+      "formula": "n3*2*npml*n1",
+      "owner": "v_pml next"
+    }
+  ],
+  "totals": {
+    "state_bytes": 75907584,
+    "six_wavefield_bytes": 527474688,
+    "state_vs_six_wavefields": 0.14390753855472208
+  },
+  "pml_region_breakdown": {
+    "z_only": 3538944,
+    "x_only": 875520,
+    "y_only": 875520,
+    "xy_edge": 54720,
+    "xz_edge": 221184,
+    "yz_edge": 221184,
+    "xyz_corner": 13824
+  },
+  "zface_counts": {
+    "memory_dz_elements": 3995136,
+    "true_zface_elements": 3538944,
+    "safe_zface_elements": 3393024,
+    "true_zface_of_memory_dz": 0.8858131487889274,
+    "safe_zface_of_memory_dz": 0.8492887351018839,
+    "residual_edge_corner_elements_after_safe_zface": 602112
+  },
+  "traffic": {
+    "state_update_elements_per_step": 12651264,
+    "mandatory_state_update_bytes_per_step": 101210112,
+    "zmem_recompute": {
+      "recompute_vz_calls_per_step": 60076032,
+      "memory_dz_old_reads_per_step": 29297664,
+      "memory_dz_old_read_bytes_per_step": 117190656,
+      "memory_dz_next_writes_per_step": 3995136,
+      "memory_dz_next_write_bytes_per_step": 15980544
+    },
+    "pml_pressure_vx_vy_load_bytes_per_step_est": 480608256,
+    "pml_pressure_p0_p1_cw2_store_bytes_per_step_floor": 120152064,
+    "pml_work_points": 7509504
+  },
+  "ncu": null,
+  "gate": {
+    "verdict": "stop_compact_state",
+    "estimated_wp_speedup_ceiling": 1.0045213379469435,
+    "reason": "Current CPML memory is already stored as y/x/z slabs.  Safe z-face compacting does not remove edge/corner state and has no >=5% static WP ceiling without new profiler evidence that CPML state layout dominates stalls."
+  }
+}

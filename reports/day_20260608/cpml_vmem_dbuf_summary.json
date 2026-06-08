@@ -1,0 +1,55 @@
+{
+  "date": "2026-06-08",
+  "platform": "RTX 5090 / CUDA 13.0 / Intel MPI 2021.18",
+  "baseline": "zmem_reference",
+  "candidate": "CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL",
+  "case": "perf_1gpu_6shots",
+  "correctness": {
+    "pass": true,
+    "max_rel_l2": 0.0,
+    "max_abs": 0.0
+  },
+  "rounds": [
+    {
+      "round": "a",
+      "zmem_wp": 2.456481,
+      "cpml_wp": 2.379958,
+      "wp_speedup": 1.032153088415846,
+      "zmem_gradient": 2.564714,
+      "cpml_gradient": 2.494277,
+      "gradient_speedup": 1.0282394457391861
+    },
+    {
+      "round": "b",
+      "zmem_wp": 2.422,
+      "cpml_wp": 2.35314,
+      "wp_speedup": 1.0292630272741954,
+      "zmem_gradient": 2.54406,
+      "cpml_gradient": 2.475148,
+      "gradient_speedup": 1.0278415674537442
+    },
+    {
+      "round": "c",
+      "zmem_wp": 2.426137,
+      "cpml_wp": 2.34281,
+      "wp_speedup": 1.0355671181188402,
+      "zmem_gradient": 2.542697,
+      "cpml_gradient": 2.470961,
+      "gradient_speedup": 1.0290316196815732
+    }
+  ],
+  "means": {
+    "zmem_wp": 2.4348726666666667,
+    "cpml_wp": 2.358636,
+    "wp_speedup": 1.0323291561360606,
+    "zmem_gradient": 2.5504903333333334,
+    "cpml_gradient": 2.480128666666667,
+    "gradient_speedup": 1.028370169221709
+  },
+  "gate": {
+    "pass": true,
+    "min_single_round_speedup_required": 1.015,
+    "mean_speedup_required": 1.025,
+    "decision": "keep_as_ownership_scaffold"
+  }
+}

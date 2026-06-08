@@ -2766,3 +2766,168 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - `CUDA3D_PML_ZFACE_SHARED_VP_DEBUG` 当前形态已停止；禁止继续重复 S2/S4 p-only 或 S4 staged-V。
   - 新增 shared VP 代码全部默认关闭，仅保留为 traceable failed prototype。
   - 后续建议保留 CPML double-buffer scaffold，转向 PML compact-state audit 或 global-region temporal pipeline 的 byte-budget/profiler 设计。
+
+## 2026-06-08 09:50:00 +08:00 - Day sprint Phase 0 zmem baseline rebuild
+
+- 操作目标：
+  - 根据 2026-06-08 白天 sprint 要求，建立同机、同日、同 flags 的 zmem 对照。
+  - 避免后续 CPML double-buffer A/B 测试复用错误 binary。
+- 修改文件：
+  - 追加本 `AGENT_LOG.md` 条目。
+  - 远端新增报告目录：`reports/day_20260608`、`docs/day_20260608`、`benchmarks/profiles/day_20260608`、`benchmarks/build_logs/day_20260608`。
+- 执行命令摘要：
+  - 本地创建工作分支：`git checkout -B exp/day-20260608-cpml-compact-temporal`。
+  - 远端记录 sprint 前状态：`reports/day_20260608/git_status_before_day_sprint_20260608.txt`。
+  - 远端构建 zmem：
+    - `-O3 -arch=sm_120 --use_fast_math`
+    - `-DCUDA3D_PML_RECOMPUTE_Z`
+    - `-DCUDA3D_PML_TILE_LIST`
+    - `-DCUDA3D_PML_ZMEM_IN_P`
+    - `-DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2`
+  - 远端运行：
+    - `python3 tools/run_benchmark.py --case smoke_1gpu --tag day_zmem_phase0_smoke`
+    - `python3 tools/run_benchmark.py --case correctness --tag day_zmem_phase0_correctness`
+- 测试结果：
+  - zmem 编译通过。
+  - `smoke_1gpu` 通过，输出 3 个 `.dir`。
+  - `correctness` 通过，输出 6 个 `.dir`。
+- 输出/哈希/误差摘要：
+  - zmem binary SHA256：`23760de8a255cccb133d7c54657ee8cb77407031f4ae382ea681fbf8fbb8d754`。
+  - smoke run：`benchmarks/runs/smoke_1gpu_day_zmem_phase0_smoke_20260608_094936`。
+  - correctness run：`benchmarks/runs/correctness_day_zmem_phase0_correctness_20260608_094940`。
+- 风险与下一步：
+  - 远端 worktree 保留夜间实验改动与测试工件，今天不执行清理或 reset。
+  - 继续 Phase 1：每个 zmem/CPML perf6 run 前显式重建对应 binary，完成三轮 A/B。
+
+## 2026-06-08 09:58:00 +08:00 - Day sprint Phase 1 CPML double-buffer revalidation
+
+- 操作目标：
+  - 复验 `CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL` 在 RTX 5090 平台上是否有可重复小收益。
+  - 使用同机同日三轮 zmem/CPML A/B，且每次候选运行前重新编译对应 binary，避免混用可执行文件。
+- 修改文件：
+  - 追加本 `AGENT_LOG.md` 条目。
+  - 远端新增构建日志：`benchmarks/build_logs/day_20260608/*_perf6_*_build.log`。
+  - 远端新增汇总：`reports/day_20260608/cpml_dbuf_perf6_ab_summary.json`、`reports/day_20260608/cpml_dbuf_perf6_ab_paths.tsv`。
+  - 远端新增 correctness/perf 对比目录：`reports/day_20260608/cpml_dbuf_phase1_correctness_vs_zmem`、`reports/day_20260608/cpml_dbuf_perf6_{a,b,c}_vs_zmem`。
+- 执行命令摘要：
+  - 构建 CPML double-buffer：
+    - `-O3 -arch=sm_120 --use_fast_math`
+    - `-DCUDA3D_PML_RECOMPUTE_Z`
+    - `-DCUDA3D_PML_TILE_LIST`
+    - `-DCUDA3D_PML_ZMEM_IN_P`
+    - `-DCUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL`
+    - `-DCUDA3D_CPML_VMEM_DISABLE_MPI`
+    - `-DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2`
+  - 远端运行 CPML smoke/correctness/perf_1gpu。
+  - 远端运行三轮 `perf_1gpu_6shots` A/B：`day_zmem_perf6_{a,b,c}` 与 `day_cpml_dbuf_perf6_{a,b,c}`。
+  - 使用 `tools/compare_outputs.py` 对 correctness 与每轮 perf6 输出做 rel L2 对比。
+- 测试结果：
+  - CPML smoke/correctness/perf_1gpu 均通过。
+  - CPML correctness vs zmem 通过。
+  - 三轮 perf6 输出对比均通过。
+  - Phase 1 gate 通过：平均 WP speedup `1.0323x`，平均 Gradient speedup `1.0284x`，所有单轮均高于 `1.015x`。
+- 输出/哈希/误差摘要：
+  - CPML phase1 binary SHA256：`4654be0284377da9fcb046836fd4379f2bcb57a5a5de9dfdb9b68e92f4d4dfc6`。
+  - Round a：zmem WP `2.456481s`，CPML WP `2.379958s`，WP speedup `1.032153x`；Gradient speedup `1.028239x`。
+  - Round b：zmem WP `2.422000s`，CPML WP `2.353140s`，WP speedup `1.029263x`；Gradient speedup `1.027842x`。
+  - Round c：zmem WP `2.426137s`，CPML WP `2.342810s`，WP speedup `1.035567x`；Gradient speedup `1.029032x`。
+  - all-mean：zmem WP `2.434873s`，CPML WP `2.358636s`，WP speedup `1.032329x`。
+  - all-mean：zmem Gradient `2.550490s`，CPML Gradient `2.480129s`，Gradient speedup `1.028370x`。
+- 风险与下一步：
+  - CPML double-buffer 是稳定小收益，可保留为后续 ownership scaffold。
+  - 继续 Phase 2：做 PML compact-state byte budget 与 NCU 短 profile；没有 `>=5%` 理论/实测意义收益则不进入 compact prototype。
+
+## 2026-06-08 10:10:00 +08:00 - Day sprint Phase 2 compact-state audit and gate
+
+- 操作目标：
+  - 根据白天 sprint 要求，判断 PML compact-state 是否值得进入 CUDA prototype。
+  - 用静态 byte budget 和 NCU 短 profile 避免继续做低收益 micro-prototype。
+- 修改文件：
+  - 新增 `tools/pml_state_traffic_audit.py`。
+  - 新增 `docs/day_20260608/cpml_vmem_dbuf_revalidation.md`。
+  - 新增 `docs/day_20260608/pml_compact_state_audit.md`。
+  - 新增 `docs/day_20260608/pml_compact_state_audit_static.md`。
+  - 新增 `docs/day_20260608/pml_state_ncu_summary.md`。
+  - 新增 `docs/day_20260608/phase2_compact_state_gate_decision.md`。
+  - 新增 `reports/day_20260608/cpml_vmem_dbuf_summary.json`。
+  - 新增 `reports/day_20260608/cpml_dbuf_perf6_ab_summary.json`。
+  - 新增 `reports/day_20260608/pml_compact_state_audit.json`。
+  - 新增 `reports/day_20260608/pml_compact_state_audit_static.json`。
+  - 新增 `reports/day_20260608/pml_state_ncu_summary.json`。
+  - 新增 `reports/day_20260608/phase2_compact_state_gate_summary.json`。
+  - 新增 `benchmarks/profiles/day_20260608/zmem_pml_state_ncu.csv`。
+  - 新增 `benchmarks/profiles/day_20260608/cpml_dbuf_pml_state_ncu.csv`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地运行：`python tools/pml_state_traffic_audit.py --case benchmarks/cases/perf_1gpu_6shots --variant cpml_dbuf`。
+  - 上传 `tools/pml_state_traffic_audit.py` 到 `/work/wenzhe/cuda3D/tools/`。
+  - 远端运行同一 audit，生成 `docs/day_20260608/pml_compact_state_audit*.md/json`。
+  - 远端分别重建 zmem 与 CPML double-buffer，并使用 Nsight Compute 2025.3.0 profile：
+    - `--section SpeedOfLight`
+    - `--section MemoryWorkloadAnalysis`
+    - `--section SourceCounters`
+    - `--section WarpStateStats`
+    - `--launch-skip 10`
+    - `--launch-count 12`
+    - kernel filter：`regex:.*cuda_fd3d_[vp]_pml_tile.*`
+  - 远端运行 `tools/ncu_csv_summary.py` 生成 NCU 汇总。
+  - 远端最终重建 zmem 并运行 final smoke。
+- 测试结果：
+  - `tools/pml_state_traffic_audit.py` 本地 `py_compile` 通过。
+  - zmem NCU CSV 生成，423 行。
+  - CPML NCU CSV 生成，423 行。
+  - compact-state gate 失败，停止 compact-state CUDA prototype。
+  - 远端最终 zmem restore smoke 通过。
+- 输出/哈希/误差摘要：
+  - CPML state footprint：`72.391 MiB`。
+  - six padded wavefield/cw2 array floor：`503.039 MiB`。
+  - safe z-face compact share of `memory_dz`：`84.93%`。
+  - residual z edge/corner elements：`602112`。
+  - mandatory CPML state update traffic floor：`96.521 MiB/step`。
+  - zmem `memory_dz` old reads from recompute path：`111.762 MiB/step`。
+  - pressure PML vx/vy load estimate：`458.344 MiB/step`。
+  - estimated compact-state WP speedup ceiling：`1.005x`。
+  - NCU `cuda_fd3d_p_pml_tile_ns` duration：zmem `189.840us`，CPML `190.293us`。
+  - NCU `cuda_fd3d_v_pml_tile_ns` duration：zmem `71.493us`，CPML `66.000us`。
+  - restored zmem binary SHA256：`4083a1f39428e2bbb0f204e330c409dd55c135ffd088441c24d331288ed1ad7e`。
+  - restored zmem smoke run：`benchmarks/runs/smoke_1gpu_day_zmem_restore_after_phase2_smoke_20260608_100828`。
+- 风险与下一步：
+  - 不实现 `CUDA3D_PML_COMPACT_STATE_DEBUG_MIRROR` 或 `CUDA3D_PML_COMPACT_ZFACE_STATE`，除非新 profiler 证明 CPML state layout 是主瓶颈且 byte model 预测 `>=5%` WP speedup。
+  - 下一步进入 global-region temporal pipeline 设计/原型阶段；继续禁止重复 z-face fusion、shared zface VP、RECOMPUTE_X/Y/XYZ、block/register sweep 等已失败路线。
+
+## 2026-06-08 10:18:00 +08:00 - Day sprint Phase 4 temporal pipeline design gate
+
+- 操作目标：
+  - 在 compact-state gate 失败后，按要求进入更大粒度的 global-region temporal pipeline 方向。
+  - 先补主核 profile 与 byte/synchronization 设计门，不直接写可能跨 CTA 读半更新数据的不安全 two-step kernel。
+- 修改文件：
+  - 新增 `docs/day_20260608/zmem_core_pml_sol_ncu_summary.md`。
+  - 新增 `docs/day_20260608/global_temporal_pipeline_phase4_design.md`。
+  - 新增 `reports/day_20260608/zmem_core_pml_sol_ncu_summary.json`。
+  - 新增 `reports/day_20260608/phase4_global_temporal_pipeline_design_summary.json`。
+  - 新增 `benchmarks/profiles/day_20260608/zmem_core_pml_sol_ncu.csv`。
+  - 更新 `AGENTS.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 远端在已恢复的 zmem binary 上运行 Nsight Compute 短 profile：
+    - `--section SpeedOfLight`
+    - `--launch-skip 10`
+    - `--launch-count 30`
+    - kernel filter：`regex:.*cuda_fd3d_(p_core|v_pml_tile|p_pml_tile).*`
+  - 使用 `tools/ncu_csv_summary.py` 生成 summary。
+- 测试结果：
+  - NCU CSV 生成并成功汇总。
+  - Phase 4 设计门已打开，但没有写 CUDA prototype。
+- 输出/哈希/误差摘要：
+  - `cuda_fd3d_p_pml_tile_ns` duration：`189.562us`，约占 sampled main kernels `53.43%`。
+  - `cuda_fd3d_p_core_ns` duration：`93.670us`，约占 `26.40%`，Memory SOL `96.810%`。
+  - `cuda_fd3d_v_pml_tile_ns` duration：`71.610us`，约占 `20.18%`。
+  - sampled main-kernel total：`354.842us`。
+  - sampled main kernels 若要达到 `>=5%` speedup，需要节省约 `16.897us`。
+  - 如果只优化 `p_core`，需要至少 `18.04%` 的 `p_core` reduction。
+  - K=2 deep-core temporal geometry 约覆盖原 pressure core `77.7%`；K=3 约 `58.1%`。
+- 风险与下一步：
+  - 普通 CUDA kernel 没有 grid-wide barrier；不能实现会跨 CTA 读取半更新 `p(t+1)` 的 fused two-step kernel。
+  - 下一步应先写 K=2 deep-core temporal byte/synchronization model，再决定是否进入 `CUDA3D_WAVESTEP_ENGINE_V2_TEMPORAL_PIPELINE` prototype。

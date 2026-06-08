@@ -236,3 +236,68 @@ Next allowed route:
 Keep CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL as scaffold.
 Move away from local z-face fusion and evaluate global-region temporal pipeline or PML compact-state audit.
 ```
+
+## 2026-06-08 - Stop PML Compact-State Prototype
+
+Decision:
+
+```text
+Do not implement CUDA3D_PML_COMPACT_STATE_DEBUG_MIRROR,
+CUDA3D_PML_COMPACT_ZFACE_STATE, or related compact-state CUDA prototypes
+from the current evidence.
+```
+
+Evidence:
+
+```text
+CPML double-buffer revalidation:
+  perf_1gpu_6shots all-mean WP speedup       1.032329x
+  perf_1gpu_6shots all-mean Gradient speedup 1.028370x
+  correctness/perf output rel_l2             0
+
+PML compact-state static audit:
+  cpml_dbuf state footprint                  72.391 MiB
+  six padded wavefield/cw2 array floor       503.039 MiB
+  state footprint share vs six arrays        14.39%
+  safe zface share of memory_dz              84.93%
+  residual z edge/corner elements            602112
+  estimated compact-state WP ceiling         1.005x
+
+NCU short profile:
+  zmem cuda_fd3d_p_pml_tile_ns               189.840 us
+  cpml cuda_fd3d_p_pml_tile_ns               190.293 us
+  zmem cuda_fd3d_v_pml_tile_ns                71.493 us
+  cpml cuda_fd3d_v_pml_tile_ns                66.000 us
+```
+
+Reason:
+
+```text
+The current implementation already stores CPML state as axis slabs:
+memory_dy, memory_dx, memory_dz, memory_dyy, memory_dxx, memory_dzz.
+Therefore the obvious full-domain-to-PML compaction is already present.
+
+A safe z-face compact layout can cover the pure/safe z-face region, but
+edge and corner state still exists and must be updated for correctness.
+The static upper bound is far below the >=5% meaningful prototype gate.
+
+The measured CPML double-buffer gain comes from velocity PML ownership;
+pressure PML timing is essentially unchanged, so pressure-side compact
+state is not the active bottleneck.
+```
+
+Stop rule:
+
+```text
+Do not reopen compact-state storage unless a new profiler run shows CPML
+state layout or state-sector traffic is the dominant pressure/velocity PML
+bottleneck and the byte model predicts >=5% WP speedup.
+```
+
+Next allowed route:
+
+```text
+Keep CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL as ownership scaffold.
+Move to global-region temporal pipeline design/prototype with a >=5%
+meaningful-case gate.
+```

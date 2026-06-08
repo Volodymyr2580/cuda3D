@@ -1,0 +1,35 @@
+{
+  "date": "2026-06-08",
+  "phase": "phase4_global_temporal_pipeline_design",
+  "status": "design_gate_opened",
+  "no_cuda_prototype_yet": true,
+  "kernel_timing_us": {
+    "cuda_fd3d_p_pml_tile_ns": 189.562,
+    "cuda_fd3d_p_core_ns": 93.67,
+    "cuda_fd3d_v_pml_tile_ns": 71.61,
+    "sampled_total": 354.842
+  },
+  "sampled_share": {
+    "cuda_fd3d_p_pml_tile_ns": 0.534220063014009,
+    "cuda_fd3d_p_core_ns": 0.26397878491948245,
+    "cuda_fd3d_v_pml_tile_ns": 0.20180115206650863
+  },
+  "five_percent_gate": {
+    "sampled_us_to_save": 16.8972380952381,
+    "required_p_core_reduction_if_core_only": 0.18039113339397886
+  },
+  "geometry": {
+    "core_lengths_zxy": [87, 376, 376],
+    "k2_deep_core_lengths_zxy": [73, 362, 362],
+    "k2_deep_core_share": 0.777146530767526,
+    "k3_deep_core_lengths_zxy": [59, 348, 348],
+    "k3_deep_core_share": 0.5810972917168043
+  },
+  "constraints": [
+    "normal CUDA kernels have no grid-wide barrier",
+    "do not repeat the previously failed CTA-local core two-step pattern",
+    "K=2 must prove dependency cone safety before CUDA code",
+    "prototype must reach >=5% meaningful-case WP speedup before expansion"
+  ],
+  "next_action": "build byte/synchronization model for K=2 deep-core temporal pipeline"
+}

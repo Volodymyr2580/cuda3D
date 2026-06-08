@@ -1,0 +1,28 @@
+{
+  "date": "2026-06-08",
+  "phase": "phase2_compact_state_gate",
+  "decision": "stop_compact_state_prototype",
+  "static_audit": {
+    "cpml_dbuf_state_mib": 72.39111328125,
+    "six_wavefield_floor_mib": 503.0390625,
+    "state_share_vs_six_wavefields": 0.14390753277892544,
+    "safe_zface_share_of_memory_dz": 0.8492887351018839,
+    "residual_z_edge_corner_elements": 602112,
+    "mandatory_state_update_mib_per_step": 96.521484375,
+    "zmem_dz_old_read_mib_per_step": 111.76171875,
+    "pml_pressure_vx_vy_load_mib_per_step_est": 458.34375,
+    "estimated_wp_speedup_ceiling": 1.0045213379469435
+  },
+  "ncu": {
+    "zmem_p_pml_duration_ns": 189840.0,
+    "cpml_dbuf_p_pml_duration_ns": 190293.0,
+    "zmem_v_pml_duration_ns": 71493.0,
+    "cpml_dbuf_v_pml_duration_ns": 66000.0,
+    "interpretation": "velocity PML improves; pressure PML does not, so compact pressure-side state layout is not currently the dominant lever"
+  },
+  "gate": {
+    "required_meaningful_speedup": 1.05,
+    "pass": false,
+    "next_direction": "global_region_temporal_pipeline_design"
+  }
+}

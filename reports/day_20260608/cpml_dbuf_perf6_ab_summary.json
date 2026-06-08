@@ -1,0 +1,87 @@
+{
+  "rows": [
+    {
+      "variant": "zmem",
+      "round": "a",
+      "run_dir": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_day_zmem_perf6_a_20260608_095229",
+      "wp_seconds": 2.456481,
+      "gradient_seconds": 2.564714,
+      "elapsed_text": "0:04.98"
+    },
+    {
+      "variant": "cpml_dbuf",
+      "round": "a",
+      "run_dir": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_day_cpml_dbuf_perf6_a_20260608_095241",
+      "wp_seconds": 2.379958,
+      "gradient_seconds": 2.494277,
+      "elapsed_text": "0:04.89"
+    },
+    {
+      "variant": "zmem",
+      "round": "b",
+      "run_dir": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_day_zmem_perf6_b_20260608_095254",
+      "wp_seconds": 2.422,
+      "gradient_seconds": 2.54406,
+      "elapsed_text": "0:04.87"
+    },
+    {
+      "variant": "cpml_dbuf",
+      "round": "b",
+      "run_dir": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_day_cpml_dbuf_perf6_b_20260608_095306",
+      "wp_seconds": 2.35314,
+      "gradient_seconds": 2.475148,
+      "elapsed_text": "0:04.93"
+    },
+    {
+      "variant": "zmem",
+      "round": "c",
+      "run_dir": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_day_zmem_perf6_c_20260608_095319",
+      "wp_seconds": 2.426137,
+      "gradient_seconds": 2.542697,
+      "elapsed_text": "0:04.85"
+    },
+    {
+      "variant": "cpml_dbuf",
+      "round": "c",
+      "run_dir": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_day_cpml_dbuf_perf6_c_20260608_095331",
+      "wp_seconds": 2.34281,
+      "gradient_seconds": 2.470961,
+      "elapsed_text": "0:04.71"
+    }
+  ],
+  "pairs": [
+    {
+      "round": "a",
+      "zmem_wp": 2.456481,
+      "cpml_wp": 2.379958,
+      "wp_speedup": 1.032153088415846,
+      "zmem_gradient": 2.564714,
+      "cpml_gradient": 2.494277,
+      "gradient_speedup": 1.0282394457391861,
+      "zmem_run": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_day_zmem_perf6_a_20260608_095229",
+      "cpml_run": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_day_cpml_dbuf_perf6_a_20260608_095241"
+    },
+    {
+      "round": "b",
+      "zmem_wp": 2.422,
+      "cpml_wp": 2.35314,
+      "wp_speedup": 1.0292630272741954,
+      "zmem_gradient": 2.54406,
+      "cpml_gradient": 2.475148,
+      "gradient_speedup": 1.0278415674537442,
+      "zmem_run": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_day_zmem_perf6_b_20260608_095254",
+      "cpml_run": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_day_cpml_dbuf_perf6_b_20260608_095306"
+    },
+    {
+      "round": "c",
+      "zmem_wp": 2.426137,
+      "cpml_wp": 2.34281,
+      "wp_speedup": 1.0355671181188402,
+      "zmem_gradient": 2.542697,
+      "cpml_gradient": 2.470961,
+      "gradient_speedup": 1.0290316196815732,
+      "zmem_run": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_day_zmem_perf6_c_20260608_095319",
+      "cpml_run": "/work/wenzhe/cuda3D/benchmarks/runs/perf_1gpu_6shots_day_cpml_dbuf_perf6_c_20260608_095331"
+    }
+  ]
+}
