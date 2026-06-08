@@ -1,0 +1,90 @@
+{
+  "package": {
+    "name": "current_best_v_pml_len16_package",
+    "status": "current_best_not_speed_threshold_archive",
+    "branch": "exp/day-20260608-cpml-compact-temporal",
+    "head_commit": "f637ba115d52852b493867ab4a957113a01142a5"
+  },
+  "current_best": {
+    "alias": "current_best_v_pml_len16",
+    "mean_elapsed": 3.0166666666666666,
+    "mean_gradient": 2.1119303333333335,
+    "mean_wp": 1.9889053333333333,
+    "elapsed_speedup_vs_zmem": 1.1182609576488542,
+    "gradient_speedup_vs_zmem": 1.2065883595902978,
+    "wp_speedup_vs_zmem": 1.2220234686933649,
+    "max_rel_l2": 6.384336369813099e-07,
+    "max_abs": 4.76837158203125e-06,
+    "all_compare_pass": true,
+    "flags": "-O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2 -DCUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL -DCUDA3D_CPML_VMEM_DISABLE_MPI -DCUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE -DCUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK -DCUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK",
+    "formal_summary": "reports/day_20260608/formal_vpmlen16_table_20260608_2359/summary.json"
+  },
+  "milestone": {
+    "is_1_5x_archive": false,
+    "additional_wp_speedup_needed_for_1_5x": 1.227472334556601,
+    "reason": "Speed-threshold archives start at 1.5x; current formal WP speedup is below that threshold."
+  },
+  "accepted_stack": [
+    "CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL",
+    "CUDA3D_CPML_VMEM_DISABLE_MPI",
+    "CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE",
+    "CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK",
+    "CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK"
+  ],
+  "frontier_gates": {
+    "ordinary_exact_cuda": {
+      "decision": "ordinary_exact_cuda_frontier_exhausted_for_micro_routes",
+      "ordinary_cuda_allowed_count": 0,
+      "report": "docs/day_20260608/ownership_frontier_gate.md"
+    },
+    "cluster_cooperative": {
+      "decision": "reject_direct_cooperative_grid_k2_temporal_reopen",
+      "cluster_decision": "design_only_until_cluster_local_ownership_model_passes",
+      "cooperative_over_capacity_factor": 34.65098039215686,
+      "report": "docs/day_20260609/cluster_cooperative_frontier_gate.md"
+    },
+    "cluster_local_ownership": {
+      "decision": "reject_cluster_local_temporal_cuda_prototype",
+      "best_local_pair_byte_ratio": 1.1602121350364962,
+      "best_sampled_main_speedup_estimate": 0.9497814601513969,
+      "report": "docs/day_20260609/cluster_local_ownership_model.md"
+    },
+    "application_level": {
+      "decision": "no_local_application_level_experiment_available_on_single_gpu",
+      "available_gpus": 1,
+      "same_gpu_best_elapsed_speedup": 0.92,
+      "report": "docs/day_20260609/application_level_frontier_gate.md"
+    }
+  },
+  "allowed_next": [
+    "Run true multi-GPU batching when a >=2 GPU platform is available.",
+    "Open precision-relaxation only after an explicit tolerance-policy change.",
+    "Propose a fundamentally different ownership representation and pass a new byte/synchronization model before CUDA code.",
+    "Stop the CUDA-core sprint at current-best and package results."
+  ],
+  "do_not_repeat": [
+    "ordinary exact-CUDA micro prototypes under the closed route matrix",
+    "direct cooperative-grid K=2 temporal reopen",
+    "cluster-local K=2 temporal DSM prototype",
+    "same-GPU multi-rank oversubscription",
+    "host/setup micro-prototypes without a new >=5% measured hotspot"
+  ],
+  "recent_commits": [
+    "f637ba1 (HEAD -> exp/day-20260608-cpml-compact-temporal, origin/exp/day-20260608-cpml-compact-temporal) test(scheduling): gate application level frontier",
+    "652ea41 test(cuda): gate cluster local temporal ownership",
+    "f59040f test(cuda): gate cluster cooperative primitives",
+    "f6a0cbc docs(pml): add current-best handoff report",
+    "929219e test(pml): close exact cuda frontier",
+    "76e7468 test(pml): gate residual pressure routes",
+    "eaac165 test(pml): record vpmlen16 formal speed table",
+    "3355359 test(pml): gate post-vlen16 pressure routes"
+  ],
+  "primary_reports": [
+    "reports/day_20260608/formal_vpmlen16_table_20260608_2359/summary.json",
+    "docs/day_20260608/ownership_frontier_gate.md",
+    "docs/day_20260609/cluster_cooperative_frontier_gate.md",
+    "docs/day_20260609/cluster_local_ownership_model.md",
+    "docs/day_20260609/application_level_frontier_gate.md",
+    "docs/day_20260609/pro_handoff_current_best_frontier.md"
+  ]
+}

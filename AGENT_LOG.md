@@ -5489,3 +5489,45 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
     - 多 GPU 平台上验收 true multi-GPU batching。
     - 用户明确放宽 tolerance 后做 precision-relaxation。
     - 或停止 CUDA-core sprint，打包 current-best 成果。
+
+## 2026-06-09 02:34:50 +08:00
+
+- 操作目标：
+  - 为当前 `current_best_v_pml_len16` 生成可交接的 current-best package summary。
+  - 明确该 package 不是 `1.5x` speed-threshold archive，避免误存档。
+- 修改文件：
+  - 新增 `tools/current_best_package_summary.py`。
+  - 新增 `docs/day_20260609/current_best_package_summary.md`。
+  - 新增 `reports/day_20260609/current_best_package_summary.json`。
+  - 更新 `AGENTS.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - `python -m py_compile tools\current_best_package_summary.py`
+  - `python tools\current_best_package_summary.py --json-out reports\day_20260609\current_best_package_summary.json --md-out docs\day_20260609\current_best_package_summary.md`
+  - `git log --oneline --decorate -12`
+- 测试结果：
+  - Python 编译检查通过。
+  - current-best package Markdown/JSON 生成通过。
+  - 本轮不修改主 CUDA 程序，不需要 build/correctness/perf repeat。
+- 输出/哈希/误差摘要：
+  - package status：`current_best_not_speed_threshold_archive`。
+  - branch：`exp/day-20260608-cpml-compact-temporal`。
+  - package 生成时 HEAD：`f637ba115d52852b493867ab4a957113a01142a5`。
+  - candidate：`current_best_v_pml_len16`。
+  - mean elapsed：`3.016667s`。
+  - mean Gradient：`2.111930s`。
+  - mean WP：`1.988905s`。
+  - elapsed speedup vs zmem：`1.118261x`。
+  - Gradient speedup vs zmem：`1.206588x`。
+  - WP speedup vs zmem：`1.222023x`。
+  - max rel L2：`6.384336e-07`。
+  - max abs：`4.768372e-06`。
+  - all compare pass：`true`。
+  - additional WP speedup to `1.5x`：`1.227472x`。
+- 风险与下一步：
+  - 不写入 `archives/speedups/`，因为当前不是 `1.5x` milestone archive。
+  - single-GPU RTX 5090 上已无继续自动推进的本地 CUDA/profiling experiment。
+  - 后续继续提速需要至少一个外部条件：
+    - `>=2` visible GPUs 进行 true multi-GPU batching validation。
+    - 用户明确放宽 tolerance policy 后做 precision-relaxation。
+    - 提出全新的 ownership representation，并先通过 byte/synchronization model。

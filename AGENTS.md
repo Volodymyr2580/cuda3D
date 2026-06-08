@@ -1349,6 +1349,43 @@ Phase 4.37 application-level scheduling frontier gate 已完成：
   - 没有新 `>=5%` hotspot 的 host/setup 小修。
   - 在当前单卡平台声明 true multi-GPU benchmark。
 
+Phase 4.38 current-best package summary 已完成：
+
+- 工具：`tools/current_best_package_summary.py`。
+- 报告：`docs/day_20260609/current_best_package_summary.md`。
+- JSON：`reports/day_20260609/current_best_package_summary.json`。
+- package status：`current_best_not_speed_threshold_archive`。
+- 注意：
+  - 这是 current-best package，不是 `1.5x` speed-threshold archive。
+  - 不写入 `archives/speedups/`，因为正式 WP speedup 仍低于 `1.5x`。
+- current-best：
+  - candidate：`current_best_v_pml_len16`。
+  - mean elapsed：`3.016667s`。
+  - mean Gradient：`2.111930s`。
+  - mean WP：`1.988905s`。
+  - elapsed speedup vs zmem：`1.118261x`。
+  - Gradient speedup vs zmem：`1.206588x`。
+  - WP speedup vs zmem：`1.222023x`。
+  - max rel L2：`6.384336e-07`。
+  - max abs：`4.768372e-06`。
+  - all compare pass：`true`。
+- milestone：
+  - `1.5x archive`：`false`。
+  - additional WP speedup to `1.5x`：`1.227472x`。
+- package 索引包含：
+  - formal current-best table。
+  - ownership frontier gate。
+  - cluster/cooperative primitive gate。
+  - cluster-local ownership gate。
+  - application-level frontier gate。
+  - Pro/next-agent handoff。
+- 当前全局结论：
+  - single-GPU RTX 5090 上，本轮 autonomous sprint 已无可继续执行的本地 CUDA/profiling experiment。
+  - 后续必须满足至少一个外部条件：
+    - `>=2` visible GPUs 用于 true multi-GPU batching validation。
+    - 用户明确放宽 tolerance policy 后做 precision-relaxation。
+    - 提出全新的 ownership representation，并先通过 byte/synchronization model。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：
