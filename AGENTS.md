@@ -1198,6 +1198,36 @@ Phase 4.33 ownership frontier gate 已完成：
   - 不重开 residual pressure、v-PML descriptor、z-face fusion、current p-core shared-plane、K=2 temporal 路线。
   - 不声明 `1.5x` milestone；当前正式 WP speedup 是 `1.222023x`。
 
+Phase 4.34 current-best handoff report 已完成：
+
+- 报告：`docs/day_20260609/pro_handoff_current_best_frontier.md`。
+- 目的：
+  - 给 Pro 或后续 agent 提供一个可直接接手的 current-best / closed-frontier 摘要。
+  - 防止后续 agent 在上下文丢失后重复已关闭的 exact ordinary-CUDA micro routes。
+- 当前正式 RTX 5090 single-GPU current-best：
+  - candidate：`current_best_v_pml_len16`。
+  - WP speedup vs zmem：`1.222023x`。
+  - Gradient speedup vs zmem：`1.206588x`。
+  - elapsed speedup vs zmem：`1.118261x`。
+  - max rel L2：`6.384336e-07`。
+- handoff 结论：
+  - 当前版本通过 correctness 与 formal same-session `perf_1gpu_6shots` repeat。
+  - 当前版本不是 `1.5x` milestone archive。
+  - exact ordinary-CUDA micro-prototype frontier 已关闭；下一步必须先选择 scope change。
+- handoff 中建议 Pro/后续 agent 选择：
+  - `A`：研究 cluster/cooperative persistent-kernel primitive。
+  - `B`：用户明确放宽 tolerance 后研究 precision-relaxation。
+  - `C`：转向 application-level multi-shot scheduling。
+  - `D`：停止 CUDA-core sprint，打包当前成果。
+- 继续禁止：
+  - residual pressure branch-only split。
+  - pressure length-23 / exact descriptor retry。
+  - v-PML descriptor / point-list expansion。
+  - direct z-face VP fusion 或 shared-VP retry。
+  - current p-core shared-plane/block/register family。
+  - K=2 ordinary CUDA temporal/wavefront prototype。
+  - single-GPU CUDA Graph / host launch aggregation。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

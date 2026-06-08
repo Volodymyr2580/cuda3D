@@ -5299,3 +5299,37 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 不再启动 residual pressure、v-PML descriptor、z-face fusion、current p-core shared-plane、K=2 temporal、host scheduling 类小原型。
   - 不声明 `1.5x` milestone；当前正式 WP speedup 是 `1.222023x`。
   - 下一步允许写 Pro/后续 agent handoff report，或先研究具体 cluster/cooperative persistent-kernel primitive，或在用户明确改变 tolerance policy 后做 precision-relaxation，或转向 application-level batching / multi-shot scheduling。
+
+## 2026-06-09 01:20:20 +08:00
+
+- 操作目标：
+  - 将 current-best 与已关闭 exact ordinary-CUDA frontier 整理成给 Pro/后续 agent 的交接报告。
+  - 在 `AGENTS.md` 中固化 handoff 入口和后续禁止路线，避免重复已失败方向。
+- 修改文件：
+  - 新增 `docs/day_20260609/pro_handoff_current_best_frontier.md`。
+  - 更新 `AGENTS.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - `Get-Content -Encoding UTF8 "docs/day_20260609/pro_handoff_current_best_frontier.md"`
+  - `Select-String -Path "AGENTS.md" -Encoding UTF8 -Pattern "Phase 4|current_best_v_pml_len16|ownership_frontier|2026-06-08 day sprint"`
+  - `Get-Content -Encoding UTF8 "docs/architecture_decision_log.md" | Select-Object -Last 80`
+  - 本轮仅做文档收口，不连接远端服务器，不运行 CUDA build/perf。
+- 测试结果：
+  - 本轮不修改 CUDA 源码、构建文件或 benchmark 脚本。
+  - 不需要 correctness/perf repeat。
+- 输出/哈希/误差摘要：
+  - handoff 报告记录 current-best：`current_best_v_pml_len16`。
+  - formal speedup vs zmem：
+    - WP `1.222023x`。
+    - Gradient `1.206588x`。
+    - elapsed `1.118261x`。
+    - max rel L2 `6.384336e-07`。
+  - handoff 报告入口：`docs/day_20260609/pro_handoff_current_best_frontier.md`。
+- 风险与下一步：
+  - 当前 best 不是 `1.5x` milestone archive。
+  - exact ordinary-CUDA micro-prototype frontier 仍保持关闭。
+  - 后续要继续提速，必须先选择 scope change：
+    - 研究 cluster/cooperative persistent-kernel primitive。
+    - 用户明确放宽 tolerance 后研究 precision-relaxation。
+    - 转向 application-level multi-shot scheduling。
+    - 或停止 CUDA-core sprint 并打包当前成果。
