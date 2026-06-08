@@ -748,3 +748,42 @@ Do not retry z-safe shared-p1 direct second-derivative tiles in the current
 evidence that it reduces the pressure critical path without increasing shared
 traffic and load latency.
 ```
+
+## 2026-06-08 - Reject PTXAS DLCM Cache-Policy Sweep
+
+Decision:
+
+```text
+Reject forcing direct-fill builds with -Xptxas -dlcm=ca or -Xptxas -dlcm=cg.
+```
+
+Evidence:
+
+```text
+-dlcm=ca:
+  perf6 output compares                    pass
+  mean WP speedup vs direct-fill           0.999263x
+  mean Gradient speedup vs direct-fill     0.999576x
+
+-dlcm=cg:
+  perf6 output compares                    pass
+  mean WP speedup vs direct-fill           0.859344x
+  mean Gradient speedup vs direct-fill     0.864052x
+```
+
+Reason:
+
+```text
+SourceCounters showed L1TEX scoreboard stalls, but a global cache-policy
+override is too blunt.  Cache-all is measurement-neutral to slightly slower,
+while cache-global/bypass-L1 destroys useful locality in the accepted
+direct-fill pressure-PML path.
+```
+
+Rejected boundary:
+
+```text
+Do not repeat ptxas dlcm cache-policy sweeps for the accepted direct-fill
+candidate.  Future memory work needs source/dataflow changes or profiler
+evidence for a narrower per-load policy, not a whole-binary cache override.
+```

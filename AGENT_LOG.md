@@ -3448,3 +3448,36 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 决策：拒绝 `zsafe_direct_shared`，性能退化约 `3.3%`，不进入主线。
   - 不再重复当前 32x4x2 tile 下的 z-safe shared `p1` direct second derivative。
   - 下一步如果继续 pressure-PML，需要寻找能降低 CPML memory traffic 或 active-thread divergence 的更大改法，而不是扩大 z 方向 shared halo。
+
+## 2026-06-08 13:24:00 +08:00 - Reject ptxas dlcm cache-policy sweep
+
+- 操作目标：
+  - 根据 SourceCounters 中 L1TEX scoreboard stall 信号，测试 whole-build ptxas global-load cache policy 是否能改善 direct-fill pressure-PML。
+  - 候选 flags：
+    - `-Xptxas -dlcm=ca`
+    - `-Xptxas -dlcm=cg`
+- 修改文件：
+  - 未修改源码。
+  - 新增报告：
+    - `reports/day_20260608/dlcm_ca_perf6_repeat_summary.md`
+    - `reports/day_20260608/dlcm_ca_perf6_repeat_summary.json`
+    - `reports/day_20260608/dlcm_cg_perf6_repeat_summary.md`
+    - `reports/day_20260608/dlcm_cg_perf6_repeat_summary.json`
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 更新 `docs/day_20260608/pressure_pml_zrecomp_cache_prototype.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 对 `-dlcm=ca`：每轮重新编译 direct-fill default 与 candidate，各跑 `perf_1gpu_6shots`，共 3 轮 A/B，并逐轮对比输出。
+  - 对 `-dlcm=cg`：同样 3 轮 A/B，并逐轮对比输出。
+  - 测试结束后远端重新编译 direct-fill best，避免 binary 停留在失败 flags。
+- 测试结果：
+  - `-dlcm=ca`：输出对比全部通过，mean WP speedup `0.999263x`，mean Gradient speedup `0.999576x`。
+  - `-dlcm=cg`：输出对比全部通过，mean WP speedup `0.859344x`，mean Gradient speedup `0.864052x`。
+- 输出/哈希/误差摘要：
+  - `-dlcm=ca` round WP speedup：`0.999543x`、`0.999403x`、`0.998842x`。
+  - `-dlcm=cg` round WP speedup：`0.862083x`、`0.855110x`、`0.860840x`。
+- 风险与下一步：
+  - 决策：拒绝 ptxas `dlcm` cache-policy sweep。
+  - `cg` 明显破坏当前 direct-fill cache locality；`ca` 不超过噪声。
+  - 后续 memory work 必须更具体到源码/dataflow 或 per-load 证据，不能继续 whole-binary cache-policy sweep。

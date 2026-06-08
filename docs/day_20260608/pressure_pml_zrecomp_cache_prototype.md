@@ -395,3 +395,32 @@ Reject zsafe_direct_shared and restore source to direct-fill.  This confirms
 that the accepted direct-fill vz cache is still better than a wider shared
 p1 direct-z path for the current 32x4x2 pressure-PML tile.
 ```
+
+## Rejected PTXAS DLCM Cache Policy
+
+Tested:
+
+```text
+-Xptxas -dlcm=ca
+-Xptxas -dlcm=cg
+```
+
+Result:
+
+```text
+dlcm=ca perf6 repeat compares       pass
+dlcm=ca mean WP speedup             0.999263x
+dlcm=ca mean Gradient speedup       0.999576x
+
+dlcm=cg perf6 repeat compares       pass
+dlcm=cg mean WP speedup             0.859344x
+dlcm=cg mean Gradient speedup       0.864052x
+```
+
+Decision:
+
+```text
+Reject whole-build ptxas dlcm overrides.  The accepted direct-fill path
+depends on useful cache locality; forcing cg is strongly harmful and ca is
+noise-level neutral to slightly slower.
+```

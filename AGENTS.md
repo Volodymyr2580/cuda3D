@@ -324,7 +324,11 @@ Phase 4.8 direct-fill SourceCounters profile 已完成：
   - `perf_1gpu_6shots` repeat mean WP speedup vs direct-fill：`0.966920x`。
   - mean Gradient speedup vs direct-fill：`0.965779x`。
   - 结论：对 z-safe tile 使用 shared `p1` 线缓存直接二阶差分会慢约 `3.3%`，更宽 halo 和额外 shared/p1 访问超过了省掉 z-recompute 的收益。
-- 下一步不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load 或 z-safe shared `p1` direct second derivative，应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构。
+- ptxas cache policy 已测试并拒绝：
+  - `-Xptxas -dlcm=ca`：perf repeat compare pass，mean WP `0.999263x`，mean Gradient `0.999576x`。
+  - `-Xptxas -dlcm=cg`：perf repeat compare pass，mean WP `0.859344x`，mean Gradient `0.864052x`。
+  - 结论：强制全局 load cache policy 不解决 direct-fill 的 L1TEX scoreboard stall；`cg` 明显破坏当前 cache reuse。
+- 下一步不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load、z-safe shared `p1` direct second derivative 或 ptxas `dlcm` cache-policy sweep，应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构。
 
 ## 速度阈值存档规则
 

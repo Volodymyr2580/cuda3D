@@ -1,0 +1,58 @@
+{
+  "rows": [
+    {
+      "round": 1,
+      "direct_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_dlcm_ca_directfill_r1_20260608_131058",
+      "candidate_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_dlcm_ca_candidate_r1_20260608_131109",
+      "compare_dir": "reports/day_20260608/dlcm_ca_perf6_repeat_20260608_131051/compare_r1",
+      "direct": {
+        "wp": 2.2081,
+        "gradient": 2.317923
+      },
+      "candidate": {
+        "wp": 2.209109,
+        "gradient": 2.321739
+      },
+      "wp_speedup_vs_direct": 0.9995432547692303,
+      "gradient_speedup_vs_direct": 0.9983564044020452,
+      "compare_pass": true
+    },
+    {
+      "round": 2,
+      "direct_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_dlcm_ca_directfill_r2_20260608_131122",
+      "candidate_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_dlcm_ca_candidate_r2_20260608_131133",
+      "compare_dir": "reports/day_20260608/dlcm_ca_perf6_repeat_20260608_131051/compare_r2",
+      "direct": {
+        "wp": 2.188629,
+        "gradient": 2.308771
+      },
+      "candidate": {
+        "wp": 2.189937,
+        "gradient": 2.307878
+      },
+      "wp_speedup_vs_direct": 0.9994027225440733,
+      "gradient_speedup_vs_direct": 1.0003869355312542,
+      "compare_pass": true
+    },
+    {
+      "round": 3,
+      "direct_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_dlcm_ca_directfill_r3_20260608_131146",
+      "candidate_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_dlcm_ca_candidate_r3_20260608_131158",
+      "compare_dir": "reports/day_20260608/dlcm_ca_perf6_repeat_20260608_131051/compare_r3",
+      "direct": {
+        "wp": 2.190207,
+        "gradient": 2.307964
+      },
+      "candidate": {
+        "wp": 2.192747,
+        "gradient": 2.308002
+      },
+      "wp_speedup_vs_direct": 0.9988416356287343,
+      "gradient_speedup_vs_direct": 0.9999835355428635,
+      "compare_pass": true
+    }
+  ],
+  "mean_wp_speedup_vs_direct": 0.999262537647346,
+  "mean_gradient_speedup_vs_direct": 0.999575625158721,
+  "all_compare_pass": true
+}
