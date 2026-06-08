@@ -2611,3 +2611,75 @@ perf_1gpu_6shots repeat speedup.
 Next CUDA-core work should target pressure-PML or a materially new p-core
 design, not more v-PML micro packing.
 ```
+
+## 2026-06-08 - Gate Post-VLen16 Pressure Routes
+
+Decision:
+
+```text
+Do not start another micro CUDA prototype immediately after v-PML len16.
+Pressure-PML remains the dominant target, but the next CUDA prototype must be
+backed by a pressure or wave-step ownership model with an explicit >=5%
+perf_1gpu_6shots repeat ceiling.
+```
+
+Evidence:
+
+```text
+tool:
+  tools/post_vlen16_pressure_next_gate.py
+
+profile:
+  reports/day_20260608/v_pml_len16_ncu_short_20260608_2315/summary.json
+
+post-vlen16 sampled main:
+  total                             284.010us
+  p-core                             93.730us  33.00%
+  pressure-PML total                138.120us  48.63%
+  velocity-PML total                 52.160us  18.37%
+
+required local speedup for >=5% sampled-main:
+  pressure-PML total                  1.1085x
+  packed pressure len16 only          1.2568x
+  residual pressure-PML only          1.2315x
+  velocity-PML total                  1.3500x
+
+packed pressure len16 source groups:
+  final p0/p1/cw2 update             60.78%
+  CPML mem_dzz update                26.82%
+  final + mem_dzz required speedup    1.3043x
+```
+
+Reason:
+
+```text
+The post-vlen16 profile points back to pressure-PML, but the remaining hot
+source groups are required pressure writeback and recursive CPML z-state
+traffic.  Existing syntax/cache/descriptor variants either already measured as
+noise-level or have below-gate calibrated ceilings.  Starting another CUDA
+micro-prototype now would likely repeat known failed families.
+```
+
+Boundary:
+
+```text
+Do not repeat p0 __ldg, local new_mem, ptxas cache-policy, z-cache fill, or
+shared-z-cache micro-tuning.
+
+Do not write pressure length-23 / exact active-point descriptor prototypes or
+v-PML descriptor expansion after accepted v-len16.
+
+Do not retry direct z-face VP fusion/shared-VP unless a materially new
+ownership proof avoids the old duplicate halo/control/synchronization failure.
+
+Next allowed action is a formal same-session benchmark table for zmem,
+direct-fill, pressure-len16, and current-best, followed only by design-level
+pressure/wave-step ownership work with a >=5% modeled repeat ceiling.
+```
+
+Report:
+
+```text
+docs/day_20260608/post_vlen16_pressure_next_gate.md
+reports/day_20260608/post_vlen16_pressure_next_gate.json
+```

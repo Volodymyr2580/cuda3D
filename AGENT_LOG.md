@@ -5104,3 +5104,43 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 全量 NCU profile 太慢，后续这类 heartbeat profiling 默认使用 `--launch-count` 或更窄 kernel filter。
   - v-PML packed 后只剩 sampled-main `18.37%`，继续 v-PML descriptor / point-list 实验不应开启，除非 overhead model 仍证明 `>=5%` repeat-speedup ceiling。
   - 下一步 CUDA-core 方向应回到 pressure-PML 或 materially new p-core design，但必须先通过 model gate。
+
+## 2026-06-08 23:36:02 +08:00
+
+- 操作目标：
+  - 基于 v-PML len16 后的最新 NCU 短 profile，重新 gate pressure-PML 下一步路线。
+  - 判断是否应继续开 micro CUDA prototype，或先收口到正式同 session benchmark 与更大粒度 ownership model。
+- 修改文件：
+  - 新增 `tools/post_vlen16_pressure_next_gate.py`。
+  - 新增 `docs/day_20260608/post_vlen16_pressure_next_gate.md`。
+  - 新增 `reports/day_20260608/post_vlen16_pressure_next_gate.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - `python -m py_compile tools\post_vlen16_pressure_next_gate.py`
+  - `python tools\post_vlen16_pressure_next_gate.py --json-out reports\day_20260608\post_vlen16_pressure_next_gate.json --md-out docs\day_20260608\post_vlen16_pressure_next_gate.md`
+  - `python -c "import json; p='reports/day_20260608/post_vlen16_pressure_next_gate.json'; d=json.load(open(p,encoding='utf-8')); print(d['gate']['decision']); print(d['inputs']['profile']['sampled_main_us']); print(d['derived']['required_local_speedup_by_region']['p_pml_total'])"`
+- 测试结果：
+  - Python 编译检查通过。
+  - gate 工具运行成功并生成 Markdown/JSON。
+  - 本轮不修改 CUDA 源码，不需要远端 build/correctness/perf repeat。
+- 输出/哈希/误差摘要：
+  - gate decision：`no_new_micro_cuda_prototype`。
+  - post-vlen16 sampled main total：`284.010us`。
+  - pressure-PML total：`138.120us`，sampled-main share `48.63%`。
+  - velocity-PML total：`52.160us`，sampled-main share `18.37%`。
+  - `>=5%` sampled-main 所需 local speedup：
+    - pressure-PML total：`1.1085x`。
+    - packed pressure len16 only：`1.2568x`。
+    - residual pressure-PML only：`1.2315x`。
+    - velocity-PML total：`1.3500x`。
+  - packed pressure len16 source groups：
+    - final `p0/p1/cw2` update：`60.78%`。
+    - CPML `mem_dzz` update：`26.82%`。
+    - final + `mem_dzz` group required speedup：`1.3043x`。
+- 风险与下一步：
+  - 决策：当前不启动新的 micro CUDA prototype。
+  - 禁止继续重复 `p0 __ldg`、local `new_mem`、ptxas cache-policy、z-cache fill、shared-z-cache、pressure length-23/exact descriptor、v-PML descriptor expansion、direct z-face VP fusion/shared-VP retry，以及 rejected p-core shared-plane/block/register sweep。
+  - 下一步优先同 session 正式重跑 `zmem`、direct-fill、pressure-len16、current-best，给出当前 RTX 5090 平台正式总提速表。
+  - 然后只允许开启 design-level pressure/wave-step ownership model，并且必须先证明扣除 extra storage/control cost 后仍有 `>=5%` repeat-speedup ceiling。
