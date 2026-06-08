@@ -1603,3 +1603,102 @@ Report:
 docs/day_20260608/pressure_state_representation_model.md
 reports/day_20260608/pressure_state_representation_model.json
 ```
+
+## 2026-06-08 - Reject PML Vx/Vy Round-Trip Ownership Prototype
+
+Decision:
+
+```text
+Reject ordinary CUDA PML vx/vy round-trip ownership prototypes under the
+current CTA-local or macro-tile shared-cache designs.
+```
+
+Evidence:
+
+```text
+sampled main                         297.248us
+p_core                                93.547us
+v_pml                                 65.248us
+pressure-PML total                   138.453us
+formal current-best WP vs zmem          1.192835x
+
+generous savable-time model:
+  len16 unknown/unparsed time assigned to vx/vy      4.056us
+  residual pressure-PML generous 20% savable        14.537us
+  total generous vx/vy round-trip savable           18.593us
+
+duplicate velocity/CPML work factor allowed for 1.05x sampled-main:
+  <= 1.068
+```
+
+Candidate outcomes:
+
+```text
+current pressure tile 4x2:
+  duplicate velocity work        4.085x
+  sampled-main speedup           0.6193x
+
+macro 8x4:
+  duplicate velocity work        2.606x
+  sampled-main speedup           0.7752x
+
+macro 16x8:
+  duplicate velocity work        1.866x
+  sampled-main speedup           0.8868x
+
+macro 16x16:
+  duplicate velocity work        1.620x
+  shared velocity cache          94,208B
+  sampled-main speedup           0.9315x
+
+macro 32x8 / 32x16:
+  duplicate velocity work        1.743x / 1.497x
+  shared velocity cache          101,376B / 174,080B
+  exceeds conservative 96KiB shared-memory limit
+
+ideal no-duplicate cross-CTA owner:
+  duplicate velocity work        1.000x
+  sampled-main ceiling           1.0667x
+  ordinary CUDA implementation   not available
+```
+
+Reason:
+
+```text
+The only route that reaches a meaningful ceiling requires each velocity value
+to be computed once and consumed by neighboring pressure CTAs without passing
+through global memory.  Ordinary CUDA cannot exchange register/shared values
+across CTAs and the earlier global synchronization / cooperative-grid path is
+not viable for this grid shape.
+
+All implementable CTA-local or macro-tile shared-cache candidates duplicate too
+much velocity and CPML state work before they can recover the global vx/vy
+round-trip cost.
+```
+
+Boundary:
+
+```text
+Do not implement CTA-local vx/vy shared-cache fusion under current tile or
+macro-tile ownership.
+Do not reopen RECOMPUTE_X/Y/XYZ or direct p1 x/y derivative replacement.
+Do not reopen current-geometry vx/vy component-owner split.
+Do not write ordinary CUDA producer-consumer vx/vy fusion that relies on
+cross-CTA shared values.
+```
+
+Next:
+
+```text
+Source-aware multi-step/wavefront design may reopen only after synchronization
+and halo ownership are proven.  Precision relaxation requires an explicit new
+tolerance policy.  If exact CUDA-core routes remain gated off, consider
+application-level multi-shot batching.
+```
+
+Report:
+
+```text
+docs/day_20260608/pml_vxvy_roundtrip_ownership_model.md
+reports/day_20260608/pml_vxvy_roundtrip_ownership_model.json
+```

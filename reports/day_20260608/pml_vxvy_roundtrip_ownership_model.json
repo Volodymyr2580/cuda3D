@@ -1,0 +1,172 @@
+{
+  "candidates": {
+    "current_pressure_tile_4x2": {
+      "candidate_sampled_main_speedup": 0.6193232602125881,
+      "candidate_sampled_main_us": 479.9561377655459,
+      "decision": "reject_cuda_prototype",
+      "duplicate_velocity_work_factor": 4.085166128791446,
+      "macro_xy": [
+        4,
+        2
+      ],
+      "pressure_points_per_macro_tile": 256,
+      "reason": "CTA-local velocity cache needs x/y halo velocity values.  After counting duplicated velocity/CPML work and shared-memory footprint, this macro tile does not meet the >=5% gate.",
+      "shared_velocity_cache_bytes": 7424,
+      "velocity_slots_per_pressure_point": 7.25,
+      "vx_slots_per_macro_tile": 704,
+      "vy_slots_per_macro_tile": 1152,
+      "within_shared_limit": true
+    },
+    "ideal_no_duplicate_cross_cta_owner": {
+      "candidate_sampled_main_speedup": 1.0667232500662638,
+      "candidate_sampled_main_us": 278.65521819416165,
+      "decision": "reject_not_ordinary_cuda",
+      "duplicate_velocity_work_factor": 1.0,
+      "reason": "The speed ceiling can look meaningful only if velocity values are computed once and consumed by neighboring pressure CTAs without global memory.  Ordinary CUDA has no cross-CTA register/shared exchange or grid-wide barrier for this producer-consumer pattern.",
+      "within_shared_limit": null
+    },
+    "macro_16x16": {
+      "candidate_sampled_main_speedup": 0.931497562992277,
+      "candidate_sampled_main_us": 319.10765181729676,
+      "decision": "reject_cuda_prototype",
+      "duplicate_velocity_work_factor": 1.619979671762125,
+      "macro_xy": [
+        16,
+        16
+      ],
+      "pressure_points_per_macro_tile": 8192,
+      "reason": "CTA-local velocity cache needs x/y halo velocity values.  After counting duplicated velocity/CPML work and shared-memory footprint, this macro tile does not meet the >=5% gate.",
+      "shared_velocity_cache_bytes": 94208,
+      "velocity_slots_per_pressure_point": 2.875,
+      "vx_slots_per_macro_tile": 11776,
+      "vy_slots_per_macro_tile": 11776,
+      "within_shared_limit": true
+    },
+    "macro_16x8": {
+      "candidate_sampled_main_speedup": 0.886797883707217,
+      "candidate_sampled_main_us": 335.1925004121217,
+      "decision": "reject_cuda_prototype",
+      "duplicate_velocity_work_factor": 1.8664983174650573,
+      "macro_xy": [
+        16,
+        8
+      ],
+      "pressure_points_per_macro_tile": 4096,
+      "reason": "CTA-local velocity cache needs x/y halo velocity values.  After counting duplicated velocity/CPML work and shared-memory footprint, this macro tile does not meet the >=5% gate.",
+      "shared_velocity_cache_bytes": 54272,
+      "velocity_slots_per_pressure_point": 3.3125,
+      "vx_slots_per_macro_tile": 5888,
+      "vy_slots_per_macro_tile": 7680,
+      "within_shared_limit": true
+    },
+    "macro_32x16": {
+      "candidate_sampled_main_speedup": 0.9555809319156349,
+      "candidate_sampled_main_us": 311.0652275198843,
+      "decision": "reject_cuda_prototype",
+      "duplicate_velocity_work_factor": 1.496720348910659,
+      "macro_xy": [
+        32,
+        16
+      ],
+      "pressure_points_per_macro_tile": 16384,
+      "reason": "CTA-local velocity cache needs x/y halo velocity values.  After counting duplicated velocity/CPML work and shared-memory footprint, this macro tile does not meet the >=5% gate.",
+      "shared_velocity_cache_bytes": 174080,
+      "velocity_slots_per_pressure_point": 2.65625,
+      "vx_slots_per_macro_tile": 19968,
+      "vy_slots_per_macro_tile": 23552,
+      "within_shared_limit": false
+    },
+    "macro_32x8": {
+      "candidate_sampled_main_speedup": 0.9085982908216576,
+      "candidate_sampled_main_us": 327.15007611470924,
+      "decision": "reject_cuda_prototype",
+      "duplicate_velocity_work_factor": 1.743238994613591,
+      "macro_xy": [
+        32,
+        8
+      ],
+      "pressure_points_per_macro_tile": 8192,
+      "reason": "CTA-local velocity cache needs x/y halo velocity values.  After counting duplicated velocity/CPML work and shared-memory footprint, this macro tile does not meet the >=5% gate.",
+      "shared_velocity_cache_bytes": 101376,
+      "velocity_slots_per_pressure_point": 3.09375,
+      "vx_slots_per_macro_tile": 9984,
+      "vy_slots_per_macro_tile": 15360,
+      "within_shared_limit": false
+    },
+    "macro_8x4": {
+      "candidate_sampled_main_speedup": 0.7751996082598549,
+      "candidate_sampled_main_us": 383.4470461965964,
+      "decision": "reject_cuda_prototype",
+      "duplicate_velocity_work_factor": 2.6060542545738534,
+      "macro_xy": [
+        8,
+        4
+      ],
+      "pressure_points_per_macro_tile": 1024,
+      "reason": "CTA-local velocity cache needs x/y halo velocity values.  After counting duplicated velocity/CPML work and shared-memory footprint, this macro tile does not meet the >=5% gate.",
+      "shared_velocity_cache_bytes": 18944,
+      "velocity_slots_per_pressure_point": 4.625,
+      "vx_slots_per_macro_tile": 1920,
+      "vy_slots_per_macro_tile": 2816,
+      "within_shared_limit": true
+    }
+  },
+  "gate": {
+    "best_candidate": "ideal_no_duplicate_cross_cta_owner",
+    "best_sampled_main_speedup": 1.0667232500662638,
+    "decision": "reject_vxvy_roundtrip_ownership_cuda_prototype",
+    "implementable_candidate_count": 0,
+    "next_allowed": [
+      "source-aware multi-step/wavefront design only after synchronization and halo ownership proof",
+      "precision-relaxation study only with explicit tolerance policy",
+      "application-level multi-shot batching if CUDA-core exact routes remain gated off"
+    ],
+    "prohibited": [
+      "CTA-local vx/vy shared-cache fusion under current tile/macro-tile ownership",
+      "RECOMPUTE_X/Y/XYZ or direct p1 x/y derivative replacement",
+      "current-geometry vx/vy component-owner split",
+      "ordinary CUDA producer-consumer vx/vy fusion that relies on cross-CTA shared values"
+    ],
+    "reason": "Under a generous vx/vy-roundtrip savings budget, an implementable CTA-local cache would need duplicate velocity/CPML work factor <= 1.068.  Feasible macro tiles exceed that or exceed a conservative shared-memory limit, while the only passing ceiling requires impossible cross-CTA exchange without global memory."
+  },
+  "inputs": {
+    "formal": {
+      "mean_candidate_wp": 2.0317529999999997,
+      "mean_wp_speedup_vs_zmem": 1.1928347521636058
+    },
+    "savable_model": {
+      "len16_unknown_or_vxvy_us": 4.056248472505093,
+      "note": "This is intentionally generous: len16 assigns all unparsed source samples to vx/vy, and residual pressure-PML grants 20% savable time even though source evidence points mostly to CPML state and p0 writeback.",
+      "residual_generous_fraction": 0.2,
+      "residual_generous_savable_us": 14.536533333333336,
+      "total_generous_vxvy_roundtrip_savable_us": 18.592781805838428
+    },
+    "shared_limit_bytes": 98304,
+    "target_speedup": 1.05,
+    "v_layout": {
+      "active_lanes": 22421334,
+      "component_lanes": 39791447,
+      "component_per_active_pressure_point": 1.7747136276548041,
+      "p_core_us": 93.54666666666667,
+      "p_pml_us": 138.45333333333335,
+      "sampled_main_us": 297.248,
+      "v_pml_us": 65.248
+    },
+    "writeback": {
+      "len16_packed_us": 65.77066666666667,
+      "residual_pml_us": 72.68266666666668,
+      "source_groups": {
+        "address_branch_control_visible": 0.04308808553971487,
+        "cpml_mem_dzz_update": 0.26820264765784113,
+        "final_p0_p1_cw2_update": 0.6078156822810591,
+        "other_or_unparsed": 0.0616726069246436,
+        "z_cache_shared_loads": 0.019220977596741344
+      }
+    }
+  },
+  "thresholds": {
+    "baseline_component_per_active_pressure_point": 1.7747136276548041,
+    "max_duplicate_velocity_work_factor_for_5pct": 1.0680191751344363,
+    "target_sampled_main_us": 283.0933333333333
+  }
+}

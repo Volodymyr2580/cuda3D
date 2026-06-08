@@ -4375,3 +4375,52 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 下一步转向 PML `vx/vy` round-trip ownership design；必须先有 `>=5%` model 再写 CUDA。
   - source-aware multi-step/wavefront 只有先解决 synchronization/halo ownership 才允许重开。
   - precision-relaxation 只有用户明确给出新 tolerance policy 才允许研究。
+
+## 2026-06-08 18:57:34 +08:00
+
+- 操作目标：
+  - 继续 Phase 4.17 后的下一条 CUDA-core exact 路线，对 PML `vx/vy` global round-trip ownership 做 gate。
+  - 判断 CTA-local / macro-tile shared-cache 是否能在不重复过多 velocity/CPML work 的前提下去掉 `vx/vy` global write/read round trip。
+- 修改文件：
+  - 新增 `tools/pml_vxvy_roundtrip_ownership_model.py`。
+  - 新增 `docs/day_20260608/pml_vxvy_roundtrip_ownership_model.md`。
+  - 新增 `reports/day_20260608/pml_vxvy_roundtrip_ownership_model.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - `Get-Content -Encoding UTF8 docs\day_20260608\v_pml_coalescing_layout_budget.md`
+  - `Get-Content -Encoding UTF8 docs\day_20260608\pressure_state_representation_model.md`
+  - `Select-String -Path AGENTS.md -Pattern "vx/vy|round-trip|component-owner|RECOMPUTE_X|shared ``vx" -Context 1,1`
+  - `Select-String -Path src\single_solver.cu -Pattern "if \(need_vx\)|if \(need_vy\)|float c2=stencil|float c3=stencil|__ldg\(vx|__ldg\(vy" -Context 2,6`
+  - `python -m py_compile tools\pml_vxvy_roundtrip_ownership_model.py`
+  - `python tools\pml_vxvy_roundtrip_ownership_model.py --json-out reports\day_20260608\pml_vxvy_roundtrip_ownership_model.json --md-out docs\day_20260608\pml_vxvy_roundtrip_ownership_model.md`
+  - `python -c "import json; json.load(open('reports/day_20260608/pml_vxvy_roundtrip_ownership_model.json', encoding='utf-8')); print('vxvy model json ok')"`
+- 测试结果：
+  - 模型脚本 Python 编译通过。
+  - 生成 JSON 可被标准 `json.load` 读取。
+  - 本轮未修改 CUDA 源码，未运行远端构建或 benchmark。
+- 输出/哈希/误差摘要：
+  - sampled main：`297.248us`。
+  - `p_core`：`93.547us`。
+  - `v_pml`：`65.248us`。
+  - pressure-PML total：`138.453us`。
+  - formal current-best WP speedup vs zmem：`1.192835x`。
+  - generous savable-time model：
+    - len16 unknown/unparsed source time 全部算给 `vx/vy`：`4.056us`。
+    - residual pressure-PML 慷慨假设 `20%` 可省：`14.537us`。
+    - total generous `vx/vy` round-trip savable time：`18.593us`。
+  - 要达到 `1.05x` sampled-main speedup，duplicate velocity/CPML work factor 必须 `<=1.068`。
+  - CTA-local / macro-tile 结果：
+    - `4x2` current pressure tile：duplicate `4.085x`，sampled-main speedup `0.6193x`。
+    - `8x4`：duplicate `2.606x`，sampled-main speedup `0.7752x`。
+    - `16x8`：duplicate `1.866x`，sampled-main speedup `0.8868x`。
+    - `16x16`：duplicate `1.620x`，shared cache `94,208B`，sampled-main speedup `0.9315x`。
+    - `32x8` / `32x16`：duplicate `1.743x` / `1.497x`，shared cache `101,376B` / `174,080B`，超出 conservative `96KiB` limit。
+    - ideal no-duplicate cross-CTA owner：speedup ceiling `1.0667x`，但 ordinary CUDA 不能实现跨 CTA register/shared exchange。
+- 风险与下一步：
+  - 决策：拒绝 PML `vx/vy` round-trip ownership CUDA prototype。
+  - 禁止写 CTA-local `vx/vy` shared-cache fusion、`RECOMPUTE_X/Y/XYZ`、direct p1 x/y derivative replacement、current-geometry `vx/vy` component-owner split、或依赖 cross-CTA shared values 的 ordinary CUDA producer-consumer fusion。
+  - source-aware multi-step / wavefront design 只有先证明 synchronization 和 halo ownership 后才允许重开。
+  - precision-relaxation 只有用户明确给出新 tolerance policy 才允许研究。
+  - 如果 exact CUDA-core 路线继续被 gate 掐掉，可以转向 application-level multi-shot batching。
