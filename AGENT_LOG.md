@@ -3407,3 +3407,44 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 决策：拒绝 `pml_p0_ldg`，未达到 `>=2%` small-candidate gate。
   - 不再重复 final `p0` read-only load 方向，除非出现新的 profiler 证据。
   - 下一步应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构，而不是继续做表达式级小修。
+
+## 2026-06-08 13:18:00 +08:00 - Reject z-safe direct shared p1 pressure-z candidate
+
+- 操作目标：
+  - 测试一个结构化 pressure-PML 候选：对 z 方向完全远离 z-PML 的 tile，跳过 `recompute_vz_after_update_from_old_mem` line cache，改用 shared `p1` z-line +/-7 halo 直接计算 z 二阶项。
+  - 候选名：`zsafe_direct_shared`，临时宏：`CUDA3D_PML_PRESSURE_Z_SAFE_DIRECT_SHARED`。
+- 修改文件：
+  - 临时修改 `src/single_solver.cu`：
+    - 增加 shared `p1` z-line fill helper。
+    - 增加 direct z second-derivative helper。
+    - 对 z-safe tile 使用 direct shared `p1` path。
+  - 测试后已恢复到 direct-fill best；本地 `git diff -- src/single_solver.cu` 为空，远端已重新上传并重编译 direct-fill best。
+  - 新增报告：
+    - `reports/day_20260608/zsafe_direct_correctness_comparison.md`
+    - `reports/day_20260608/zsafe_direct_correctness_comparison.json`
+    - `reports/day_20260608/zsafe_direct_perf6_repeat_summary.md`
+    - `reports/day_20260608/zsafe_direct_perf6_repeat_summary.json`
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 更新 `docs/day_20260608/pressure_pml_zrecomp_cache_prototype.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 上传临时 `src/single_solver.cu` 到 `/work/wenzhe/cuda3D_codex_day_20260608_68de1a7`。
+  - 编译 direct-fill flags + `CUDA3D_PML_PRESSURE_Z_SAFE_DIRECT_SHARED`。
+  - 运行 correctness 并对比 zmem correctness baseline。
+  - 运行 `perf_1gpu_6shots` direct-fill vs candidate 3 轮 A/B，每轮输出对比。
+  - 恢复本地和远端源码到 direct-fill best，并在远端重编译 direct-fill best。
+- 测试结果：
+  - 编译通过。
+  - correctness 通过，6 个输出 rel L2 最大约 `2.180533e-10`，无 NaN/Inf。
+  - `perf_1gpu_6shots` repeat 3 轮输出对比全部通过。
+  - mean WP speedup vs direct-fill：`0.966920x`。
+  - mean Gradient speedup vs direct-fill：`0.965779x`。
+- 输出/哈希/误差摘要：
+  - round 1：direct WP `2.206688s`，candidate WP `2.285624s`，speedup `0.965464x`；Gradient speedup `0.965635x`。
+  - round 2：direct WP `2.191635s`，candidate WP `2.264459s`，speedup `0.967840x`；Gradient speedup `0.966443x`。
+  - round 3：direct WP `2.192925s`，candidate WP `2.266692s`，speedup `0.967456x`；Gradient speedup `0.965260x`。
+- 风险与下一步：
+  - 决策：拒绝 `zsafe_direct_shared`，性能退化约 `3.3%`，不进入主线。
+  - 不再重复当前 32x4x2 tile 下的 z-safe shared `p1` direct second derivative。
+  - 下一步如果继续 pressure-PML，需要寻找能降低 CPML memory traffic 或 active-thread divergence 的更大改法，而不是扩大 z 方向 shared halo。

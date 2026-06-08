@@ -351,3 +351,47 @@ Reject pml_p0_ldg.  The final p0 update line is hot in SourceCounters, but
 changing only the old p0 operand to a read-only-cache load is noise-level
 neutral and fails the >=2% small-candidate gate.
 ```
+
+## Rejected Z-Safe Direct Shared Candidate
+
+Tested:
+
+```text
+zsafe_direct_shared
+```
+
+The candidate detected CTA-uniform middle-z tiles whose central z range is
+safely outside z-PML, loaded a shared `p1` z-line with +/-7 halo, and computed
+the z second-derivative directly instead of using the direct-fill
+`recompute_vz_after_update_from_old_mem` line cache.
+
+Correctness:
+
+```text
+pass, 6 outputs
+maximum rel L2 vs zmem correctness baseline about 2.180533e-10
+```
+
+Perf repeat result:
+
+```text
+perf6 repeat compares          pass
+mean WP speedup vs direct-fill 0.966920x
+mean Gradient speedup          0.965779x
+```
+
+Perf repeat table:
+
+| round | direct WP | candidate WP | WP speedup | direct Gradient | candidate Gradient | Gradient speedup |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 2.206688 | 2.285624 | 0.965464 | 2.319415 | 2.401958 | 0.965635 |
+| 2 | 2.191635 | 2.264459 | 0.967840 | 2.309927 | 2.390133 | 0.966443 |
+| 3 | 2.192925 | 2.266692 | 0.967456 | 2.308957 | 2.392057 | 0.965260 |
+
+Decision:
+
+```text
+Reject zsafe_direct_shared and restore source to direct-fill.  This confirms
+that the accepted direct-fill vz cache is still better than a wider shared
+p1 direct-z path for the current 32x4x2 pressure-PML tile.
+```

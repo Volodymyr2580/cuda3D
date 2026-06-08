@@ -319,7 +319,12 @@ Phase 4.8 direct-fill SourceCounters profile 已完成：
   - `perf_1gpu_6shots` repeat mean WP speedup vs direct-fill：`1.000054x`。
   - mean Gradient speedup vs direct-fill：`1.000694x`。
   - 结论：把 final pressure update 中旧 `p0[outIndex]` 读取改成 `__ldg(p0+outIndex)` 只有噪声级收益，不满足 `>=2%` gate。
-- 下一步不要继续抠 z-cache fill、`new_mem` 表达式或 final `p0` read-only load，应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构。
+- `zsafe_direct_shared` 已测试并拒绝：
+  - correctness pass，6 个输出 rel L2 最大约 `2.180533e-10`。
+  - `perf_1gpu_6shots` repeat mean WP speedup vs direct-fill：`0.966920x`。
+  - mean Gradient speedup vs direct-fill：`0.965779x`。
+  - 结论：对 z-safe tile 使用 shared `p1` 线缓存直接二阶差分会慢约 `3.3%`，更宽 halo 和额外 shared/p1 访问超过了省掉 z-recompute 的收益。
+- 下一步不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load 或 z-safe shared `p1` direct second derivative，应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构。
 
 ## 速度阈值存档规则
 

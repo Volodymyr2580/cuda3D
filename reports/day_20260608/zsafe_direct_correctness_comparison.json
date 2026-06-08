@@ -1,0 +1,81 @@
+{
+  "pass": true,
+  "baseline": "/work/wenzhe/cuda3D_codex_day_20260608/benchmarks/runs/correctness_zrecomp_cache_baseline_correctness_20260608_111832/outputs",
+  "candidate": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/correctness_zsafe_direct_correctness_20260608_130144/outputs",
+  "missing": [],
+  "extra": [],
+  "results": [
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_0.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 9849,
+      "rel_l2": 1.1163391790116623e-11,
+      "rms": 1.4712241546855224e-11,
+      "max_abs": 2.4010660126805305e-10,
+      "max_rel": 0.001168940425168019,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_1.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 9849,
+      "rel_l2": 2.1805332154478992e-10,
+      "rms": 2.88382880922105e-10,
+      "max_abs": 7.945345714688301e-09,
+      "max_rel": 0.000819680087568779,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_2.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 9849,
+      "rel_l2": 5.855840734574114e-12,
+      "rms": 7.441182685261797e-12,
+      "max_abs": 1.964508555829525e-10,
+      "max_rel": 0.00011891499334674474,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_3.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 9849,
+      "rel_l2": 1.7797261409382857e-10,
+      "rms": 2.387375427722154e-10,
+      "max_abs": 2.903107088059187e-09,
+      "max_rel": 0.0028336005817033855,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_4.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 9849,
+      "rel_l2": 3.460589124927325e-11,
+      "rms": 4.658123318059641e-11,
+      "max_abs": 1.076841726899147e-09,
+      "max_rel": 0.00023901587456968986,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_5.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 9849,
+      "rel_l2": 2.998077460940797e-11,
+      "rms": 3.876695359001615e-11,
+      "max_abs": 2.3046595742926e-09,
+      "max_rel": 0.00029655878249320965,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    }
+  ]
+}

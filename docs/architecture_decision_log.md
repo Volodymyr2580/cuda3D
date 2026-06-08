@@ -710,3 +710,41 @@ Do not retry __ldg(p0+outIndex) for the pressure-PML final update without
 new profiler evidence.  Future pressure-PML work should move to larger
 region/dataflow restructuring.
 ```
+
+## 2026-06-08 - Reject Z-Safe Direct Shared P1 Pressure-Z Path
+
+Decision:
+
+```text
+Reject zsafe_direct_shared, a structural candidate that handles pressure-PML
+tiles whose central z range is safely outside z-PML by loading a shared p1
+z-line with +/-7 halo and computing the z second derivative directly.
+```
+
+Evidence:
+
+```text
+correctness rel L2 maximum               about 2.180533e-10
+perf6 output compares                    pass
+mean WP speedup vs direct-fill           0.966920x
+mean Gradient speedup vs direct-fill     0.965779x
+```
+
+Reason:
+
+```text
+The design was attractive because middle-z x/y-PML and shell tiles do not
+need z-CPML memory, so they can theoretically bypass recompute_vz.  In
+practice the wider shared p1 halo, extra p1/shared loads, and changed
+instruction mix are slower than the accepted direct-fill vz-line cache.
+The candidate is correctness-safe but regresses by roughly 3.3%.
+```
+
+Rejected boundary:
+
+```text
+Do not retry z-safe shared-p1 direct second-derivative tiles in the current
+32x4x2 pressure-PML shape.  Any future direct-z path must first show profiler
+evidence that it reduces the pressure critical path without increasing shared
+traffic and load latency.
+```
