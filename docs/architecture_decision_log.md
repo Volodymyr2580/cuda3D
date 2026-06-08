@@ -3055,3 +3055,89 @@ Allowed next:
   application-level multi-shot scheduling / batching
   a fundamentally different ownership representation with a new byte model
 ```
+
+## 2026-06-09 02:16:19 +08:00 - Application-level scheduling frontier
+
+Decision:
+
+```text
+No local application-level scheduling experiment remains available on the
+current single-GPU RTX 5090 platform.
+```
+
+Evidence:
+
+```text
+tool:
+  tools/application_level_frontier_gate.py
+
+report:
+  docs/day_20260609/application_level_frontier_gate.md
+  reports/day_20260609/application_level_frontier_gate.json
+
+inputs:
+  reports/day_20260608/formal_vpmlen16_table_20260608_2359/summary.json
+  reports/day_20260608/multirank_samegpu_sched_20260608_193042/summary.json
+  reports/day_20260608/process_timer_probe_20260608_205311/summary.json
+  reports/day_20260608/cal_loop_timer_probe_20260608_212019/summary.json
+```
+
+Formal current-best anchor:
+
+```text
+alias                         current_best_v_pml_len16
+mean elapsed                  3.016667s
+mean Gradient                 2.111930s
+mean WP                       1.988905s
+elapsed speedup vs zmem        1.1183x
+Gradient speedup vs zmem       1.2066x
+WP speedup vs zmem             1.2220x
+max rel L2                     6.384336e-07
+```
+
+Application-level routes:
+
+```text
+same-GPU multi-rank:
+  decision                    reject_same_gpu_multirank_probe
+  best elapsed speedup         0.9200x
+  best Gradient speedup        0.9301x
+
+true multi-GPU batching:
+  current visible GPUs         1
+  status                       defer until >=2 visible GPUs
+  2-GPU ideal shot speedup      2.0000x
+  3-GPU ideal shot speedup      3.0000x
+  4-GPU ideal shot speedup      3.0000x, limited by 6 shots
+  6-GPU ideal shot speedup      6.0000x
+
+host/setup:
+  outside process wrapper       0.547231s
+  MPI_Init                      0.254292s
+  gpu_setup/context             0.186226s
+  wavefield_prep ceiling        1.0236x Gradient
+```
+
+Reason:
+
+```text
+Same-GPU oversubscription is slower, true multi-GPU batching cannot be
+validated on the current one-GPU server, and host/setup/pre-FD local micro
+routes do not meet the >=5% gate.  The only application-level route with large
+theoretical upside is true multi-GPU batching on a platform with >=2 GPUs.
+```
+
+Boundary:
+
+```text
+Do not continue:
+  same-GPU np=2/3 oversubscription reruns for perf_1gpu_6shots
+  claiming speedup from root-rank printed WP in multi-rank runs
+  host/setup micro-prototypes without a new >=5% measured hotspot
+  true multi-GPU benchmark on the current single-GPU platform
+
+Allowed next:
+  true multi-GPU batching when a >=2 GPU platform is available
+  precision-relaxation only after explicit tolerance policy change
+  stop CUDA-core sprint at current-best and package results
+```

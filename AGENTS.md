@@ -1299,6 +1299,56 @@ Phase 4.36 cluster-local ownership model 已完成并拒绝 CUDA prototype：
   - 转向 application-level multi-shot scheduling / batching。
   - 或提出完全不同的 ownership representation，必须先证明能绕过 DSM halo blow-up。
 
+Phase 4.37 application-level scheduling frontier gate 已完成：
+
+- 工具：`tools/application_level_frontier_gate.py`。
+- 报告：`docs/day_20260609/application_level_frontier_gate.md`。
+- JSON：`reports/day_20260609/application_level_frontier_gate.json`。
+- 输入证据：
+  - formal current-best：`reports/day_20260608/formal_vpmlen16_table_20260608_2359/summary.json`。
+  - same-GPU multi-rank：`reports/day_20260608/multirank_samegpu_sched_20260608_193042/summary.json`。
+  - process timer：`reports/day_20260608/process_timer_probe_20260608_205311/summary.json`。
+  - cal-loop timer：`reports/day_20260608/cal_loop_timer_probe_20260608_212019/summary.json`。
+- 当前平台复核：
+  - `nvidia-smi -L` 仍只显示 `1` 张 `NVIDIA GeForce RTX 5090`。
+- formal current-best anchor：
+  - alias：`current_best_v_pml_len16`。
+  - mean elapsed：`3.016667s`。
+  - mean Gradient：`2.111930s`。
+  - mean WP：`1.988905s`。
+  - elapsed speedup vs zmem：`1.1183x`。
+  - Gradient speedup vs zmem：`1.2066x`。
+  - WP speedup vs zmem：`1.2220x`。
+  - max rel L2：`6.384336e-07`。
+- same-GPU multi-rank：
+  - decision：`reject_same_gpu_multirank_probe`。
+  - best elapsed speedup：`0.9200x`。
+  - best Gradient speedup：`0.9301x`。
+  - 继续禁止同卡 `np=2/3` oversubscription rerun。
+- true multi-GPU batching：
+  - 当前单卡不可验收。
+  - 理论 shot-balance 上限：
+    - `2` GPUs：active shots/rank `[3,3]`，ideal speedup `2.0000x`。
+    - `3` GPUs：`[2,2,2]`，ideal speedup `3.0000x`。
+    - `4` GPUs：`[2,2,1,1]`，ideal speedup `3.0000x`。
+    - `6` GPUs：`[1,1,1,1,1,1]`，ideal speedup `6.0000x`。
+  - 这是唯一仍有大理论收益的 application-level route，但必须等 `>=2` visible GPUs。
+- host/setup：
+  - 不继续 host/setup micro prototypes。
+  - process wrapper / `MPI_Init` / CUDA context setup 是 benchmark/startup policy 问题，不能当 CUDA kernel speedup。
+  - cal-loop `wavefield_prep` ideal ceiling 约 `1.0236x` Gradient，不满足 `>=5%` gate。
+- 决策：
+  - `no_local_application_level_experiment_available_on_single_gpu`。
+- 允许下一步：
+  - 有 `>=2` GPU 平台后做 true multi-GPU batching repeat。
+  - 用户明确放宽 tolerance 后做 precision-relaxation study。
+  - 或停止 CUDA-core sprint，打包 current-best 成果。
+- 继续禁止：
+  - 同卡 oversubscription 重跑。
+  - 用 root-rank printed WP 声称 multi-rank speedup。
+  - 没有新 `>=5%` hotspot 的 host/setup 小修。
+  - 在当前单卡平台声明 true multi-GPU benchmark。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

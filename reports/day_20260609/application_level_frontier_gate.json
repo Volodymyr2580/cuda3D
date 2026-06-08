@@ -1,0 +1,137 @@
+{
+  "inputs": {
+    "formal_json": "reports/day_20260608/formal_vpmlen16_table_20260608_2359/summary.json",
+    "same_gpu_json": "reports/day_20260608/multirank_samegpu_sched_20260608_193042/summary.json",
+    "process_timer_json": "reports/day_20260608/process_timer_probe_20260608_205311/summary.json",
+    "cal_loop_json": "reports/day_20260608/cal_loop_timer_probe_20260608_212019/summary.json",
+    "available_gpus": 1,
+    "shots": 6
+  },
+  "platform": {
+    "available_gpus": 1,
+    "latest_remote_probe": "nvidia-smi -L shows one NVIDIA GeForce RTX 5090"
+  },
+  "formal_current_best": {
+    "alias": "current_best_v_pml_len16",
+    "mean_elapsed": 3.0166666666666666,
+    "mean_gradient": 2.1119303333333335,
+    "mean_wp": 1.9889053333333333,
+    "mean_elapsed_speedup_vs_zmem": 1.1182609576488542,
+    "mean_gradient_speedup_vs_zmem": 1.2065883595902978,
+    "mean_wp_speedup_vs_zmem": 1.2220234686933649,
+    "max_rel_l2": 6.384336369813099e-07,
+    "rounds": 3
+  },
+  "same_gpu_multirank": {
+    "decision": "reject_same_gpu_multirank_probe",
+    "best_elapsed_speedup": 0.92,
+    "best_gradient_speedup": 0.9301097898607804,
+    "allowed": false
+  },
+  "true_multigpu_batching": {
+    "decision": "defer_current_platform_single_gpu",
+    "runnable_now": false,
+    "distributions": [
+      {
+        "ranks": 1,
+        "active_counts": [
+          6
+        ],
+        "ideal_shot_balance_speedup": 1.0,
+        "ideal_parallel_efficiency": 1.0,
+        "runnable_on_current_platform": true,
+        "ideal_elapsed": 3.0166666666666666,
+        "ideal_gradient": 2.1119303333333335,
+        "ideal_wp": 1.9889053333333333
+      },
+      {
+        "ranks": 2,
+        "active_counts": [
+          3,
+          3
+        ],
+        "ideal_shot_balance_speedup": 2.0,
+        "ideal_parallel_efficiency": 1.0,
+        "runnable_on_current_platform": false,
+        "ideal_elapsed": 1.5083333333333333,
+        "ideal_gradient": 1.0559651666666667,
+        "ideal_wp": 0.9944526666666667
+      },
+      {
+        "ranks": 3,
+        "active_counts": [
+          2,
+          2,
+          2
+        ],
+        "ideal_shot_balance_speedup": 3.0,
+        "ideal_parallel_efficiency": 1.0,
+        "runnable_on_current_platform": false,
+        "ideal_elapsed": 1.0055555555555555,
+        "ideal_gradient": 0.7039767777777778,
+        "ideal_wp": 0.6629684444444445
+      },
+      {
+        "ranks": 4,
+        "active_counts": [
+          2,
+          2,
+          1,
+          1
+        ],
+        "ideal_shot_balance_speedup": 3.0,
+        "ideal_parallel_efficiency": 0.75,
+        "runnable_on_current_platform": false,
+        "ideal_elapsed": 1.0055555555555555,
+        "ideal_gradient": 0.7039767777777778,
+        "ideal_wp": 0.6629684444444445
+      },
+      {
+        "ranks": 6,
+        "active_counts": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "ideal_shot_balance_speedup": 6.0,
+        "ideal_parallel_efficiency": 1.0,
+        "runnable_on_current_platform": false,
+        "ideal_elapsed": 0.5027777777777778,
+        "ideal_gradient": 0.3519883888888889,
+        "ideal_wp": 0.33148422222222224
+      }
+    ],
+    "gate": "requires >=2 visible GPUs, input gpus_p_node=N, mpirun -np N, CUDA_VISIBLE_DEVICES with N devices, 3-round repeat, and output comparisons pass"
+  },
+  "host_setup": {
+    "decision": "reject_more_local_host_setup_micro_prototypes",
+    "process_timer_source": "reports/day_20260608/process_timer_probe_20260608_205311/summary.json",
+    "cal_loop_timer_source": "reports/day_20260608/cal_loop_timer_probe_20260608_212019/summary.json",
+    "process_timer_elapsed": 3.22,
+    "process_timer_gradient": 2.161705,
+    "outside_process_s": 0.547231,
+    "mpi_init_s": 0.254292,
+    "gpu_setup_s": 0.186226,
+    "cal_loop_wavefield_prep_s": 0.049816,
+    "cal_loop_wavefield_prep_gradient_speedup_ceiling": 1.0235623873992121,
+    "note": "Timer probes predate the final v-PML len16 formal table, but their route decisions are insensitive to that small compute-kernel improvement."
+  },
+  "gate": {
+    "decision": "no_local_application_level_experiment_available_on_single_gpu",
+    "reason": "same-GPU oversubscription is slower, true multi-GPU batching needs more visible GPUs, and host/setup/pre-FD local micro routes do not meet the >=5% gate.",
+    "allowed_next": [
+      "Run true multi-GPU batching when a >=2 GPU platform is available.",
+      "Open precision-relaxation only after an explicit tolerance-policy change.",
+      "Stop CUDA-core sprint at current-best and package results."
+    ],
+    "prohibited": [
+      "same-GPU np=2/3 oversubscription reruns for perf_1gpu_6shots",
+      "claiming speedup from root-rank printed WP in multi-rank runs",
+      "host/setup micro-prototypes without a new >=5% measured hotspot",
+      "true multi-GPU benchmark on current single-GPU platform"
+    ]
+  }
+}

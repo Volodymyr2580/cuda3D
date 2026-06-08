@@ -5430,3 +5430,62 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
     - 用户明确放宽 tolerance 后做 precision-relaxation。
     - 转向 application-level multi-shot scheduling / batching。
     - 或提出完全不同的 ownership representation，并先通过 byte/synchronization model。
+
+## 2026-06-09 02:16:19 +08:00
+
+- 操作目标：
+  - 汇总当前 exact CUDA-core frontier 关闭后的 application-level scheduling 路线。
+  - 使用正式 `current_best_v_pml_len16` 口径更新 true multi-GPU / same-GPU / host-setup 决策。
+- 修改文件：
+  - 新增 `tools/application_level_frontier_gate.py`。
+  - 新增 `docs/day_20260609/application_level_frontier_gate.md`。
+  - 新增 `reports/day_20260609/application_level_frontier_gate.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 远端平台复核：
+    - `cd /work/wenzhe/cuda3D`
+    - `nvidia-smi -L`
+  - 本地生成 gate：
+    - `python -m py_compile tools\application_level_frontier_gate.py`
+    - `python tools\application_level_frontier_gate.py --json-out reports\day_20260609\application_level_frontier_gate.json --md-out docs\day_20260609\application_level_frontier_gate.md`
+- 测试结果：
+  - 远端 `nvidia-smi -L` 显示当前仍只有 `1` 张 `NVIDIA GeForce RTX 5090`。
+  - Python 编译检查通过。
+  - application-level frontier Markdown/JSON 生成通过。
+  - 本轮不修改主 CUDA 程序，不需要 build/correctness/perf repeat。
+- 输出/哈希/误差摘要：
+  - formal current-best：
+    - alias：`current_best_v_pml_len16`。
+    - mean elapsed：`3.016667s`。
+    - mean Gradient：`2.111930s`。
+    - mean WP：`1.988905s`。
+    - elapsed speedup vs zmem：`1.1183x`。
+    - Gradient speedup vs zmem：`1.2066x`。
+    - WP speedup vs zmem：`1.2220x`。
+    - max rel L2：`6.384336e-07`。
+  - same-GPU multi-rank：
+    - decision：`reject_same_gpu_multirank_probe`。
+    - best elapsed speedup：`0.9200x`。
+    - best Gradient speedup：`0.9301x`。
+  - true multi-GPU shot-balance theory：
+    - `2` GPUs：`[3,3]`，ideal `2.0000x`。
+    - `3` GPUs：`[2,2,2]`，ideal `3.0000x`。
+    - `4` GPUs：`[2,2,1,1]`，ideal `3.0000x`。
+    - `6` GPUs：`[1,1,1,1,1,1]`，ideal `6.0000x`。
+  - host/setup：
+    - outside process wrapper：`0.547231s`。
+    - `MPI_Init`：`0.254292s`。
+    - gpu setup/context：`0.186226s`。
+    - cal-loop `wavefield_prep` ceiling：`1.0236x` Gradient。
+- 风险与下一步：
+  - 决策：`no_local_application_level_experiment_available_on_single_gpu`。
+  - 不继续 same-GPU oversubscription。
+  - 不用 root-rank printed WP 声称 multi-rank speedup。
+  - 不写没有新 `>=5%` measured hotspot 的 host/setup 小修。
+  - true multi-GPU batching 必须等 `>=2` visible GPUs 平台。
+  - 后续只剩：
+    - 多 GPU 平台上验收 true multi-GPU batching。
+    - 用户明确放宽 tolerance 后做 precision-relaxation。
+    - 或停止 CUDA-core sprint，打包 current-best 成果。
