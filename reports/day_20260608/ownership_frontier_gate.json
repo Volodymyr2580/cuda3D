@@ -1,0 +1,144 @@
+{
+  "derived": {
+    "additional_wp_speedup_needed_to_1_5x": 1.227472334556601,
+    "sampled_main_target_speedup": 1.05,
+    "target_next_milestone": 1.5,
+    "target_saved_us_for_5pct_sampled_main": 13.524285714285725
+  },
+  "gate": {
+    "decision": "ordinary_exact_cuda_frontier_exhausted_for_micro_routes",
+    "design_only_routes": [
+      "combined_final_plus_mem_dzz_state_redesign"
+    ],
+    "next_allowed": [
+      "write a handoff report to Pro/next agent with current-best and prohibited routes",
+      "investigate concrete cluster/cooperative persistent-kernel primitives before any cross-CTA ownership prototype",
+      "precision-relaxation plan only if the user explicitly changes the tolerance policy",
+      "application-level batching/multi-shot scheduling outside the CUDA-core exactness track"
+    ],
+    "ordinary_cuda_allowed_count": 0,
+    "reason": "All remaining ordinary CUDA exact routes either fail the >=5% modeled repeat-speedup gate, repeat a measured failed family, or require cross-CTA/global synchronization semantics not present in the current implementation model.",
+    "stop_for_now": [
+      "do not start another exact ordinary-CUDA micro prototype",
+      "do not reopen residual pressure, v-PML descriptor, z-face fusion, current p-core shared-plane, or K=2 temporal routes",
+      "do not claim 1.5x archive; current formal WP speedup is 1.222023x"
+    ]
+  },
+  "inputs": {
+    "formal": {
+      "current_best_alias": "current_best_v_pml_len16",
+      "directfill_wp": 1.1011719494380356,
+      "max_rel_l2": 6.384336369813099e-07,
+      "mean_elapsed_speedup_vs_zmem": 1.1182609576488542,
+      "mean_gradient_speedup_vs_zmem": 1.2065883595902978,
+      "mean_wp_speedup_vs_zmem": 1.2220234686933649,
+      "pressure_len16_wp": 1.1944948178986836
+    },
+    "post_vlen16": {
+      "fusion_scenarios": {
+        "halve_all_v_pml_time": 1.1011127049974798,
+        "perfect_remove_all_v_pml_time": 1.2249730429156782,
+        "perfect_remove_v_len16_time": 1.075876960375786
+      },
+      "p_core_share": 0.33002359071863663,
+      "p_core_us": 93.73,
+      "p_pml_len16_share": 0.2330199640857716,
+      "p_pml_len16_us": 66.18,
+      "p_pml_residual_share": 0.2533009401077426,
+      "p_pml_residual_us": 71.94,
+      "p_pml_total_share": 0.48632090419351426,
+      "p_pml_total_us": 138.12,
+      "pressure_scenarios": {
+        "len16_final_plus_mem_dzz_1_5x": 1.0730111708492018,
+        "len16_final_update_2x": 1.076213795670522,
+        "len16_mem_dzz_2x": 1.0322562377954998,
+        "p_pml_len16_1_25x": 1.048882093554034,
+        "p_pml_residual_1_25x": 1.0533635979259852,
+        "p_pml_total_1_10x": 1.0462560155928184,
+        "p_pml_total_1_25x": 1.1077437925627764
+      },
+      "required_local_by_region": {
+        "p_core": 1.1686199772014823,
+        "p_pml_len16": 1.256843647413115,
+        "p_pml_residual": 1.2315179379325527,
+        "p_pml_total": 1.1085453523968953,
+        "v_pml_len16": 3.0788317962231067,
+        "v_pml_residual": 1.7268888206388224,
+        "v_pml_total": 1.3500462192641898
+      },
+      "sampled_main_us": 284.01000000000005,
+      "source_group_required": {
+        "cpml_mem_dzz_if_alone": 4.20073747220385,
+        "final_p0_p1_cw2_if_alone": 1.5065094165108934,
+        "final_plus_mem_dzz": 1.3042542389675
+      },
+      "target_speedup": 1.05,
+      "v_pml_total_share": 0.183655505087849,
+      "v_pml_total_us": 52.160000000000004
+    },
+    "residual": {
+      "descriptor_sampled": 1.0153260416070762,
+      "gate_decision": "reject_residual_pressure_micro_cuda_prototype",
+      "perfect_branch_sampled": 1.0429283957553575,
+      "required_residual_local_speedup": 1.2315179379325527
+    }
+  },
+  "routes": {
+    "combined_final_plus_mem_dzz_state_redesign": {
+      "decision": "design_only",
+      "model_ceiling": 1.0730111708492018,
+      "reason": "Only a broader state/ownership redesign can plausibly reach the gate, but no exact ordinary-CUDA design has yet shown how to remove both traffic groups without larger side effects.",
+      "region_share": 0.2330199640857716,
+      "required_local": 1.3042542389675
+    },
+    "cpml_recursive_state_traffic": {
+      "decision": "reject_cuda_prototype",
+      "model_ceiling": 1.0322562377954998,
+      "reason": "mem_dzz is a recursive per-step state with no intra-step reuse target; even a 2x local win is below gate.",
+      "region_share": 0.2330199640857716,
+      "required_local": 4.20073747220385
+    },
+    "host_launch_or_stream_scheduling": {
+      "decision": "reject_cuda_prototype",
+      "model_ceiling": 1.005183,
+      "reason": "The tested async stream prototype was correct but reached only about 0.5% WP speedup.",
+      "region_share": null,
+      "required_local": null
+    },
+    "ordinary_v_pressure_zface_fusion": {
+      "decision": "reject_previous_failed_family",
+      "model_ceiling": 1.075876960375786,
+      "reason": "Direct z-face VP fusion/shared-VP has already failed; ordinary CUDA variants duplicate halo/control work or need cross-CTA values not available in shared/register state.",
+      "region_share": 0.6699764092813633,
+      "required_local": null
+    },
+    "pressure_final_writeback_state_representation": {
+      "decision": "reject_cuda_prototype",
+      "model_ceiling": 1.076213795670522,
+      "reason": "A 2x final-update subgroup win is mathematically enough in isolation, but exact state representation variants have already moved or increased traffic into p_core/v_pml or added state writes.",
+      "region_share": 0.2330199640857716,
+      "required_local": 1.5065094165108934
+    },
+    "residual_pressure_branch_or_descriptor": {
+      "decision": "reject_cuda_prototype",
+      "model_ceiling": 1.0429283957553575,
+      "reason": "Residual pressure branch/predicate/descriptor cleanups are below the 5% sampled-main gate.",
+      "region_share": 0.2533009401077426,
+      "required_local": 1.2315179379325527
+    },
+    "source_aware_temporal_wavefront": {
+      "decision": "reject_ordinary_cuda",
+      "model_ceiling": 1.1248,
+      "reason": "The ideal K=2 source-aware ceiling is meaningful, but ordinary CUDA schedules either materialize p_mid globally, duplicate halos heavily, or need a grid-wide/cross-CTA ownership primitive.",
+      "region_share": 0.33002359071863663,
+      "required_local": 1.1686199772014823
+    },
+    "v_pml_descriptor_or_micro_packing": {
+      "decision": "reject_cuda_prototype",
+      "model_ceiling": null,
+      "reason": "After accepted v-len16, v-PML share is only 18.37%; descriptor expansion has no >=5% overhead model.",
+      "region_share": 0.183655505087849,
+      "required_local": 1.3500462192641898
+    }
+  }
+}

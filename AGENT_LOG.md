@@ -5258,3 +5258,44 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 禁止 residual branch-only split、length-32 branch/control specialization retry、length-23/exact descriptor retry、residual `p0 __ldg` / local `new_mem` / cache-policy / z-cache 小修。
   - 下一步只允许真正减少 pressure writeback 或 CPML state traffic 的 pressure/wave-step ownership model，或明确 cross-CTA/cluster-level primitive study，或用户明确改变 tolerance policy 后研究 precision-relaxation。
   - NCU source page 已在远端临时导出，但未映射出 C++ source text；保留 `.ncu-rep` 和 source page 在远端 worktree，不提交到仓库。
+
+## 2026-06-09 00:35:55 +08:00
+
+- 操作目标：
+  - 汇总 current-best 之后所有剩余 pressure/wave-step ownership 路线。
+  - 判断 ordinary exact-CUDA 下是否还有可立即写的新 prototype。
+- 修改文件：
+  - 新增 `tools/ownership_frontier_gate.py`。
+  - 新增 `docs/day_20260608/ownership_frontier_gate.md`。
+  - 新增 `reports/day_20260608/ownership_frontier_gate.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - `python -m py_compile tools\ownership_frontier_gate.py`
+  - `python tools\ownership_frontier_gate.py --json-out reports\day_20260608\ownership_frontier_gate.json --md-out docs\day_20260608\ownership_frontier_gate.md`
+  - `python -c "import json; d=json.load(open('reports/day_20260608/ownership_frontier_gate.json', encoding='utf-8')); print(d['gate']['decision']); print(d['gate']['ordinary_cuda_allowed_count']); print(d['derived']['additional_wp_speedup_needed_to_1_5x'])"`
+- 测试结果：
+  - Python 编译检查通过。
+  - frontier gate 工具运行成功，生成 Markdown/JSON。
+  - 本轮不修改 CUDA 源码，不需要远端 build/correctness/perf repeat。
+- 输出/哈希/误差摘要：
+  - current best：`current_best_v_pml_len16`。
+  - formal speedup vs zmem：
+    - WP `1.222023x`。
+    - Gradient `1.206588x`。
+    - elapsed `1.118261x`。
+    - max rel L2 `6.384336e-07`。
+  - additional WP speedup needed to reach `1.5x`：`1.2275x`。
+  - sampled main：`284.010us`。
+  - remaining region shares：
+    - p-core `33.00%`。
+    - pressure-PML total `48.63%`。
+    - v-PML total `18.37%`。
+  - ordinary CUDA allowed prototype count：`0`。
+  - gate decision：`ordinary_exact_cuda_frontier_exhausted_for_micro_routes`。
+- 风险与下一步：
+  - 决策：关闭 ordinary exact-CUDA micro-prototype frontier。
+  - 不再启动 residual pressure、v-PML descriptor、z-face fusion、current p-core shared-plane、K=2 temporal、host scheduling 类小原型。
+  - 不声明 `1.5x` milestone；当前正式 WP speedup 是 `1.222023x`。
+  - 下一步允许写 Pro/后续 agent handoff report，或先研究具体 cluster/cooperative persistent-kernel primitive，或在用户明确改变 tolerance policy 后做 precision-relaxation，或转向 application-level batching / multi-shot scheduling。

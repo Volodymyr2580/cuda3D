@@ -1158,6 +1158,46 @@ Phase 4.32 residual pressure-PML route gate 已完成：
   - 本轮 `.ncu-rep` 保留在远端 worktree，未提交。
   - `ncu --page source` 导出的 source page 未映射出 C++ source text，仅作远端临时排查，不进入仓库。
 
+Phase 4.33 ownership frontier gate 已完成：
+
+- 工具：`tools/ownership_frontier_gate.py`。
+- 报告：`docs/day_20260608/ownership_frontier_gate.md`。
+- JSON：`reports/day_20260608/ownership_frontier_gate.json`。
+- current best：`current_best_v_pml_len16`。
+- formal speedup vs zmem：
+  - WP `1.222023x`。
+  - Gradient `1.206588x`。
+  - elapsed `1.118261x`。
+  - max rel L2 `6.384336e-07`。
+- 还要达到 `1.5x` WP milestone，需要额外 `1.2275x` WP speedup。
+- current-best sampled-main profile anchor：
+  - sampled main：`284.010us`。
+  - p-core：`93.730us`，share `33.00%`。
+  - pressure-PML total：`138.120us`，share `48.63%`。
+  - v-PML total：`52.160us`，share `18.37%`。
+- frontier 决策：
+  - `ordinary_exact_cuda_frontier_exhausted_for_micro_routes`。
+  - 立即允许写的 ordinary CUDA exact prototype 数：`0`。
+  - 所有剩余 ordinary CUDA exact 路线要么低于 `>=5%` repeat-speedup gate，要么重复已测失败家族，要么需要当前实现模型没有的 cross-CTA/global synchronization semantics。
+- route matrix：
+  - `pressure_final_writeback_state_representation`：拒绝 CUDA prototype。
+  - `cpml_recursive_state_traffic`：拒绝 CUDA prototype。
+  - `combined_final_plus_mem_dzz_state_redesign`：只允许 design-only。
+  - `residual_pressure_branch_or_descriptor`：拒绝 CUDA prototype。
+  - `v_pml_descriptor_or_micro_packing`：拒绝 CUDA prototype。
+  - `ordinary_v_pressure_zface_fusion`：拒绝，属于已失败家族。
+  - `source_aware_temporal_wavefront`：拒绝 ordinary CUDA prototype。
+  - `host_launch_or_stream_scheduling`：拒绝 CUDA prototype。
+- 下一步允许：
+  - 给 Pro/后续 agent 写 handoff report，总结 current-best、硬门槛与禁止路线。
+  - 先研究具体 cluster/cooperative persistent-kernel primitive，再决定是否能重开 cross-CTA ownership prototype。
+  - 只有用户明确改变 tolerance policy 后，才做 precision-relaxation。
+  - exact CUDA-core 路线被 gate off 时，可研究 application-level batching / multi-shot scheduling。
+- 当前禁止：
+  - 不再启动 ordinary exact-CUDA micro prototype。
+  - 不重开 residual pressure、v-PML descriptor、z-face fusion、current p-core shared-plane、K=2 temporal 路线。
+  - 不声明 `1.5x` milestone；当前正式 WP speedup 是 `1.222023x`。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

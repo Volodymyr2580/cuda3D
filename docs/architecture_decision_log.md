@@ -2809,3 +2809,85 @@ through a pressure/wave-step ownership model, identify a concrete cross-CTA or
 cluster-level ownership primitive, or explicitly change the precision/tolerance
 policy before precision-relaxation work.
 ```
+
+## 2026-06-09 - Close Ordinary Exact-CUDA Micro Frontier
+
+Decision:
+
+```text
+Close the ordinary exact-CUDA micro-prototype frontier after current_best_v_pml_len16.
+No immediate ordinary CUDA exact prototype is allowed without a new primitive,
+policy change, or application-level scope change.
+```
+
+Evidence:
+
+```text
+tool:
+  tools/ownership_frontier_gate.py
+
+report:
+  docs/day_20260608/ownership_frontier_gate.md
+  reports/day_20260608/ownership_frontier_gate.json
+
+current best:
+  current_best_v_pml_len16
+
+formal same-session speedup vs zmem:
+  WP        1.222023x
+  Gradient  1.206588x
+  elapsed   1.118261x
+  max rel L2 6.384336e-07
+
+additional WP speedup required for 1.5x milestone:
+  1.2275x
+
+sampled main profile:
+  total              284.010us
+  p-core              93.730us  33.00%
+  pressure-PML total 138.120us  48.63%
+  v-PML total         52.160us  18.37%
+
+ordinary CUDA allowed prototypes:
+  0
+```
+
+Route matrix:
+
+```text
+pressure_final_writeback_state_representation  reject_cuda_prototype
+cpml_recursive_state_traffic                   reject_cuda_prototype
+combined_final_plus_mem_dzz_state_redesign     design_only
+residual_pressure_branch_or_descriptor         reject_cuda_prototype
+v_pml_descriptor_or_micro_packing              reject_cuda_prototype
+ordinary_v_pressure_zface_fusion               reject_previous_failed_family
+source_aware_temporal_wavefront                reject_ordinary_cuda
+host_launch_or_stream_scheduling               reject_cuda_prototype
+```
+
+Reason:
+
+```text
+The remaining exact ordinary-CUDA routes either fail the >=5% modeled
+repeat-speedup gate, repeat measured failed families, or require cross-CTA/global
+synchronization semantics that the current ordinary CUDA implementation model
+does not provide.  Continuing to write micro-prototypes would now be busywork,
+not senior CUDA engineering.
+```
+
+Boundary:
+
+```text
+Do not start another ordinary exact-CUDA micro prototype.
+Do not reopen residual pressure, v-PML descriptor, z-face fusion, current p-core
+shared-plane, or K=2 temporal routes.
+Do not claim a 1.5x milestone; current formal WP speedup is 1.222023x.
+
+Next allowed work:
+  1. Write a handoff report for Pro/next agent.
+  2. Investigate a concrete cluster/cooperative persistent-kernel primitive
+     before any cross-CTA ownership prototype.
+  3. Open precision-relaxation only after an explicit tolerance-policy change.
+  4. Study application-level batching / multi-shot scheduling outside the
+     exact CUDA-core route.
+```
