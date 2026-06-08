@@ -2109,3 +2109,83 @@ Report:
 reports/day_20260608/host_setup_timer_probe_20260608_203508/summary.md
 reports/day_20260608/host_setup_timer_probe_20260608_203508/summary.json
 ```
+
+## 2026-06-08 - Close Process-Level Wall-Clock Gap
+
+Decision:
+
+```text
+Stop host/setup wall-clock micro-optimization for CUDA-core speedup accounting.
+The elapsed-vs-Gradient gap is now explained by process wrapper, MPI/context
+startup, and measured pre-Gradient setup.
+```
+
+Evidence:
+
+```text
+timer binary flags:
+  current-best flags + -DCUDA3D_HOST_SETUP_TIMERS
+
+correctness:
+  process timer binary vs formal len16 current-best r1
+  pass, max rel L2 0, max abs 0
+
+program timing:
+  elapsed                         3.220s
+  Gradient TIME all               2.161705s
+  WP computing time               2.045140s
+  elapsed - Gradient              1.058295s
+
+process timers:
+  MPI_Init                        0.254292s
+  main after MPI to pre-finalize  2.418194s
+  MPI_Finalize                    0.000283s
+  process total                   2.672769s
+  elapsed - process total         0.547231s
+
+in-program timers:
+  measured pre-Gradient setup     0.250119s
+  gpu_setup                       0.186226s
+  root_model_read                 0.018050s
+  shot_list                       0.022546s
+  cal pre_gradient_init           0.022299s
+
+accounting:
+  known non-Gradient time         1.053080s
+  residual after known timers     0.005215s
+```
+
+Reason:
+
+```text
+The wall-clock overhead is no longer a mysterious CUDA solver hotspot.  The
+largest pieces are external command / source / mpirun wrapper time, MPI_Init,
+and CUDA device/context setup.  These are valid deployment or benchmarking
+policy topics, but they are not CUDA kernel speedups.
+```
+
+Boundary:
+
+```text
+Do not pursue host/setup micro-optimizations as CUDA-core performance wins.
+Do not use context warmup, moved timers, skipped setup, or skipped output as a
+speedup claim.
+Do not compare wall-clock runs unless command wrapper, environment source, MPI
+rank count, GPU count, and input gpus_p_node are fixed.
+```
+
+Next:
+
+```text
+Use Gradient TIME all and WP for CUDA-core optimization.  Reopen wall-clock
+work only for true multi-GPU/multi-job batching, long-running service mode, or a
+clearly defined deployment benchmark where process startup is part of the
+objective.
+```
+
+Report:
+
+```text
+reports/day_20260608/process_timer_probe_20260608_205311/summary.md
+reports/day_20260608/process_timer_probe_20260608_205311/summary.json
+```

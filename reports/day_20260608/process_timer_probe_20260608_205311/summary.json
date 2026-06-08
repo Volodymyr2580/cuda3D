@@ -1,0 +1,43 @@
+{
+  "run_log": "reports\\day_20260608\\process_timer_probe_20260608_205311\\run.log",
+  "elapsed_s": 3.22,
+  "gradient_s": 2.161705,
+  "wp_s": 2.04514,
+  "read_time_s": 0.000111,
+  "timers": {
+    "main": {
+      "input_scan": 2.3e-05,
+      "gpu_setup": 0.186226,
+      "input_bcast": 1e-06,
+      "coeff_init": 1.2e-05,
+      "static_alloc": 0.000182,
+      "root_model_read": 0.01805,
+      "model_bcast": 1e-06,
+      "acqui_read": 0.000739,
+      "acqui_bcast": 0.0,
+      "lint": 3.9e-05,
+      "shot_list": 0.022546,
+      "total_pre_gradient": 0.22782,
+      "gradient_call_total": 2.186518,
+      "post_gradient_barrier_and_free": 0.001155,
+      "total_after_mpi_to_pre_finalize": 2.415493
+    },
+    "cal": {
+      "pre_gradient_init": 0.022299
+    },
+    "process": {
+      "rank": 0.0,
+      "mpi_init": 0.254292,
+      "main_after_mpi_to_pre_finalize": 2.418194,
+      "mpi_finalize": 0.000283,
+      "process_total": 2.672769
+    }
+  },
+  "measured_pre_gradient_s": 0.250119,
+  "elapsed_minus_gradient_s": 1.0582950000000002,
+  "unaccounted_elapsed_minus_gradient_s": 0.8081760000000002,
+  "process_total_s": 2.672769,
+  "outside_process_s": 0.547231,
+  "known_non_gradient_s": 1.05308,
+  "residual_after_known_non_gradient_s": 0.005215000000000192
+}

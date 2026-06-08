@@ -4734,3 +4734,76 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - `gpu_setup` 是最大 measured stage，但更像 CUDA device/context 初始化，一次性启动成本；移动或预热它不能作为 CUDA-core speedup。
   - 下一步若继续 wall-clock 路线，应添加 process-level timer around `MPI_Init` 或做 Nsight Systems OS/runtime profile。
   - CUDA-core 优化仍以 `Gradient TIME all` 和 WP 为主指标。
+
+## 2026-06-08 21:07:08 +08:00
+
+- 操作目标：
+  - 继续 Phase 4.23 后的 wall-clock gap 分解，添加 process-level timer，定位 `MPI_Init`、`MPI_Finalize` 与 `/usr/bin/time` 外壳开销。
+  - 判断 host/setup wall-clock route 是否仍值得作为 CUDA-core optimization 推进。
+- 修改文件：
+  - 修改 `src/main.cu`：在 `CUDA3D_HOST_SETUP_TIMERS` 下新增 `gettimeofday` process timer，计时 `MPI_Init`、main after-MPI to pre-finalize、`MPI_Finalize`、process total。
+  - 修改 `tools/host_setup_timer_summary.py`：新增 process timer 解析与 known non-Gradient accounting。
+  - 新增 `reports/day_20260608/process_timer_probe_20260608_205311/run.log`。
+  - 新增 `reports/day_20260608/process_timer_probe_20260608_205311/manifest.json`。
+  - 新增 `reports/day_20260608/process_timer_probe_20260608_205311/run.stdout`。
+  - 新增 `reports/day_20260608/process_timer_probe_20260608_205311/run_dir.txt`。
+  - 新增 `reports/day_20260608/process_timer_probe_20260608_205311/binary.sha256`。
+  - 新增 `reports/day_20260608/process_timer_probe_20260608_205311/build.log`。
+  - 新增 `reports/day_20260608/process_timer_probe_20260608_205311/summary.md`。
+  - 新增 `reports/day_20260608/process_timer_probe_20260608_205311/summary.json`。
+  - 新增 `reports/day_20260608/process_timer_probe_20260608_205311/compare_vs_formal_len16_r1/comparison.md`。
+  - 新增 `reports/day_20260608/process_timer_probe_20260608_205311/compare_vs_formal_len16_r1/comparison.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地：
+    - `git status --short --branch`
+    - `git log --oneline -5`
+    - `python -m py_compile tools\host_setup_timer_summary.py`
+    - `python tools\host_setup_timer_summary.py --run-log reports\day_20260608\process_timer_probe_20260608_205311\run.log --json-out reports\day_20260608\process_timer_probe_20260608_205311\summary.json --md-out reports\day_20260608\process_timer_probe_20260608_205311\summary.md`
+  - 远端：
+    - `git -c http.proxy= -c https.proxy= fetch origin exp/day-20260608-cpml-compact-temporal`
+    - `git worktree add --detach /work/wenzhe/cuda3D/.codex_worktrees/process_timers_20260608_205311 FETCH_HEAD`
+    - `tools/remote_put.py` 上传 `src/main.cu` 与 `tools/host_setup_timer_summary.py`。
+    - 第一次 `remote_put.py` 出现 `Connection reset by peer (104)`，重试后成功，未影响文件状态。
+    - `make -B -f makefile.rtx5090 test NVFLAGS="<current-best flags> -DCUDA3D_HOST_SETUP_TIMERS"`
+    - `python3 tools/run_benchmark.py --case perf_1gpu_6shots --tag process_timers --np 1 --gpus 0 --timeout 2400`
+    - `python3 tools/compare_outputs.py --baseline <formal len16 r1>/outputs --candidate <process timer run>/outputs --out <report>/compare_vs_formal_len16_r1`
+    - `python3 tools/host_setup_timer_summary.py --run-log <report>/run.log --json-out <report>/summary.json --md-out <report>/summary.md`
+    - `make -B -f makefile.rtx5090 test NVFLAGS="<current-best flags>"` 验证 default-off build。
+  - 本地拉取：
+    - `tools/remote_get.py` 拉取 process timer run log、manifest、summary、comparison、binary sha 和 build log。
+- 测试结果：
+  - process timer binary 构建通过。
+  - process timer run returncode `0`，输出 `6` 个文件。
+  - process timer binary vs formal len16 current-best r1 输出对比 pass。
+  - 6 个输出 max rel L2 `0`，max abs `0`。
+  - default-off current-best build 通过，binary sha256 `ca8c64735b77db3c600a8132b818ef0d70b42007a49a1608a3ea1681103e297f`。
+- 输出/哈希/误差摘要：
+  - process timer binary sha256：`45df148a3c9584384d779d14cb9f82743855d119ca2b5cfe9e3f4bac9aed5da2`。
+  - elapsed：`3.220s`。
+  - `Gradient TIME all`：`2.161705s`。
+  - WP：`2.045140s`。
+  - elapsed - Gradient：`1.058295s`。
+  - process timers：
+    - `MPI_Init`：`0.254292s`。
+    - main after-MPI to pre-finalize：`2.418194s`。
+    - `MPI_Finalize`：`0.000283s`。
+    - process total：`2.672769s`。
+    - elapsed - process total：`0.547231s`。
+  - in-program timers：
+    - measured pre-Gradient setup：`0.250119s`。
+    - `gpu_setup`：`0.186226s`。
+    - `root_model_read`：`0.018050s`。
+    - `shot_list`：`0.022546s`。
+    - `cal pre_gradient_init`：`0.022299s`。
+  - accounting：
+    - known non-Gradient time：`1.053080s`。
+    - residual after known non-Gradient timers：`0.005215s`。
+- 风险与下一步：
+  - 决策：host/setup wall-clock gap 已基本闭合，不继续作为 CUDA-core optimization route。
+  - 最大非计算项为 `/usr/bin/time` command shell / `source setvars` / `mpirun` wrapper 约 `0.547s`、`MPI_Init` 约 `0.254s`、CUDA device/context setup 约 `0.186s`。
+  - 这些属于 benchmark/deployment/startup policy 或 long-running service/multi-shot batching 议题，不能作为 CUDA kernel speedup。
+  - 后续 CUDA-core 提速继续使用 `Gradient TIME all` 与 WP 指标。
+  - wall-clock route 只在 true multi-GPU/multi-job batching 或明确 deployment benchmark 下重开。

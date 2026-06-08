@@ -1,0 +1,673 @@
+/opt/intel/oneapi/mpi/latest/bin/mpicc -O3 -g -I../include/inc3D -I/opt/intel/oneapi/mpi/latest/include -c alloc.c -o alloc.o
+/opt/intel/oneapi/mpi/latest/bin/mpicc -O3 -g -I../include/inc3D -I/opt/intel/oneapi/mpi/latest/include -c utility_zz.c -o utility_zz.o
+utility_zz.c: In function ‘readsu’:
+utility_zz.c:75:11: warning: ignoring return value of ‘fread’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+   75 |           fread(&vpb[ix][it],sizeof(float),1,psegy_vp);
+      |           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+utility_zz.c: In function ‘readsegy’:
+utility_zz.c:151:9: warning: ignoring return value of ‘fread’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  151 |         fread(&vpb[ix][it],sizeof(float),1,psegy_vp);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+utility_zz.c: In function ‘read_dir’:
+utility_zz.c:195:7: warning: ignoring return value of ‘fread’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  195 |       fread(vp[i],sizeof(float),nz,fp);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+utility_zz.c: In function ‘read_dir_3d’:
+utility_zz.c:214:9: warning: ignoring return value of ‘fread’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  214 |         fread(d[iy][ix],sizeof(float),nz,fp);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+utility_zz.c: In function ‘readdir1d’:
+utility_zz.c:232:5: warning: ignoring return value of ‘fread’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  232 |     fread(vp,sizeof(float),nx,fp);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/opt/intel/oneapi/mpi/latest/bin/mpicc -O3 -g -I../include/inc3D -I/opt/intel/oneapi/mpi/latest/include -c abc.c -o abc.o
+/opt/intel/oneapi/mpi/latest/bin/mpicc -O3 -g -I../include/inc3D -I/opt/intel/oneapi/mpi/latest/include -c acqui.c -o acqui.o
+/opt/intel/oneapi/mpi/latest/bin/mpicc -O3 -g -I../include/inc3D -I/opt/intel/oneapi/mpi/latest/include -c lint.c -o lint.o
+/usr/local/cuda-13.0/bin/nvcc -O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2 -DCUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL -DCUDA3D_CPML_VMEM_DISABLE_MPI -DCUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE -DCUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK -DCUDA3D_HOST_SETUP_TIMERS -I../include/inc3D -I/opt/intel/oneapi/mpi/latest/include -c main.cu -o main.o
+main.cu(179): warning #549-D: variable "rny" is used before its value is set
+      printf("sny=%d snx=%d rny=%d rnx=%d\n",sny, snx, rny, rnx);
+                                                       ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+main.cu(179): warning #549-D: variable "rnx" is used before its value is set
+      printf("sny=%d snx=%d rny=%d rnx=%d\n",sny, snx, rny, rnx);
+                                                            ^
+
+main.cu(332): warning #1650-D: result of call is not used
+      scanf("%s",shotfile);
+      ^
+
+main.cu(335): warning #1650-D: result of call is not used
+      scanf("%f",&sht_scl);
+      ^
+
+main.cu(338): warning #1650-D: result of call is not used
+      scanf("%s",directfile);
+      ^
+
+main.cu(341): warning #1650-D: result of call is not used
+      scanf("%d",&directflag);
+      ^
+
+main.cu(344): warning #1650-D: result of call is not used
+      scanf("%s",navfile);
+      ^
+
+main.cu(348): warning #1650-D: result of call is not used
+      scanf("%s",srcfile);
+      ^
+
+main.cu(351): warning #1650-D: result of call is not used
+      scanf("%s",wbfile);
+      ^
+
+main.cu(355): warning #1650-D: result of call is not used
+      scanf("%d",&tmutflag);
+      ^
+
+main.cu(357): warning #1650-D: result of call is not used
+      scanf("%s",tmutfile);
+      ^
+
+main.cu(360): warning #1650-D: result of call is not used
+      scanf("%d",&bmutflag);
+      ^
+
+main.cu(362): warning #1650-D: result of call is not used
+      scanf("%s",bmutfile);
+      ^
+
+main.cu(366): warning #1650-D: result of call is not used
+      scanf("%s",outfile);
+      ^
+
+main.cu(369): warning #1650-D: result of call is not used
+      scanf("%zu",&ntr_shot);
+      ^
+
+main.cu(372): warning #1650-D: result of call is not used
+      scanf("%f",&near_cut);
+      ^
+
+main.cu(374): warning #1650-D: result of call is not used
+      scanf("%f",&far_cut);
+      ^
+
+main.cu(376): warning #1650-D: result of call is not used
+      scanf("%f",&decay_off);
+      ^
+
+main.cu(380): warning #1650-D: result of call is not used
+      scanf("%d", &L_n);
+      ^
+
+main.cu(384): warning #1650-D: result of call is not used
+      scanf("%f",&dt);
+      ^
+
+main.cu(386): warning #1650-D: result of call is not used
+      scanf("%d",&nt);
+      ^
+
+main.cu(390): warning #1650-D: result of call is not used
+      scanf("%s",vinfile);
+      ^
+
+main.cu(392): warning #1650-D: result of call is not used
+      scanf("%d",&vflag);
+      ^
+
+main.cu(394): warning #1650-D: result of call is not used
+      scanf("%f",&vmax);
+      ^
+
+main.cu(398): warning #1650-D: result of call is not used
+      scanf("%d",&ny);
+      ^
+
+main.cu(400): warning #1650-D: result of call is not used
+      scanf("%d",&nx);
+      ^
+
+main.cu(402): warning #1650-D: result of call is not used
+      scanf("%d",&nz);
+      ^
+
+main.cu(405): warning #1650-D: result of call is not used
+      scanf("%f",&dy);
+      ^
+
+main.cu(407): warning #1650-D: result of call is not used
+      scanf("%f",&dx);
+      ^
+
+main.cu(409): warning #1650-D: result of call is not used
+      scanf("%f",&dz);
+      ^
+
+main.cu(412): warning #1650-D: result of call is not used
+      scanf("%d",&npml);
+      ^
+
+main.cu(414): warning #1650-D: result of call is not used
+      scanf("%f",&decay);
+      ^
+
+main.cu(416): warning #1650-D: result of call is not used
+      scanf("%f",&xpad);
+      ^
+
+main.cu(420): warning #1650-D: result of call is not used
+      scanf("%d",&itop);
+      ^
+
+main.cu(423): warning #1650-D: result of call is not used
+      scanf("%s",order);
+      ^
+
+main.cu(427): warning #1650-D: result of call is not used
+      scanf("%d",&gpus_p_node);
+      ^
+
+main.cu(179): warning #549-D: variable "rny" is used before its value is set
+      printf("sny=%d snx=%d rny=%d rnx=%d\n",sny, snx, rny, rnx);
+                                                       ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+main.cu(179): warning #549-D: variable "rnx" is used before its value is set
+      printf("sny=%d snx=%d rny=%d rnx=%d\n",sny, snx, rny, rnx);
+                                                            ^
+
+main.cu(130): warning #177-D: variable "ssz" was declared but never referenced
+    float **geo, ssx, ssy, rrx, rry, ssz, rrz;
+                                     ^
+
+main.cu(130): warning #177-D: variable "rrz" was declared but never referenced
+    float **geo, ssx, ssy, rrx, rry, ssz, rrz;
+                                          ^
+
+main.cu(332): warning #1650-D: result of call is not used
+      scanf("%s",shotfile);
+      ^
+
+main.cu(335): warning #1650-D: result of call is not used
+      scanf("%f",&sht_scl);
+      ^
+
+main.cu(338): warning #1650-D: result of call is not used
+      scanf("%s",directfile);
+      ^
+
+main.cu(341): warning #1650-D: result of call is not used
+      scanf("%d",&directflag);
+      ^
+
+main.cu(344): warning #1650-D: result of call is not used
+      scanf("%s",navfile);
+      ^
+
+main.cu(348): warning #1650-D: result of call is not used
+      scanf("%s",srcfile);
+      ^
+
+main.cu(351): warning #1650-D: result of call is not used
+      scanf("%s",wbfile);
+      ^
+
+main.cu(355): warning #1650-D: result of call is not used
+      scanf("%d",&tmutflag);
+      ^
+
+main.cu(357): warning #1650-D: result of call is not used
+      scanf("%s",tmutfile);
+      ^
+
+main.cu(360): warning #1650-D: result of call is not used
+      scanf("%d",&bmutflag);
+      ^
+
+main.cu(362): warning #1650-D: result of call is not used
+      scanf("%s",bmutfile);
+      ^
+
+main.cu(366): warning #1650-D: result of call is not used
+      scanf("%s",outfile);
+      ^
+
+main.cu(369): warning #1650-D: result of call is not used
+      scanf("%zu",&ntr_shot);
+      ^
+
+main.cu(372): warning #1650-D: result of call is not used
+      scanf("%f",&near_cut);
+      ^
+
+main.cu(374): warning #1650-D: result of call is not used
+      scanf("%f",&far_cut);
+      ^
+
+main.cu(376): warning #1650-D: result of call is not used
+      scanf("%f",&decay_off);
+      ^
+
+main.cu(380): warning #1650-D: result of call is not used
+      scanf("%d", &L_n);
+      ^
+
+main.cu(384): warning #1650-D: result of call is not used
+      scanf("%f",&dt);
+      ^
+
+main.cu(386): warning #1650-D: result of call is not used
+      scanf("%d",&nt);
+      ^
+
+main.cu(390): warning #1650-D: result of call is not used
+      scanf("%s",vinfile);
+      ^
+
+main.cu(392): warning #1650-D: result of call is not used
+      scanf("%d",&vflag);
+      ^
+
+main.cu(394): warning #1650-D: result of call is not used
+      scanf("%f",&vmax);
+      ^
+
+main.cu(398): warning #1650-D: result of call is not used
+      scanf("%d",&ny);
+      ^
+
+main.cu(400): warning #1650-D: result of call is not used
+      scanf("%d",&nx);
+      ^
+
+main.cu(402): warning #1650-D: result of call is not used
+      scanf("%d",&nz);
+      ^
+
+main.cu(405): warning #1650-D: result of call is not used
+      scanf("%f",&dy);
+      ^
+
+main.cu(407): warning #1650-D: result of call is not used
+      scanf("%f",&dx);
+      ^
+
+main.cu(409): warning #1650-D: result of call is not used
+      scanf("%f",&dz);
+      ^
+
+main.cu(412): warning #1650-D: result of call is not used
+      scanf("%d",&npml);
+      ^
+
+main.cu(414): warning #1650-D: result of call is not used
+      scanf("%f",&decay);
+      ^
+
+main.cu(416): warning #1650-D: result of call is not used
+      scanf("%f",&xpad);
+      ^
+
+main.cu(420): warning #1650-D: result of call is not used
+      scanf("%d",&itop);
+      ^
+
+main.cu(423): warning #1650-D: result of call is not used
+      scanf("%s",order);
+      ^
+
+main.cu(427): warning #1650-D: result of call is not used
+      scanf("%d",&gpus_p_node);
+      ^
+
+main.cu(28): warning #177-D: variable "ID" was declared but never referenced
+    int ID,np;
+        ^
+
+main.cu(28): warning #177-D: variable "np" was declared but never referenced
+    int ID,np;
+           ^
+
+main.cu(61): warning #550-D: variable "dtr" was set but never used
+    float r, irr, dtr, *j0k, vmax, *bt, *bb, *bl, *br;
+                  ^
+
+main.cu(63): warning #177-D: variable "ik" was declared but never referenced
+    int mrecu, ik;
+               ^
+
+main.cu(66): warning #177-D: variable "nrmax" was declared but never referenced
+    int *nrec_shot, nrmax, ns, ns_s, ns_pad, myns, is;
+                    ^
+
+main.cu(90): warning #177-D: variable "iz" was declared but never referenced
+    int nz, ny, nx, npml, ix, iz, iy;
+                              ^
+
+main.cu(92): warning #550-D: variable "nxz" was set but never used
+    size_t nxyz, byte, nxy, nxz, nyz;
+                            ^
+
+main.cu(92): warning #177-D: variable "nyz" was declared but never referenced
+    size_t nxyz, byte, nxy, nxz, nyz;
+                                 ^
+
+main.cu(97): warning #177-D: variable "icc" was declared but never referenced
+    size_t ic, icc;
+               ^
+
+main.cu(116): warning #177-D: variable "tt1" was declared but never referenced
+    cudaEvent_t tt1,tt2;
+                ^
+
+main.cu(116): warning #177-D: variable "tt2" was declared but never referenced
+    cudaEvent_t tt1,tt2;
+                    ^
+
+main.cu(117): warning #177-D: variable "mills" was declared but never referenced
+    float mills;
+          ^
+
+main.cu: In function ‘int main(int, char**)’:
+main.cu:675:8: warning: format ‘%d’ expects argument of type ‘int’, but argument 2 has type ‘size_t’ {aka ‘long unsigned int’} [-Wformat=]
+  675 |       printf("shot %d, (sy=%5.4f sx=%5.4f,sz=%5.4f), indy=%d indx=%d, indz=%d, sw000=%f sw001=%f, sw010=%f, sw011=%f sw100=%f sw101=%f sw110=%f sw111=%f\n",
+      |        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  ~~      
+      |                                                                                                                                                              |
+      |                                                                                                                                                              size_t {aka long unsigned int}
+main.cu:332:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  332 |     scanf("%s",shotfile);
+      |     ~^~~~~~~~~~~~~~~~
+main.cu:335:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  335 |     scanf("%f",&sht_scl);
+      |     ~^~~~~~~~~~~~~~~~
+main.cu:338:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  338 |     scanf("%s",directfile);
+      |     ~^~~~~~~~~~~~~~~~~~
+main.cu:341:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  341 |     scanf("%d",&directflag);
+      |     ~^~~~~~~~~~~~~~~~~~~
+main.cu:344:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  344 |     scanf("%s",navfile);
+      |     ~^~~~~~~~~~~~~~~
+main.cu:348:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  348 |     scanf("%s",srcfile);
+      |     ~^~~~~~~~~~~~~~~
+main.cu:351:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  351 |     scanf("%s",wbfile);
+      |     ~^~~~~~~~~~~~~~
+main.cu:355:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  355 |     scanf("%d",&tmutflag);
+      |     ~^~~~~~~~~~~~~~~~~
+main.cu:357:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  357 |     scanf("%s",tmutfile);
+      |     ~^~~~~~~~~~~~~~~~
+main.cu:360:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  360 |     scanf("%d",&bmutflag);
+      |     ~^~~~~~~~~~~~~~~~~
+main.cu:362:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  362 |     scanf("%s",bmutfile);
+      |     ~^~~~~~~~~~~~~~~~
+main.cu:366:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  366 |     scanf("%s",outfile);
+      |     ~^~~~~~~~~~~~~~~
+main.cu:369:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  369 |     scanf("%zu",&ntr_shot);
+      |     ~^~~~~~~~~~~~~~~~~~
+main.cu:372:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  372 |     scanf("%f",&near_cut);
+      |     ~^~~~~~~~~~~~~~~~~
+main.cu:374:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  374 |     scanf("%f",&far_cut);
+      |     ~^~~~~~~~~~~~~~~~
+main.cu:376:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  376 |     scanf("%f",&decay_off);
+      |     ~^~~~~~~~~~~~~~~~~~
+main.cu:380:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  380 |     scanf("%d", &L_n);
+      |     ~^~~~~~~~~~~~
+main.cu:384:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  384 |     scanf("%f",&dt);
+      |     ~^~~~~~~~~~~
+main.cu:386:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  386 |     scanf("%d",&nt);
+      |     ~^~~~~~~~~~~
+main.cu:390:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  390 |     scanf("%s",vinfile);
+      |     ~^~~~~~~~~~~~~~~
+main.cu:392:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  392 |     scanf("%d",&vflag);
+      |     ~^~~~~~~~~~~~~~
+main.cu:394:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  394 |     scanf("%f",&vmax);
+      |     ~^~~~~~~~~~~~~
+main.cu:398:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  398 |     scanf("%d",&ny);
+      |     ~^~~~~~~~~~~
+main.cu:400:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  400 |     scanf("%d",&nx);
+      |     ~^~~~~~~~~~~
+main.cu:402:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  402 |     scanf("%d",&nz);
+      |     ~^~~~~~~~~~~
+main.cu:405:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  405 |     scanf("%f",&dy);
+      |     ~^~~~~~~~~~~
+main.cu:407:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  407 |     scanf("%f",&dx);
+      |     ~^~~~~~~~~~~
+main.cu:409:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  409 |     scanf("%f",&dz);
+      |     ~^~~~~~~~~~~
+main.cu:412:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  412 |     scanf("%d",&npml);
+      |     ~^~~~~~~~~~~~~
+main.cu:414:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  414 |     scanf("%f",&decay);
+      |     ~^~~~~~~~~~~~~~
+main.cu:416:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  416 |     scanf("%f",&xpad);
+      |     ~^~~~~~~~~~~~~
+main.cu:420:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  420 |     scanf("%d",&itop);
+      |     ~^~~~~~~~~~~~~
+main.cu:423:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  423 |     scanf("%s",order);
+      |     ~^~~~~~~~~~~~~
+main.cu:427:6: warning: ignoring return value of ‘int scanf(const char*, ...)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+  427 |     scanf("%d",&gpus_p_node);
+      |     ~^~~~~~~~~~~~~~~~~~~~
+/usr/local/cuda-13.0/bin/nvcc -O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2 -DCUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL -DCUDA3D_CPML_VMEM_DISABLE_MPI -DCUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE -DCUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK -DCUDA3D_HOST_SETUP_TIMERS -I../include/inc3D -I/opt/intel/oneapi/mpi/latest/include -c optimization_cuda.cu -o optimization_cuda.o
+optimization_cuda.cu(23): warning #177-D: variable "it" was declared but never referenced
+    int is, iss, snum, yl_pad, yr_pad, xl_pad, xr_pad, iy, ix, iz, ir, it;
+                                                                       ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+optimization_cuda.cu(26): warning #177-D: variable "indis" was declared but never referenced
+    int ny_new, nx_new, nypad, nxpad, nzpad, yl, yr, xl, xr, indis;
+                                                             ^
+
+optimization_cuda.cu(29): warning #177-D: variable "d_1" was declared but never referenced
+    float **h_obs, **d_est, **d_1, **d_2, *h_tmut, *h_bmut, **h_wb_est, maxobs, maxest;
+                              ^
+
+optimization_cuda.cu(29): warning #177-D: variable "d_2" was declared but never referenced
+    float **h_obs, **d_est, **d_1, **d_2, *h_tmut, *h_bmut, **h_wb_est, maxobs, maxest;
+                                     ^
+
+optimization_cuda.cu(29): warning #177-D: variable "maxobs" was declared but never referenced
+    float **h_obs, **d_est, **d_1, **d_2, *h_tmut, *h_bmut, **h_wb_est, maxobs, maxest;
+                                                                        ^
+
+optimization_cuda.cu(29): warning #177-D: variable "maxest" was declared but never referenced
+    float **h_obs, **d_est, **d_1, **d_2, *h_tmut, *h_bmut, **h_wb_est, maxobs, maxest;
+                                                                                ^
+
+optimization_cuda.cu(30): warning #177-D: variable "dis" was declared but never referenced
+    float dis, decay;
+          ^
+
+optimization_cuda.cu(30): warning #177-D: variable "decay" was declared but never referenced
+    float dis, decay;
+               ^
+
+optimization_cuda.cu(33): warning #177-D: variable "a2" was declared but never referenced
+    float a2, b2, c, sum, bscl=0.9;
+          ^
+
+optimization_cuda.cu(33): warning #177-D: variable "b2" was declared but never referenced
+    float a2, b2, c, sum, bscl=0.9;
+              ^
+
+optimization_cuda.cu(33): warning #177-D: variable "c" was declared but never referenced
+    float a2, b2, c, sum, bscl=0.9;
+                  ^
+
+optimization_cuda.cu(33): warning #177-D: variable "sum" was declared but never referenced
+    float a2, b2, c, sum, bscl=0.9;
+                     ^
+
+optimization_cuda.cu(36): warning #550-D: variable "iii" was set but never used
+    int iii, nzdpad, nzd, itmp, iwb, nxz;
+        ^
+
+optimization_cuda.cu(36): warning #177-D: variable "nzdpad" was declared but never referenced
+    int iii, nzdpad, nzd, itmp, iwb, nxz;
+             ^
+
+optimization_cuda.cu(36): warning #177-D: variable "nzd" was declared but never referenced
+    int iii, nzdpad, nzd, itmp, iwb, nxz;
+                     ^
+
+optimization_cuda.cu(36): warning #177-D: variable "itmp" was declared but never referenced
+    int iii, nzdpad, nzd, itmp, iwb, nxz;
+                          ^
+
+optimization_cuda.cu(36): warning #177-D: variable "iwb" was declared but never referenced
+    int iii, nzdpad, nzd, itmp, iwb, nxz;
+                                ^
+
+optimization_cuda.cu(36): warning #550-D: variable "nxz" was set but never used
+    int iii, nzdpad, nzd, itmp, iwb, nxz;
+                                     ^
+
+optimization_cuda.cu(37): warning #177-D: variable "vc_wb" was declared but never referenced
+    float ***vc_wb, ***vc_wb_pad, ***vc, ***vc_pad;
+             ^
+
+optimization_cuda.cu(37): warning #177-D: variable "vc_wb_pad" was declared but never referenced
+    float ***vc_wb, ***vc_wb_pad, ***vc, ***vc_pad;
+                       ^
+
+/usr/local/cuda-13.0/bin/nvcc -O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2 -DCUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL -DCUDA3D_CPML_VMEM_DISABLE_MPI -DCUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE -DCUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK -DCUDA3D_HOST_SETUP_TIMERS -I../include/inc3D -I/opt/intel/oneapi/mpi/latest/include -c rem_fd.cu -o rem_fd.o
+rem_fd.cu(505): warning #550-D: variable "itc" was set but never used
+    int iy, ix, iz, it, itc, nby, nbx, nbz, nbell=1;
+                        ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+rem_fd.cu(514): warning #177-D: variable "temp" was declared but never referenced
+    float ss, temp, tdy, tdx, tdz, dt2;
+              ^
+
+rem_fd.cu(516): warning #550-D: variable "byte" was set but never used
+    size_t nxyz, byte, ir, nxyzpad;
+                 ^
+
+rem_fd.cu(516): warning #177-D: variable "ir" was declared but never referenced
+    size_t nxyz, byte, ir, nxyzpad;
+                       ^
+
+rem_fd.cu(694): warning #177-D: variable "dimg_pml_zface" was declared but never referenced
+    dim3 dimg_v, dimb_v, dimg_p, dimb_p, dimg_pml, dimb_pml, dimg_pml_zface, dimb_pml_zface, dimg_pml_zface_shared, dimb_pml_zface_shared, dims, dimbs, dimr, dimbr;
+                                                             ^
+
+rem_fd.cu(694): warning #177-D: variable "dimb_pml_zface" was declared but never referenced
+    dim3 dimg_v, dimb_v, dimg_p, dimb_p, dimg_pml, dimb_pml, dimg_pml_zface, dimb_pml_zface, dimg_pml_zface_shared, dimb_pml_zface_shared, dims, dimbs, dimr, dimbr;
+                                                                             ^
+
+rem_fd.cu(694): warning #177-D: variable "dimg_pml_zface_shared" was declared but never referenced
+    dim3 dimg_v, dimb_v, dimg_p, dimb_p, dimg_pml, dimb_pml, dimg_pml_zface, dimb_pml_zface, dimg_pml_zface_shared, dimb_pml_zface_shared, dims, dimbs, dimr, dimbr;
+                                                                                             ^
+
+rem_fd.cu(694): warning #177-D: variable "dimb_pml_zface_shared" was declared but never referenced
+    dim3 dimg_v, dimb_v, dimg_p, dimb_p, dimg_pml, dimb_pml, dimg_pml_zface, dimb_pml_zface, dimg_pml_zface_shared, dimb_pml_zface_shared, dims, dimbs, dimr, dimbr;
+                                                                                                                    ^
+
+rem_fd.cu(235): warning #177-D: function "tile_may_need_component" was declared but never referenced
+  static int tile_may_need_component(int z0, int x0, int y0,
+             ^
+
+/usr/local/cuda-13.0/bin/nvcc -O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2 -DCUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL -DCUDA3D_CPML_VMEM_DISABLE_MPI -DCUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE -DCUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK -DCUDA3D_HOST_SETUP_TIMERS -I../include/inc3D -I/opt/intel/oneapi/mpi/latest/include -c single_solver.cu -o single_solver.o
+single_solver.cu(693): warning #177-D: variable "i3" was declared but never referenced
+    size_t nsize, n21, nn21, id, i3;
+                                 ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+single_solver.cu(731): warning #177-D: variable "a2" was declared but never referenced
+    float a2, b2, c, delta, dis, tmp;
+          ^
+
+single_solver.cu(731): warning #177-D: variable "b2" was declared but never referenced
+    float a2, b2, c, delta, dis, tmp;
+              ^
+
+single_solver.cu(731): warning #177-D: variable "c" was declared but never referenced
+    float a2, b2, c, delta, dis, tmp;
+                  ^
+
+single_solver.cu(731): warning #550-D: variable "delta" was set but never used
+    float a2, b2, c, delta, dis, tmp;
+                     ^
+
+single_solver.cu(731): warning #177-D: variable "dis" was declared but never referenced
+    float a2, b2, c, delta, dis, tmp;
+                            ^
+
+single_solver.cu(731): warning #177-D: variable "tmp" was declared but never referenced
+    float a2, b2, c, delta, dis, tmp;
+                                 ^
+
+single_solver.cu(763): warning #177-D: variable "indx1" was declared but never referenced
+    int indx1, indx2, indx3, npad;
+        ^
+
+single_solver.cu(763): warning #177-D: variable "indx2" was declared but never referenced
+    int indx1, indx2, indx3, npad;
+               ^
+
+single_solver.cu(763): warning #177-D: variable "indx3" was declared but never referenced
+    int indx1, indx2, indx3, npad;
+                      ^
+
+single_solver.cu(764): warning #177-D: variable "aaa" was declared but never referenced
+    float wa000, wa001, wa010, wa011, wa100, wa101, wa110, wa111, aaa;
+                                                                  ^
+
+single_solver.cu(1548): warning #177-D: variable "base" was declared but never referenced
+      const size_t base = ts3 + ts2 + gtid1 + 4;
+                   ^
+
+single_solver.cu(1913): warning #177-D: variable "base" was declared but never referenced
+      const size_t base = ts3 + ts2 + gtid1 + 4;
+                   ^
+
+single_solver.cu(2630): warning #177-D: variable "i3" was declared but never referenced
+    int i, i3;
+           ^
+
+single_solver.cu(2814): warning #177-D: variable "i3" was declared but never referenced
+    int i, i3;
+           ^
+
+/usr/local/cuda-13.0/bin/nvcc -O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2 -DCUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL -DCUDA3D_CPML_VMEM_DISABLE_MPI -DCUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE -DCUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK -DCUDA3D_HOST_SETUP_TIMERS -I../include/inc3D -I/opt/intel/oneapi/mpi/latest/include -c reduce.cu -o reduce.o
+mkdir -p ../bin
+/usr/local/cuda-13.0/bin/nvcc -O3 -arch=sm_120 --use_fast_math -DCUDA3D_PML_RECOMPUTE_Z -DCUDA3D_PML_TILE_LIST -DCUDA3D_PML_ZMEM_IN_P -DPmlTileBlockSize1=32 -DPmlTileBlockSize2=4 -DPmlTileBlockSize3=2 -DCUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL -DCUDA3D_CPML_VMEM_DISABLE_MPI -DCUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE -DCUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK -DCUDA3D_HOST_SETUP_TIMERS -o ../bin/cuda_3D_FM alloc.o utility_zz.o abc.o acqui.o lint.o main.o optimization_cuda.o rem_fd.o single_solver.o reduce.o -L/opt/intel/oneapi/mpi/latest/lib/release -lmpi
+@@@@@@@@@@@@@@@@@@@@
+FINISHED COMPILING RTX5090
+@@@@@@@@@@@@@@@@@@@@

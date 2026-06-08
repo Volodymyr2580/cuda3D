@@ -5,6 +5,15 @@
 //#include <sys/stat.h>
 //#include <sys/types.h>
 //#include <netinet/in.h>
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+#include <sys/time.h>
+
+static double cuda3d_wall_seconds(void){
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return (double)tv.tv_sec + 1.0e-6 * (double)tv.tv_usec;
+}
+#endif
 
 void check_gpu_error(const char *msg){
   cudaError_t err = cudaGetLastError ();
@@ -17,7 +26,16 @@ void check_gpu_error(const char *msg){
 int main(int argc, char **argv){
   int ntids,mytid;
   int ID,np;
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  double process_timer_start = cuda3d_wall_seconds();
+  double process_timer_after_mpi_init = process_timer_start;
+  double process_timer_before_finalize = process_timer_start;
+  double process_timer_after_finalize = process_timer_start;
+#endif
   MPI_Init(&argc,&argv);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  process_timer_after_mpi_init = cuda3d_wall_seconds();
+#endif
   MPI_Comm comm;
   comm=MPI_COMM_WORLD;
   MPI_Comm_size(comm,&ntids);
@@ -771,6 +789,19 @@ int main(int argc, char **argv){
     printf("\n*******************ALL DONE******************\n");
   }
 
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  process_timer_before_finalize = cuda3d_wall_seconds();
+#endif
   MPI_Finalize();
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  process_timer_after_finalize = cuda3d_wall_seconds();
+  if(mytid==root)
+    printf("HOST_SETUP_TIMER process rank=%d mpi_init=%lf main_after_mpi_to_pre_finalize=%lf mpi_finalize=%lf process_total=%lf\n",
+	   mytid,
+	   process_timer_after_mpi_init - process_timer_start,
+	   process_timer_before_finalize - process_timer_after_mpi_init,
+	   process_timer_after_finalize - process_timer_before_finalize,
+	   process_timer_after_finalize - process_timer_start);
+#endif
   return 0;
 }

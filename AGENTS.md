@@ -867,6 +867,42 @@ Phase 4.23 host/setup targeted timer probe 已完成：
   - 若继续 wall-clock 路线，应增加 process-level timer 或 Nsight Systems OS/runtime profile，拆 `MPI_Init`/mpirun/source/finalize。
   - CUDA-core 优化结论仍以 `Gradient TIME all` 与 WP 为主。
 
+Phase 4.24 process-level timer probe 已完成：
+
+- 扩展 `CUDA3D_HOST_SETUP_TIMERS`：
+  - `src/main.cu` 新增 `gettimeofday` wall-clock process timer。
+  - 计时 `MPI_Init`、main after-MPI to pre-finalize、`MPI_Finalize`、process total。
+  - `tools/host_setup_timer_summary.py` 新增 process accounting。
+- 报告：`reports/day_20260608/process_timer_probe_20260608_205311/summary.md`。
+- JSON：`reports/day_20260608/process_timer_probe_20260608_205311/summary.json`。
+- 远端 worktree：`/work/wenzhe/cuda3D/.codex_worktrees/process_timers_20260608_205311`。
+- 正确性：
+  - process timer binary vs formal len16 current-best r1 输出对比 pass。
+  - 6 个输出 max rel L2 `0`，max abs `0`。
+  - default-off current-best build 通过。
+- process timer 结果：
+  - elapsed：`3.220s`。
+  - `Gradient TIME all`：`2.161705s`。
+  - elapsed - Gradient：`1.058295s`。
+  - `MPI_Init`：`0.254292s`。
+  - main after-MPI to pre-finalize：`2.418194s`。
+  - `MPI_Finalize`：`0.000283s`。
+  - process total：`2.672769s`。
+  - elapsed - process total：`0.547231s`。
+  - measured pre-Gradient setup：`0.250119s`。
+  - known non-Gradient time including process shell/MPI/finalize/post-free：`1.053080s`。
+  - residual after known non-Gradient timers：`0.005215s`。
+- 决策：
+  - 当前 elapsed-vs-Gradient gap 已基本闭合，不再作为 CUDA-core 优化路线。
+  - 最大 wall-clock 非计算项来自 process 外壳和 MPI/context 初始化：
+    - `/usr/bin/time` command shell / `source setvars` / `mpirun` wrapper 约 `0.547s`。
+    - `MPI_Init` 约 `0.254s`。
+    - CUDA `gpu_setup` / context setup 约 `0.186s`。
+  - 这些只能作为 benchmarking/driver/startup policy 或 long-running service/multi-shot batching 议题，不能作为 CUDA kernel speedup。
+- 当前下一步：
+  - 停止 host/setup wall-clock 小修。
+  - 若继续提速，应回到 compute metric：`Gradient TIME all` / WP，或等待 true multi-GPU 平台做 batching。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

@@ -48,10 +48,31 @@ def parse_log(path: Path) -> dict[str, Any]:
 
     main = timers.get("main", {})
     cal = timers.get("cal", {})
+    process = timers.get("process", {})
     measured_pre_gradient = main.get("total_pre_gradient", 0.0) + cal.get("pre_gradient_init", 0.0)
     elapsed_minus_gradient = elapsed - gradient if elapsed is not None and gradient is not None else None
     unaccounted = (
         elapsed_minus_gradient - measured_pre_gradient
+        if elapsed_minus_gradient is not None
+        else None
+    )
+    process_total = process.get("process_total")
+    outside_process = (
+        elapsed - process_total
+        if elapsed is not None and process_total is not None
+        else None
+    )
+    known_non_gradient = measured_pre_gradient
+    for value in [
+        process.get("mpi_init"),
+        process.get("mpi_finalize"),
+        main.get("post_gradient_barrier_and_free"),
+        outside_process,
+    ]:
+        if value is not None:
+            known_non_gradient += value
+    residual_after_known = (
+        elapsed_minus_gradient - known_non_gradient
         if elapsed_minus_gradient is not None
         else None
     )
@@ -65,12 +86,17 @@ def parse_log(path: Path) -> dict[str, Any]:
         "measured_pre_gradient_s": measured_pre_gradient,
         "elapsed_minus_gradient_s": elapsed_minus_gradient,
         "unaccounted_elapsed_minus_gradient_s": unaccounted,
+        "process_total_s": process_total,
+        "outside_process_s": outside_process,
+        "known_non_gradient_s": known_non_gradient,
+        "residual_after_known_non_gradient_s": residual_after_known,
     }
 
 
 def write_markdown(summary: dict[str, Any], path: Path) -> None:
     main = summary["timers"].get("main", {})
     cal = summary["timers"].get("cal", {})
+    process = summary["timers"].get("process", {})
     elapsed = summary["elapsed_s"]
     gradient = summary["gradient_s"]
     lines = [
@@ -82,6 +108,18 @@ def write_markdown(summary: dict[str, Any], path: Path) -> None:
         f"- Gradient TIME all: `{gradient:.6f}s`" if gradient is not None else "- Gradient TIME all: `n/a`",
         f"- WP computing time: `{summary['wp_s']:.6f}s`" if summary["wp_s"] is not None else "- WP computing time: `n/a`",
         f"- elapsed - Gradient: `{summary['elapsed_minus_gradient_s']:.6f}s`" if summary["elapsed_minus_gradient_s"] is not None else "- elapsed - Gradient: `n/a`",
+        "",
+        "## Process Timers",
+        "",
+        "| stage | seconds |",
+        "| --- | ---: |",
+    ]
+    for key in ["mpi_init", "main_after_mpi_to_pre_finalize", "mpi_finalize", "process_total"]:
+        if key in process:
+            lines.append(f"| `{key}` | `{process[key]:.6f}` |")
+    if summary["outside_process_s"] is not None:
+        lines.append(f"| `elapsed_minus_process_total` | `{summary['outside_process_s']:.6f}` |")
+    lines += [
         "",
         "## Main Setup Timers",
         "",
@@ -122,10 +160,15 @@ def write_markdown(summary: dict[str, Any], path: Path) -> None:
         "## Accounting",
         "",
         f"- measured pre-Gradient setup: `{summary['measured_pre_gradient_s']:.6f}s`",
+        f"- known non-Gradient time including process shell/MPI/finalize/post-free: `{summary['known_non_gradient_s']:.6f}s`",
     ]
     if summary["unaccounted_elapsed_minus_gradient_s"] is not None:
         lines.append(
             f"- unaccounted elapsed-minus-Gradient: `{summary['unaccounted_elapsed_minus_gradient_s']:.6f}s`"
+        )
+    if summary["residual_after_known_non_gradient_s"] is not None:
+        lines.append(
+            f"- residual after known non-Gradient timers: `{summary['residual_after_known_non_gradient_s']:.6f}s`"
         )
     lines.append("")
     path.parent.mkdir(parents=True, exist_ok=True)
