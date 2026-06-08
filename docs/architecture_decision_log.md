@@ -2743,3 +2743,69 @@ review.
 For future isolated worktrees, create a case-local d_obs/ directory for
 perf_1gpu_6shots.  Do not symlink d_obs from the root checkout.
 ```
+
+## 2026-06-09 - Reject Residual Pressure-PML Micro Routes
+
+Decision:
+
+```text
+Reject residual pressure-PML micro CUDA prototypes after profiling
+cuda_fd3d_p_pml_tile_ns under current_best_v_pml_len16.
+```
+
+Evidence:
+
+```text
+profile:
+  reports/day_20260608/residual_pressure_source_profile_20260609_0012/
+
+gate:
+  tools/residual_pressure_route_gate.py
+  docs/day_20260608/residual_pressure_route_gate.md
+  reports/day_20260608/residual_pressure_route_gate.json
+
+NCU:
+  kernel                         cuda_fd3d_p_pml_tile_ns
+  launch window                  --launch-skip 10 --launch-count 10
+  No Eligible                    63.162%
+  eligible warps/scheduler        0.766
+  avg active threads/warp        23.050
+  avg not-predicated threads     21.730
+  branch efficiency              83.750%
+  achieved occupancy             73.389%
+
+gate model:
+  residual pressure-PML time      71.940us
+  sampled-main share              25.33%
+  required residual speedup        1.2315x
+  required local reduction        18.80%
+  required saved time             13.524us
+  perfect branch-eff ceiling       1.0429x sampled-main
+  predicate cleanup ceiling        1.0147x sampled-main
+  exact length-23 descriptor       1.0153x calibrated sampled-main
+```
+
+Reason:
+
+```text
+The residual kernel is still latency/memory dependent, but it is not dominated
+by a simple branch-control problem.  Perfect branch efficiency is below the
+>=5% sampled-main gate, predicate cleanup is much smaller, and the existing
+descriptor budget already rejected length-23/exact active-point compaction.
+Residual micro routes would repeat known below-gate families.
+```
+
+Boundary:
+
+```text
+Do not write residual pressure branch-only split.
+Do not retry length-32 branch/control specialization.
+Do not retry length-23 or exact active-point descriptors.
+Do not retry residual p0 __ldg, local new_mem, ptxas cache-policy, or z-cache
+micro-tuning.
+
+Next allowed work must remove real pressure writeback or CPML state traffic
+through a pressure/wave-step ownership model, identify a concrete cross-CTA or
+cluster-level ownership primitive, or explicitly change the precision/tolerance
+policy before precision-relaxation work.
+```

@@ -5205,3 +5205,56 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 后续不继续 v-PML micro packing。
   - 下一步应转入 design-level pressure/wave-step ownership model，或先整理给 Pro/后续 agent 的正式反馈报告。
   - 环境经验：isolated worktree 运行 `perf_1gpu_6shots` 前必须创建 case-local `d_obs/`；缺失时可能在写输出阶段 segfault。
+
+## 2026-06-09 00:22:16 +08:00
+
+- 操作目标：
+  - 对 formal current-best 下的 residual pressure-PML kernel 做 NCU profile。
+  - 判断 residual `cuda_fd3d_p_pml_tile_ns` 是否值得开启 branch/control/descriptor 类 CUDA prototype。
+- 修改文件：
+  - 新增 `reports/day_20260608/residual_pressure_source_profile_20260609_0012/` 文本 profile artifacts。
+  - 新增 `tools/residual_pressure_route_gate.py`。
+  - 新增 `docs/day_20260608/residual_pressure_route_gate.md`。
+  - 新增 `reports/day_20260608/residual_pressure_route_gate.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 远端在 `/work/wenzhe/cuda3D/.codex_worktrees/formal_vpmlen16_table_20260608_2359` 中操作。
+  - 使用 current-best flags 加 `-lineinfo` 重建：
+    - `make -B -f makefile.rtx5090 test NVFLAGS="<current-best flags + -lineinfo>" -C src`
+  - NCU：
+    - `ncu --target-processes all --force-overwrite --export residual_p_pml_tile_source.ncu-rep --kernel-name "regex:cuda_fd3d_p_pml_tile_ns" --launch-skip 10 --launch-count 10 --section SourceCounters --section SchedulerStats --section WarpStateStats --section MemoryWorkloadAnalysis --section Occupancy ...`
+    - `ncu --import residual_p_pml_tile_source.ncu-rep --csv --page details > residual_p_pml_tile_source.csv`
+    - `python3 tools/ncu_csv_summary.py --profile residual_p_pml_tile_source ...`
+  - 本地：
+    - 使用 `tools/remote_get.py` 拉回 Markdown/JSON/CSV/log 文本 artifacts；不拉回 `.ncu-rep`。
+    - `python -m py_compile tools\residual_pressure_route_gate.py`
+    - `python tools\residual_pressure_route_gate.py --json-out reports\day_20260608\residual_pressure_route_gate.json --md-out docs\day_20260608\residual_pressure_route_gate.md`
+- 测试结果：
+  - current-best `-lineinfo` rebuild 通过。
+  - NCU profile 通过，`NCU_CODE=0`。
+  - gate 工具编译和运行通过。
+  - 本轮不修改 CUDA 源码，不需要 correctness/perf repeat。
+- 输出/哈希/误差摘要：
+  - NCU residual kernel metrics：
+    - No Eligible：`63.162%`。
+    - eligible warps/scheduler：`0.766`。
+    - warp cycles/issued inst：`23.682`。
+    - avg active threads/warp：`23.050`。
+    - avg not-predicated threads/warp：`21.730`。
+    - branch efficiency：`83.750%`。
+    - achieved occupancy：`73.389%`。
+  - residual gate：
+    - residual pressure-PML：`71.940us`，sampled-main share `25.33%`。
+    - required residual local speedup：`1.2315x`。
+    - required local reduction：`18.80%`。
+    - required saved time：`13.524us`。
+    - perfect branch efficiency sampled-main ceiling：`1.0429x`。
+    - predicate cleanup sampled-main ceiling：`1.0147x`。
+    - exact length-23 descriptor calibrated sampled-main speedup：`1.0153x`。
+- 风险与下一步：
+  - 决策：拒绝 residual pressure-PML micro CUDA prototype。
+  - 禁止 residual branch-only split、length-32 branch/control specialization retry、length-23/exact descriptor retry、residual `p0 __ldg` / local `new_mem` / cache-policy / z-cache 小修。
+  - 下一步只允许真正减少 pressure writeback 或 CPML state traffic 的 pressure/wave-step ownership model，或明确 cross-CTA/cluster-level primitive study，或用户明确改变 tolerance policy 后研究 precision-relaxation。
+  - NCU source page 已在远端临时导出，但未映射出 C++ source text；保留 `.ncu-rep` 和 source page 在远端 worktree，不提交到仓库。

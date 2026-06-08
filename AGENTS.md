@@ -1128,6 +1128,36 @@ Phase 4.31 formal same-session speed table 已完成：
   - isolated worktree 的 `perf_1gpu_6shots` case 必须有 case-local `d_obs/` 目录；缺失时程序可在第 1 炮后写输出阶段 segfault。
   - 不要把根目录 `d_obs` symlink 进 worktree；只创建本 worktree 自己的 `d_obs/` 目录。
 
+Phase 4.32 residual pressure-PML route gate 已完成：
+
+- profile artifacts：`reports/day_20260608/residual_pressure_source_profile_20260609_0012/`。
+- gate 工具：`tools/residual_pressure_route_gate.py`。
+- gate 报告：`docs/day_20260608/residual_pressure_route_gate.md`。
+- gate JSON：`reports/day_20260608/residual_pressure_route_gate.json`。
+- NCU anchor：
+  - candidate：`current_best_v_pml_len16` with `-lineinfo`。
+  - kernel：`cuda_fd3d_p_pml_tile_ns` residual pressure-PML path。
+  - NCU：`--launch-skip 10 --launch-count 10`。
+  - No Eligible：`63.162%`。
+  - eligible warps/scheduler：`0.766`。
+  - avg active threads/warp：`23.050`。
+  - avg not-predicated threads/warp：`21.730`。
+  - branch efficiency：`83.750%`。
+  - achieved occupancy：`73.389%`。
+- gate model：
+  - residual pressure-PML：`71.940us`，sampled-main share `25.33%`。
+  - residual-only route needs local speedup `1.2315x` / local time reduction `18.80%` / saved time `13.524us` to move sampled-main by `>=5%`。
+  - perfect branch efficiency ceiling：sampled-main `1.0429x`，below gate。
+  - predicate cleanup ceiling：sampled-main `1.0147x`。
+  - exact length-23 descriptor calibrated speedup：sampled-main `1.0153x`。
+- 决策：
+  - 拒绝 residual pressure-PML micro CUDA prototype。
+  - 不写 residual branch-only split、length-32 branch/control specialization retry、length-23/exact descriptor retry、residual `p0 __ldg` / local `new_mem` / cache-policy / z-cache 小修。
+  - 下一步只允许 pressure/wave-step ownership model，目标必须是真正移除 pressure writeback 或 CPML state traffic；或研究明确的 cross-CTA/cluster-level primitive；或在用户明确改变 tolerance policy 后做 precision-relaxation。
+- profile note：
+  - 本轮 `.ncu-rep` 保留在远端 worktree，未提交。
+  - `ncu --page source` 导出的 source page 未映射出 C++ source text，仅作远端临时排查，不进入仓库。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

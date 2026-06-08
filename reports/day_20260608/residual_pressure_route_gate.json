@@ -1,0 +1,98 @@
+{
+  "derived": {
+    "required_residual_local_reduction": 0.18799396322332118,
+    "required_residual_local_speedup": 1.2315179379325527,
+    "required_saved_us": 13.524285714285725,
+    "scenarios": {
+      "exact_length23_descriptor_calibrated": {
+        "interpretation": "existing calibrated descriptor budget after accepted pressure len16",
+        "local_speedup": null,
+        "sampled_main_speedup": 1.0153260416070762
+      },
+      "perfect_branch_efficiency": {
+        "interpretation": "upper bound for branch/control specialization without removing memory traffic",
+        "local_speedup": 1.1940298507462686,
+        "sampled_main_speedup": 1.0429283957553575
+      },
+      "recover_all_active_threads_to_full_warp": {
+        "interpretation": "utopian lane-utilization bound; descriptor/control overhead not counted",
+        "local_speedup": 1.3882863340563991,
+        "sampled_main_speedup": 1.0762468208435427
+      },
+      "recover_all_not_predicated_threads_to_full_warp": {
+        "interpretation": "more utopian bound combining active-lane and predication cleanup",
+        "local_speedup": 1.4726184997699032,
+        "sampled_main_speedup": 1.088487231121801
+      },
+      "recover_predicated_off_threads_only": {
+        "interpretation": "upper bound for predicate cleanup while keeping same active-lane shape",
+        "local_speedup": 1.0607455131155086,
+        "sampled_main_speedup": 1.0147192507158485
+      },
+      "twenty_percent_residual_reduction": {
+        "interpretation": "minimum ballpark residual reduction needed to cross the gate",
+        "local_speedup": 1.25,
+        "sampled_main_speedup": 1.0533635979259852
+      }
+    }
+  },
+  "gate": {
+    "decision": "reject_residual_pressure_micro_cuda_prototype",
+    "next_allowed": [
+      "pressure/wave-step ownership model that removes real pressure writeback or CPML state traffic",
+      "cross-CTA or cluster-level ownership study only if a concrete synchronization primitive is identified",
+      "precision-relaxation study only after an explicit tolerance-policy change",
+      "external handoff/report summarizing current hard gates"
+    ],
+    "prohibited": [
+      "residual pressure branch-only split",
+      "length-32 branch/control specialization retry",
+      "length-23 or exact active-point descriptor retry",
+      "residual p0 __ldg/local-new_mem/cache-policy/z-cache micro-tuning"
+    ],
+    "reason": "Residual pressure-PML would need about 18.80% local time reduction (13.524us) to move sampled-main by >=5%.  The current profile already has branch efficiency 83.75% and avg active threads/warp 23.05; branch/predicate cleanup stays below the gate, while lane/descriptor compaction was already calibrated at only about 1.0153x sampled-main speedup."
+  },
+  "inputs": {
+    "compact_descriptor": {
+      "decision": "reject_cuda_prototype",
+      "exact_length23_calibrated_sampled_speedup": 1.0153260416070762,
+      "exact_length23_ceiling": 1.018824838405069,
+      "exact_length23_lane_reduction": 0.03966863509677665
+    },
+    "post_vlen16_gate": {
+      "p_pml_residual_share": 0.2533009401077426,
+      "p_pml_residual_us": 71.94,
+      "p_pml_total_share": 0.48632090419351426,
+      "p_pml_total_us": 138.12,
+      "required_residual_local_speedup": 1.2315179379325527,
+      "sampled_main_us": 284.01000000000005,
+      "target_speedup": 1.05
+    },
+    "residual_profile": {
+      "metrics": {
+        "achieved_active_warps_per_sm": 35.226,
+        "achieved_occupancy_pct": 73.389,
+        "active_warps_per_scheduler": 8.725,
+        "avg_active_threads_per_warp": 23.05,
+        "avg_divergent_branches": 274.07,
+        "avg_not_predicated_off_threads_per_warp": 21.73,
+        "block_limit_registers": 5.0,
+        "block_limit_shared_mem": 7.0,
+        "branch_efficiency_pct": 83.75,
+        "branch_instructions": 2293760.0,
+        "eligible_warps_per_scheduler": 0.766,
+        "issued_warp_per_scheduler": 0.369,
+        "l1tex_hit_rate_pct": 64.758,
+        "l2_hit_rate_pct": 59.332,
+        "mem_busy_pct": 37.656,
+        "mem_pipes_busy_pct": 35.193,
+        "memory_throughput_bytes_per_s": 766.066,
+        "no_eligible_pct": 63.162,
+        "one_or_more_eligible_pct": 36.838,
+        "theoretical_occupancy_pct": 83.33,
+        "warp_cycles_per_issued_instruction": 23.682
+      },
+      "profile_label": "residual_p_pml_tile_source"
+    }
+  }
+}
