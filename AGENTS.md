@@ -201,6 +201,36 @@ Phase 4.3 pressure PML dataflow gate 已完成：
   - `RECOMPUTE_X/Y/XYZ`
 - prototype 必须先通过 debug dump step 0/1/2、correctness、`perf_1gpu_6shots repeat`；若 repeat 没有 `>=5%` meaningful WP speedup，立即停止。
 
+Phase 4.4 pressure PML z-recompute cache prototype 已完成：
+
+- 实现宏默认关闭：`CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE`。
+- 改动范围：仅 `cuda_fd3d_p_pml_tile_ns`。
+- 数据流：CTA-local shared z-line cache 复用 `recompute_vz_after_update_from_old_mem` 中间值。
+- ownership：`memory_dz_next` 仍只由 tile-owned active central z positions 写入。
+- standalone z-cache：
+  - debug dump step `0/1/2` 通过。
+  - correctness rel L2：`0`。
+  - `perf_1gpu_6shots` repeat mean WP speedup：`1.044955x`。
+  - mean Gradient speedup：`1.045506x`。
+  - 结论：有价值，但低于 standalone `>=5%` gate，不单独作为主线突破。
+- 与 Phase 1 CPML vmem scaffold 组合：
+  - flags：
+    - `CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL`
+    - `CUDA3D_CPML_VMEM_DISABLE_MPI`
+    - `CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE`
+  - debug dump step `0/1/2` 通过。
+  - correctness rel L2：`0`。
+  - `perf_1gpu_6shots` repeat 3 轮输出对比全部通过。
+  - mean WP speedup：`1.083390x`。
+  - mean Gradient speedup：`1.080857x`。
+  - 结论：组合候选通过 meaningful `>=5%` gate，是当前可继续推进的候选。
+- 已失败并禁止继续的子路线：
+  - pressure-PML `vx/vy` shared-neighbor cache。
+  - 该路线 correctness pass，但 mean WP speedup 只有 `0.419906x`，mean Gradient speedup `0.426565x`，性能灾难性退化。
+- 下一步：
+  - profile 组合候选，分解剩余 `cuda_fd3d_p_pml_tile_ns` latency。
+  - 不得重开 shared `vx/vy` cache、tile-mask fastpath、z-face specialize/fusion 或 `RECOMPUTE_X/Y/XYZ`，除非新 profiler evidence 推翻当前结论。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

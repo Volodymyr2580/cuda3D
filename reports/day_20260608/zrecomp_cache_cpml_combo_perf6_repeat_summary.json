@@ -1,0 +1,61 @@
+{
+  "rows": [
+    {
+      "round": 1,
+      "baseline_run": "/work/wenzhe/cuda3D_codex_day_20260608/benchmarks/runs/perf_1gpu_6shots_zrecomp_cache_cpml_combo_baseline_r1_20260608_113806",
+      "candidate_run": "/work/wenzhe/cuda3D_codex_day_20260608/benchmarks/runs/perf_1gpu_6shots_zrecomp_cache_cpml_combo_candidate_r1_20260608_113818",
+      "baseline": {
+        "wp": 2.435633,
+        "gradient": 2.545943,
+        "elapsed": "mm:ss or m:ss): 0:04.96"
+      },
+      "candidate": {
+        "wp": 2.249627,
+        "gradient": 2.357701,
+        "elapsed": "mm:ss or m:ss): 0:04.68"
+      },
+      "wp_speedup": 1.0826830403440217,
+      "gradient_speedup": 1.0798413369634232,
+      "compare_pass": true
+    },
+    {
+      "round": 2,
+      "baseline_run": "/work/wenzhe/cuda3D_codex_day_20260608/benchmarks/runs/perf_1gpu_6shots_zrecomp_cache_cpml_combo_baseline_r2_20260608_113831",
+      "candidate_run": "/work/wenzhe/cuda3D_codex_day_20260608/benchmarks/runs/perf_1gpu_6shots_zrecomp_cache_cpml_combo_candidate_r2_20260608_113843",
+      "baseline": {
+        "wp": 2.413101,
+        "gradient": 2.533939,
+        "elapsed": "mm:ss or m:ss): 0:04.98"
+      },
+      "candidate": {
+        "wp": 2.22791,
+        "gradient": 2.346707,
+        "elapsed": "mm:ss or m:ss): 0:04.76"
+      },
+      "wp_speedup": 1.083123196179379,
+      "gradient_speedup": 1.0797849923318081,
+      "compare_pass": true
+    },
+    {
+      "round": 3,
+      "baseline_run": "/work/wenzhe/cuda3D_codex_day_20260608/benchmarks/runs/perf_1gpu_6shots_zrecomp_cache_cpml_combo_baseline_r3_20260608_113856",
+      "candidate_run": "/work/wenzhe/cuda3D_codex_day_20260608/benchmarks/runs/perf_1gpu_6shots_zrecomp_cache_cpml_combo_candidate_r3_20260608_113907",
+      "baseline": {
+        "wp": 2.416663,
+        "gradient": 2.542785,
+        "elapsed": "mm:ss or m:ss): 0:04.76"
+      },
+      "candidate": {
+        "wp": 2.228645,
+        "gradient": 2.348029,
+        "elapsed": "mm:ss or m:ss): 0:04.68"
+      },
+      "wp_speedup": 1.084364266179674,
+      "gradient_speedup": 1.0829444610777805,
+      "compare_pass": true
+    }
+  ],
+  "mean_wp_speedup": 1.0833901675676916,
+  "mean_gradient_speedup": 1.0808569301243374,
+  "all_compare_pass": true
+}

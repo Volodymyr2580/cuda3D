@@ -3059,3 +3059,73 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 必须保持 `memory_dz_next` ownership：只有 tile-owned central z range 可以写 next z CPML memory。
   - 不重开 `CUDA3D_PML_TILE_MASK_FASTPATH`、z-face specialize/fusion、`CUDA3D_PML_ZFACE_SHARED_VP_DEBUG` 或 `RECOMPUTE_X/Y/XYZ`。
   - 下一步实现 pressure PML z-line cache 原型，先跑 debug dump step 0/1/2 和 correctness，再跑 `perf_1gpu_6shots repeat`。
+
+## 2026-06-08 11:40:41 +08:00 - Day sprint Phase 4.4 pressure PML z-recompute cache prototype
+
+- 操作目标：
+  - 实现 `CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE`，复用 pressure PML tile 内 z-line 的 `vz_after_update` 中间值。
+  - 测试 standalone z-cache、与 Phase 1 CPML vmem scaffold 的组合效果，并验证 aggressive vx/vy cache 是否可行。
+- 修改文件：
+  - `src/single_solver.cu`
+    - 在 `cuda_fd3d_p_pml_tile_ns` 中新增宏默认关闭的 shared z-line cache。
+    - 保持 `memory_dz_next` ownership：仅 tile-owned active central z positions 写 next z CPML memory。
+    - 未保留已失败的 shared `vx/vy` cache 代码。
+  - 新增 `docs/day_20260608/pressure_pml_zrecomp_cache_prototype.md`。
+  - 新增/拉回远端报告：
+    - `reports/day_20260608/zrecomp_cache_v2_correctness_comparison.md`
+    - `reports/day_20260608/zrecomp_cache_v2_perf6_repeat_summary.md`
+    - `reports/day_20260608/zrecomp_cache_v2_perf6_repeat_summary.json`
+    - `reports/day_20260608/zrecomp_cache_v3_failed_perf6_repeat_summary.md`
+    - `reports/day_20260608/zrecomp_cache_cpml_combo_debug_step0_comparison.md`
+    - `reports/day_20260608/zrecomp_cache_cpml_combo_debug_step1_comparison.md`
+    - `reports/day_20260608/zrecomp_cache_cpml_combo_debug_step2_comparison.md`
+    - `reports/day_20260608/zrecomp_cache_cpml_combo_correctness_comparison.md`
+    - `reports/day_20260608/zrecomp_cache_cpml_combo_perf6_repeat_summary.md`
+    - `reports/day_20260608/zrecomp_cache_cpml_combo_perf6_repeat_summary.json`
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 为避免污染远端原 dirty worktree，在 `/work/wenzhe/cuda3D` 下 `git worktree add /work/wenzhe/cuda3D_codex_day_20260608 origin/exp/day-20260608-cpml-compact-temporal`。
+  - 由于 clean worktree 缺少 perf 大输入，非破坏性新增：
+    - symlink：`benchmarks/cases/perf_1gpu_6shots/vel_perf_1gpu_6shots_ny384_nx384_nz95.dir -> /work/wenzhe/cuda3D/benchmarks/cases/perf_1gpu_6shots/vel_perf_1gpu_6shots_ny384_nx384_nz95.dir`
+    - output dir：`benchmarks/cases/perf_1gpu_6shots/d_obs`
+  - 编译 flags：
+    - baseline：zmem reference flags。
+    - standalone z-cache：baseline + `CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE`。
+    - combo：standalone + `CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL` + `CUDA3D_CPML_VMEM_DISABLE_MPI`。
+  - 运行：
+    - standalone z-cache debug dump step `0/1/2`。
+    - standalone z-cache correctness。
+    - standalone z-cache `perf_1gpu_6shots` repeat 3 轮 A/B。
+    - aggressive shared `vx/vy` cache correctness/perf repeat，用于判定是否保留。
+    - combo debug dump step `0/1/2`。
+    - combo correctness。
+    - combo `perf_1gpu_6shots` repeat 3 轮 A/B。
+- 测试结果：
+  - standalone z-cache：
+    - debug dump step `0/1/2` 通过。
+    - correctness 通过，6 个输出 rel L2 全部 `0`。
+    - perf repeat 输出对比全部通过。
+    - mean WP speedup：`1.044955x`。
+    - mean Gradient speedup：`1.045506x`。
+  - aggressive shared `vx/vy` cache：
+    - correctness 通过，但性能灾难性退化。
+    - mean WP speedup：`0.419906x`。
+    - mean Gradient speedup：`0.426565x`。
+    - 结论：已从代码移除，禁止继续。
+  - combo candidate：
+    - debug dump step `0/1/2` 通过。
+    - correctness 通过，6 个输出 rel L2 全部 `0`。
+    - perf repeat 3 轮输出对比全部通过。
+    - mean WP speedup：`1.083390x`。
+    - mean Gradient speedup：`1.080857x`。
+- 输出/哈希/误差摘要：
+  - combo round 1：WP `2.435633 -> 2.249627`，speedup `1.082683x`；Gradient `2.545943 -> 2.357701`，speedup `1.079841x`。
+  - combo round 2：WP `2.413101 -> 2.227910`，speedup `1.083123x`；Gradient `2.533939 -> 2.346707`，speedup `1.079785x`。
+  - combo round 3：WP `2.416663 -> 2.228645`，speedup `1.084364x`；Gradient `2.542785 -> 2.348029`，speedup `1.082944x`。
+  - combo correctness：6 个 `.dir` 输出全部 rel L2 `0`，无 missing/extra。
+- 风险与下一步：
+  - combo 当前只验证 single GPU / single MPI rank；`CUDA3D_CPML_VMEM_DISABLE_MPI` 仍限制 MPI 场景。
+  - 下一步应 profile combo candidate，确认剩余 `cuda_fd3d_p_pml_tile_ns` latency 与 occupancy/source counters。
+  - 不继续 shared `vx/vy` cache、tile-mask fastpath、z-face specialize/fusion 或 `RECOMPUTE_X/Y/XYZ`。

@@ -479,3 +479,63 @@ Stop this prototype if debug/correctness fails or if perf_1gpu_6shots repeat
 does not show >=5% meaningful WP speedup.  Do not fall back to the forbidden
 z-face/shared-tile/tile-mask fastpath families.
 ```
+
+## 2026-06-08 - Accept CPML VMem + Pressure Z-Recompute Cache Combo
+
+Decision:
+
+```text
+Keep CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE as a macro-default-off
+pressure-PML prototype, and carry the combined candidate with Phase 1 CPML
+velocity-memory double buffering as the current meaningful >=5% result.
+```
+
+Accepted candidate flags:
+
+```text
+CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+CUDA3D_CPML_VMEM_DISABLE_MPI
+CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE
+```
+
+Evidence:
+
+```text
+Standalone z-cache:
+  correctness rel L2                         0
+  perf6 repeat mean WP speedup               1.044955x
+  perf6 repeat mean Gradient speedup         1.045506x
+  verdict                                    useful, but below standalone >=5% gate
+
+Combined with CPML vmem scaffold:
+  debug dump step 0/1/2                      pass
+  correctness rel L2                         0
+  perf6 repeat all output compares           pass
+  perf6 repeat mean WP speedup               1.083390x
+  perf6 repeat mean Gradient speedup         1.080857x
+```
+
+Reason:
+
+```text
+The z-cache prototype reduces repeated pressure-PML z intermediate
+computation but is just under the standalone 5% gate.  It composes cleanly
+with the already accepted Phase 1 velocity-memory ownership scaffold, and
+the combination crosses the meaningful gate with zero output difference.
+```
+
+Rejected sub-route:
+
+```text
+Do not continue the pressure-PML vx/vy shared-neighbor cache attempted in
+this sprint.  It passed correctness but slowed perf6 repeat to mean WP
+speedup 0.419906x and mean Gradient speedup 0.426565x.
+```
+
+Next allowed route:
+
+```text
+Profile the combined candidate and look for the next dominant source of
+pressure-PML latency.  Do not reopen shared vx/vy cache, tile-mask fastpath,
+z-face specialize/fusion, or RECOMPUTE_X/Y/XYZ without new profiler evidence.
+```
