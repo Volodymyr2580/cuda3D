@@ -3836,3 +3836,88 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - correctness case 本身 len16 tiles 为 `0`，因此 packed kernel 的数学等价主要由 `profile_1gpu` debug dump 与 `perf_1gpu_6shots` 输出对比覆盖。
   - 下一步应对 len16 candidate 做 NCU source/profile，判断剩余 bottleneck 是否变成 memory coalescing、shared-memory pressure、final `p0/mem_dzz` update，或可扩展到 length-23 active segment。
   - 不要回到已拒绝的 z-face direct/fusion/shared-VP、simple active-line list、z-cache fill 微调、`new_mem` 表达式、`p0` read-only load、ptxas cache-policy、inject/extract block-size、当前 tile 下 `vx/vy` split，除非有新的 profiler evidence。
+
+## 2026-06-08 16:12:00 +08:00 - Len16 NCU profile and length-23 gate
+
+- 操作目标：
+  - 对已接受的 `CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK` 做 Nsight Compute A/B profile。
+  - 判断 len16 收益是否在 kernel-level profile 中成立，以及下一步是否应该开 length-23 prototype。
+- 修改文件：
+  - 新增报告：`docs/day_20260608/len16_halfwarp_ncu_profile.md`。
+  - 新增 NCU artifacts：
+    - `reports/day_20260608/len16_vs_directfill_ncu_20260608_1600/summary.md`
+    - `reports/day_20260608/len16_vs_directfill_ncu_20260608_1600/summary.json`
+    - `reports/day_20260608/len16_vs_directfill_ncu_20260608_1600/directfill_profile_ncu_details.csv`
+    - `reports/day_20260608/len16_vs_directfill_ncu_20260608_1600/len16_profile_ncu_details.csv`
+    - `reports/day_20260608/len16_vs_directfill_ncu_20260608_1600/directfill_lineinfo_bin.sha256`
+    - `reports/day_20260608/len16_vs_directfill_ncu_20260608_1600/len16_lineinfo_bin.sha256`
+    - `reports/day_20260608/len16_vs_directfill_ncu_20260608_1600/final_release_bin.sha256`
+    - `reports/day_20260608/len16_vs_directfill_ncu_20260608_1600/directfill_profile_details_run.log`
+    - `reports/day_20260608/len16_vs_directfill_ncu_20260608_1600/len16_profile_details_run.log`
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 远端隔离 worktree：`/work/wenzhe/cuda3D/.codex_worktrees/sprint_0648`。
+  - 检查环境：
+    - Nsight Compute：`/usr/local/cuda-13.0/bin/ncu`，version `2025.3.0.0`。
+    - GPU：RTX 5090，约 `481 MiB` 显存占用，`0%` util。
+  - 先运行 syntax-check NCU，确认 kernel filter 能捕捉 `cuda_fd3d_p_pml_len16_halfwarp_ns`。
+  - direct-fill profile build：
+    - current direct-fill flags + `-lineinfo`
+    - 不启用 `CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK`
+  - len16 profile build：
+    - current len16 flags + `-lineinfo`
+    - 启用 `CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK`
+  - NCU command 口径：
+    - `--target-processes all`
+    - `--csv --page details`
+    - sections：`SpeedOfLight`、`MemoryWorkloadAnalysis`、`SchedulerStats`、`WarpStateStats`、`Occupancy`、`SourceCounters`
+    - `--launch-skip 10`
+    - `--launch-count 12`
+    - kernel filter：`regex:.*cuda_fd3d_(p_core|v_pml_tile|p_pml_tile|p_pml_len16_halfwarp).*`
+  - 使用 `tools/ncu_csv_summary.py` 生成 summary。
+  - profile 后重建无 `-lineinfo` release len16 binary，并运行 smoke。
+- 测试结果：
+  - syntax-check NCU 成功，捕捉到 `cuda_fd3d_p_pml_len16_halfwarp_ns`。
+  - direct-fill details NCU 成功，CSV `655` 行，run log 包含 `ALL DONE`。
+  - len16 details NCU 成功，CSV `658` 行，run log 包含 `ALL DONE`。
+  - summary 生成成功。
+  - final release rebuild 成功。
+  - post-profile smoke 通过：
+    - run：`benchmarks/runs/smoke_1gpu_len16_after_ncu_restore_20260608_160633`
+    - 输出包含 `ALL DONE`
+- 输出/哈希/误差摘要：
+  - NCU `profile_1gpu` sampled durations：
+    - direct-fill `cuda_fd3d_p_core_ns`：`93.752us`
+    - len16 `cuda_fd3d_p_core_ns`：`93.547us`
+    - direct-fill `cuda_fd3d_v_pml_tile_ns`：`65.528us`
+    - len16 `cuda_fd3d_v_pml_tile_ns`：`65.248us`
+    - direct-fill pressure-PML total：`164.328us`
+    - len16 residual pressure-PML：`72.683us`
+    - len16 packed pressure-PML：`65.771us`
+    - len16 pressure-PML total：`138.453us`
+    - pressure-PML kernel-path speedup：约 `1.187x`
+    - sampled main-kernel total：direct-fill `323.608us`，len16 `297.248us`，speedup `1.0887x`
+  - direct-fill pressure-PML：
+    - No Eligible `61.170%`
+    - eligible warps/scheduler `0.775`
+    - avg active threads/warp `19.680`
+    - branch efficiency `75.530%`
+  - len16 residual pressure-PML：
+    - No Eligible `63.497%`
+    - eligible warps/scheduler `0.733`
+    - avg active threads/warp `22.950`
+    - branch efficiency `83.320%`
+  - len16 packed kernel：
+    - No Eligible `73.827%`
+    - eligible warps/scheduler `0.433`
+    - warp cycles/issued instruction `34.210`
+    - avg active threads/warp `26.380`
+    - branch efficiency `65.220%`
+  - final release binary SHA256：`2dd6c588c41f206adcb0121a755e17857ef1a862fc28d59d72c7434e64685b3a`
+- 风险与下一步：
+  - NCU 证实 len16 收益来自 pressure-PML active segment ownership，和 `perf_1gpu_6shots` repeat 方向一致。
+  - 拒绝直接写简单 `CUDA3D_PML_PRESSURE_LEN23_*` prototype；length-23 单独只能移除约 `0.790M` inactive lanes，且不能两线合并进一个 warp，额外 launch/tile-list/control overhead 风险过高。
+  - 下一步允许打开 Phase 4.11：exact active-point / compact descriptor budget。
+  - 只有该预算证明 `>=5%` repeat speedup ceiling，才允许写新的 CUDA prototype；否则转向 packed len16 kernel source-level drill-down 或 v-PML memory layout/coalescing 设计。

@@ -1,0 +1,36 @@
+Shot input file is ./d_obs/d_obs_profile_1gpu_shot_
+
+Shot input file is noinput
+
+Nav input file is ./nav_profile_1gpu_1shots_441rec.nav
+
+Source file is ricker1_profile_1gpu
+
+wb file is noinput
+
+wb file is ./tmut_zz/
+
+wb file is ./bmut_zz/
+
+avail=1 gpus
+dt=0.002000, limit ddtt=0.554256
+
+Read NAV file to get ns
+ TOTAL SHOT=1, each core process 1 shots
+Read NAV file for src, and rec locations
+ns=1 iscount=1
+NAV loaded ntr=441, ntr_input=441
+shot 1, (sy=4.7875 sx=4.7875,sz=0.0250), indy=191 indx=191, indz=1, sw000=0.250000 sw001=0.000000, sw010=0.250000, sw011=0.000000 sw100=0.250000 sw101=0.000000 sw110=0.250000 sw111=0.000000
+
+Computing GRADIENT, Random shot starting point=0
+shot =0
+Round 1 of 1
+id =0 start modeling
+ indxy=191, indxx=191, indxz=1
+PML tile-list enabled: v_tiles=23100, p_tiles=22188, block=32x4x2
+FP it=0
+FP it=500
+mod time 7.262491s
+Gradient TIME all= 7.296921s, WP computing time = 7.270144s, read time =0.000142s
+
+*******************ALL DONE******************

@@ -404,6 +404,31 @@ Phase 4.9 length-16 half-warp pressure-PML prototype 已完成并接受：
   - 对 len16 candidate 做 Nsight Compute source/profile，确认剩余瓶颈是否转向 memory coalescing、shared pressure、final `p0/mem_dzz` update 或 length-23 active segment。
   - 不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load、z-safe shared `p1` direct second derivative、ptxas `dlcm` cache-policy sweep、p_core 显式 `__ldg`、inject/extract block-size 微调、当前 tile 下的 vx/vy split，或当前 single-GPU launch aggregation/CUDA Graph，除非有新的 profiler evidence。
 
+Phase 4.10 len16 NCU profile 已完成：
+
+- 报告：`docs/day_20260608/len16_halfwarp_ncu_profile.md`。
+- NCU summary：
+  - `reports/day_20260608/len16_vs_directfill_ncu_20260608_1600/summary.md`
+  - `reports/day_20260608/len16_vs_directfill_ncu_20260608_1600/summary.json`
+- 同口径 `profile_1gpu` NCU details：
+  - direct-fill pressure-PML：`164.328us`。
+  - len16 residual pressure-PML：`72.683us`。
+  - len16 packed pressure-PML：`65.771us`。
+  - len16 pressure-PML total：`138.453us`。
+  - pressure-PML kernel-path speedup：`1.187x`。
+  - sampled main-kernel total：direct-fill `323.608us`，len16 `297.248us`，speedup `1.0887x`。
+- profile 解释：
+  - `p_core` 与 `v_pml` 基本不变，len16 收益来自 pressure-PML ownership split。
+  - residual pressure-PML branch efficiency 从 `75.530%` 提高到 `83.320%`。
+  - 新 packed len16 kernel `No Eligible` 为 `73.827%`，eligible warps/scheduler 仅 `0.433`，属于 latency/issue-limited kernel。
+- length-23 gate：
+  - 不允许直接写简单 `CUDA3D_PML_PRESSURE_LEN23_*` prototype。
+  - 原因：length-23 单独只能移除约 `0.790M` inactive lanes，且不能像 length-16 一样两条线塞进一个 warp；额外 launch/tile-list/control overhead 很可能吞掉收益。
+  - 只有在 exact active-point / compact descriptor 预算证明 `>=5%` repeat speedup ceiling 时，才允许进入 CUDA prototype。
+- 当前下一步：
+  - Phase 4.11：exact active-point / compact descriptor budget。
+  - 若 gate 失败，转向 `cuda_fd3d_p_pml_len16_halfwarp_ns` source-level drill-down 或 v-PML memory layout/coalescing 设计。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

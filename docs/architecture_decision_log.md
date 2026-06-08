@@ -1065,3 +1065,54 @@ Report:
 docs/day_20260608/len16_halfwarp_pressure_pml_prototype.md
 reports/day_20260608/len16_halfwarp_perf6_repeat_20260608_152944/summary.md
 ```
+
+## 2026-06-08 - Confirm Len16 Profile and Reject Simple Len23 Prototype
+
+Decision:
+
+```text
+Confirm CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK with same-worktree Nsight
+Compute evidence.  Reject a simple length-23-only pressure-PML prototype.
+```
+
+Evidence:
+
+```text
+direct-fill pressure-PML duration              164.328us
+len16 residual pressure-PML duration            72.683us
+len16 packed pressure-PML duration              65.771us
+len16 pressure-PML total                       138.453us
+pressure-PML kernel-path speedup                 1.187x
+
+sampled main-kernel total direct-fill          323.608us
+sampled main-kernel total len16                297.248us
+sampled main-kernel speedup                     1.0887x
+```
+
+Reason:
+
+```text
+The NCU result matches the perf repeat result and shows that len16 improves
+pressure-PML ownership rather than merely moving time between kernels.
+
+The remaining length-23 opportunity is much smaller: about 0.790M inactive
+lanes, and it cannot pack two lines into one warp.  A simple length-23 kernel
+would add a launch and split logic while still leaving one warp per line.
+```
+
+Boundary:
+
+```text
+Do not implement a simple CUDA3D_PML_PRESSURE_LEN23_* prototype.
+
+Length-23 may be reopened only as part of an exact active-point / compact
+descriptor design that demonstrates a >=5% perf_1gpu_6shots repeat speedup
+ceiling before CUDA code.
+```
+
+Report:
+
+```text
+docs/day_20260608/len16_halfwarp_ncu_profile.md
+reports/day_20260608/len16_vs_directfill_ncu_20260608_1600/summary.md
+```
