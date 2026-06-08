@@ -1001,6 +1001,33 @@ Phase 4.27 p-core shared-plane prototype 已完成并拒绝：
 - 重开条件：
   - 只有新的 warp/coalescing 设计能证明 shared-fill/control overhead 明显更低，并先给出 profiler/source evidence，才允许重开 p-core shared-plane CUDA prototype。
 
+Phase 4.28 p-core shared-plane calibrated gate 已完成并拒绝当前 shape family：
+
+- 工具：`tools/p_core_shared_plane_calibrated_gate.py`。
+- 报告：`docs/day_20260608/p_core_shared_plane_calibrated_gate.md`。
+- JSON：`reports/day_20260608/p_core_shared_plane_calibrated_gate.json`。
+- 校准输入：
+  - budget：`reports/day_20260608/p_core_shared_plane_budget.json`。
+  - failed prototype：`reports/day_20260608/p_core_zx_prototype_20260608_2158/perf6_repeat_summary.json`。
+- 校准锚点：
+  - tested shape：`[16,16,1]` / `zx_shared_y_global`。
+  - modeled p_core local speedup：`1.5651x`。
+  - modeled sampled-main speedup：`1.1282x`。
+  - observed WP global speedup：`0.7845x`。
+  - observed Gradient global speedup：`0.7893x`。
+  - inferred WP-local p_core speedup：`0.5339x`。
+  - inferred Gradient-local p_core speedup：`0.5411x`。
+  - WP model-to-observed factor：`0.3411x`。
+  - Gradient model-to-observed factor：`0.3457x`。
+- 结论：
+  - 将这个实测 overhead calibration 应用于当前 shared-plane 候选后，所有候选都低于 `>=5%` gate。
+  - `[32,8,1]` z+x shared-plane calibrated WP sampled speedup 约 `0.7768x`。
+  - `[64,2,2]` z+x / z+y shared-plane calibrated WP sampled speedup 约 `0.6878x`。
+- 决策：
+  - 拒绝当前 p-core shared-plane shape family。
+  - 不继续测试 `[32,8,1]`、`[16,8,2]`、`[64,2,2]` 等基于同一 shared-fill/control 形态的变体。
+  - 只有 materially different warp/coalescing design，并且模型显式计入 shared fill、同步和控制开销后仍有 `>=5%` repeat speedup ceiling，才允许重开。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

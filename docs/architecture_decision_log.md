@@ -2421,3 +2421,68 @@ reports/day_20260608/p_core_shared_plane_budget.json
 reports/day_20260608/p_core_zx_prototype_20260608_2158/summary.md
 reports/day_20260608/p_core_zx_prototype_20260608_2158/perf6_repeat_summary.json
 ```
+
+## 2026-06-08 - Reject Current P-Core Shared-Plane Shape Family
+
+Decision:
+
+```text
+Reject the current p-core shared-plane shape family after calibrating the byte
+model with the failed 16x16x1 z+x prototype.
+```
+
+Evidence:
+
+```text
+calibration tool:
+  tools/p_core_shared_plane_calibrated_gate.py
+
+inputs:
+  reports/day_20260608/p_core_shared_plane_budget.json
+  reports/day_20260608/p_core_zx_prototype_20260608_2158/perf6_repeat_summary.json
+
+anchor:
+  tested shape                    [16,16,1]
+  tested mode                     zx_shared_y_global
+  modeled p_core local speedup    1.5651x
+  modeled sampled-main speedup    1.1282x
+  observed WP global speedup      0.7845x
+  observed Gradient global speedup 0.7893x
+  inferred WP-local p_core        0.5339x
+  inferred Gradient-local p_core  0.5411x
+  WP model-to-observed factor     0.3411x
+  Gradient model-to-observed      0.3457x
+
+calibrated candidate examples:
+  [16,16,1] zx shared             0.7845x WP sampled
+  [32,8,1] zx shared              0.7768x WP sampled
+  [64,2,2] zx shared              0.6878x WP sampled
+  [64,2,2] zy shared              0.6878x WP sampled
+```
+
+Reason:
+
+```text
+The failed prototype provides direct evidence that shared-fill, synchronization,
+control, and warp/coalescing overhead dominate the theoretical p1 traffic
+savings.  Other current shared-plane shapes share the same overhead class and
+fall below the >=5% gate after calibration.
+```
+
+Boundary:
+
+```text
+Do not test more variants from the current p-core shared-plane shape family
+([32,8,1], [16,8,2], [64,2,2], etc.) merely because the uncalibrated byte model
+looks positive.
+
+Reopen only with a materially different warp/coalescing design and a model that
+separately accounts for shared fill, synchronization, and control overhead.
+```
+
+Report:
+
+```text
+docs/day_20260608/p_core_shared_plane_calibrated_gate.md
+reports/day_20260608/p_core_shared_plane_calibrated_gate.json
+```

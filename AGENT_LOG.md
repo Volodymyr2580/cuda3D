@@ -4965,3 +4965,37 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 当前源码已恢复，不保留失败宏。
   - 不继续当前 p-core shared-plane 形态；模型高估是因为 shared tile fill、control overhead、warp mapping/coalescing 变化吞掉了 global-load reduction。
   - 只有新的 warp/coalescing 设计能先证明 shared-fill/control overhead 明显更低，才允许重开 p-core shared-plane CUDA prototype。
+
+## 2026-06-08 22:30:01 +08:00
+
+- 操作目标：
+  - 用 Phase 4.27 失败 prototype 校准 p-core shared-plane byte model。
+  - 判断是否还值得测试 `[32,8,1]`、`[16,8,2]`、`[64,2,2]` 等其它 shared-plane shape。
+- 修改文件：
+  - 新增 `tools/p_core_shared_plane_calibrated_gate.py`。
+  - 新增 `docs/day_20260608/p_core_shared_plane_calibrated_gate.md`。
+  - 新增 `reports/day_20260608/p_core_shared_plane_calibrated_gate.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - `python tools\p_core_shared_plane_calibrated_gate.py --json-out reports\day_20260608\p_core_shared_plane_calibrated_gate.json --md-out docs\day_20260608\p_core_shared_plane_calibrated_gate.md`
+  - `Get-Content -Encoding UTF8 docs\day_20260608\p_core_shared_plane_calibrated_gate.md`
+- 测试结果：
+  - 校准工具运行成功。
+  - 本轮不改 CUDA 源码，不需要远端 build/run。
+- 输出/哈希/误差摘要：
+  - tested shape：`[16,16,1]` / `zx_shared_y_global`。
+  - modeled p_core local speedup：`1.5651x`。
+  - modeled sampled-main speedup：`1.1282x`。
+  - observed WP global speedup：`0.7845x`。
+  - observed Gradient global speedup：`0.7893x`。
+  - inferred WP-local p_core speedup：`0.5339x`。
+  - inferred Gradient-local p_core speedup：`0.5411x`。
+  - WP model-to-observed factor：`0.3411x`。
+  - Gradient model-to-observed factor：`0.3457x`。
+  - calibrated best current shared-plane WP sampled speedup：`0.7845x`。
+- 风险与下一步：
+  - 决策：拒绝当前 p-core shared-plane shape family。
+  - 不继续测试 `[32,8,1]`、`[16,8,2]`、`[64,2,2]` 等同类变体。
+  - 只有 materially different warp/coalescing design，并且模型显式计入 shared fill、同步和控制开销后仍有 `>=5%` repeat speedup ceiling，才允许重开。
