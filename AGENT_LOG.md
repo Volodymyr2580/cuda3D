@@ -3628,3 +3628,62 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 决策：拒绝当前 `32x4x2` tile geometry 下的 `v_pml` vx/vy component-owner split，不进入 CUDA implementation。
   - `v_pml` 剩余信号是真实的 memory-latency/coalescing 问题，而不是简单 branch 或表达式级问题。
   - 下一步如果继续 `v_pml`，必须先提出改变 memory layout/coalescing 的设计；不能做 tile block shape sweep，也不能重开 `CUDA3D_PML_ZMEM_V_TILE_PRUNE`。
+
+## 2026-06-08 14:45:00 +08:00 - Nsight Systems scheduling gate and CUDA Graph rejection
+
+- 操作目标：
+  - 对当前 direct-fill best 运行 Nsight Systems，判断单卡 `perf_1gpu_6shots` 是否存在足够 launch/scheduling gap 来支持 CUDA Graph 或 launch aggregation prototype。
+  - 将调度层结论写入项目规则，避免后续重复投入不满足 gate 的方向。
+- 修改文件：
+  - 新增工具：`tools/nsys_cuda_summary.py`。
+  - 新增 raw/summary artifacts：
+    - `reports/day_20260608/directfill_scheduling_cuda_api_sum.csv`
+    - `reports/day_20260608/directfill_scheduling_cuda_gpu_kern_sum.csv`
+    - `reports/day_20260608/directfill_scheduling_nsys_run.log`
+    - `reports/day_20260608/directfill_scheduling_nsys_bin.sha256`
+    - `reports/day_20260608/directfill_scheduling_nsys_summary.md`
+    - `reports/day_20260608/directfill_scheduling_nsys_summary.json`
+  - 新增报告：`docs/day_20260608/scheduling_nsys_cuda_graph_gate.md`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 远端 `/work/wenzhe/cuda3D_codex_day_20260608_68de1a7` 检查 `nsys` 可用，版本 `2025.3.2.367-253236224375v0`。
+  - 远端检查 RTX 5090 空闲：约 `481 MiB` 显存占用，`0%` util。
+  - 远端运行：
+    - `nsys profile -t cuda,nvtx,osrt --sample=none --cpuctxsw=none --force-overwrite=true --stats=false`
+    - case：`benchmarks/cases/perf_1gpu_6shots`
+    - binary：当前 direct-fill best。
+  - 远端导出 Nsight Systems stats：
+    - `cuda_api_sum`
+    - `cuda_gpu_kern_sum`
+    - `cuda_gpu_trace` 保留在远端 raw profile 目录，未提交大文件。
+  - 本地运行：
+    - `python -m py_compile tools/nsys_cuda_summary.py`
+    - `python tools/nsys_cuda_summary.py --api-csv reports/day_20260608/directfill_scheduling_cuda_api_sum.csv --kernel-csv reports/day_20260608/directfill_scheduling_cuda_gpu_kern_sum.csv --run-log reports/day_20260608/directfill_scheduling_nsys_run.log --md-out reports/day_20260608/directfill_scheduling_nsys_summary.md --json-out reports/day_20260608/directfill_scheduling_nsys_summary.json`
+  - 将 `tools/nsys_cuda_summary.py` 上传到远端测试 worktree：`/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/tools/nsys_cuda_summary.py`。
+  - 远端复查 CUDA 源码无实验 diff；仅辅助工具 `tools/nsys_cuda_summary.py` 为未跟踪文件。
+- 测试结果：
+  - Nsight Systems profile 成功。
+  - 程序日志包含 `ALL DONE`。
+  - `tools/nsys_cuda_summary.py` py_compile 通过。
+- 输出/哈希/误差摘要：
+  - 远端 nsys run id：`scheduling_nsys_20260608_142948`。
+  - 远端 profile：`/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/reports/day_20260608/scheduling_nsys_20260608_142948/directfill_perf6.nsys-rep`。
+  - binary SHA256：`bf719d04f0fa1136af3f1afac54a936ee0d052a18ffd9a9d07863aa7f9dfca28`。
+  - `Gradient TIME all = 2.349826s`。
+  - `WP computing time = 2.238769s`。
+  - GPU kernel total：`2.232398465s`。
+  - `WP - GPU kernel total = 0.006370535s`，visible gap fraction `0.2846%`。
+  - ideal speedup if gap vanished：`1.002854x`。
+  - `cudaLaunchKernel` CPU API total：`1.845401s`，`36,024` calls，avg `51.227us`。
+  - main kernel totals：
+    - `cuda_fd3d_p_pml_tile_ns`：`1.251216s`，`9006` instances，avg `138.931us`。
+    - `cuda_fd3d_p_core_ns`：`0.557985s`，`9006` instances，avg `61.957us`。
+    - `cuda_fd3d_v_pml_tile_ns`：`0.390576s`，`9006` instances，avg `43.368us`。
+    - `lint3d_inject_bell_extract_gpu_zz`：`0.032622s`，`9006` instances，avg `3.622us`。
+- 风险与下一步：
+  - 决策：拒绝当前 single-GPU / single-MPI-rank CUDA Graph 或 launch aggregation prototype。
+  - 原因：CPU launch API 累计时间很高，但大部分与 GPU kernel 执行重叠；WP timer 与 GPU kernel total 只差约 `6.37ms`。
+  - 只有当未来 Nsight Systems 或多 rank wall-clock profile 显示 `>2%` visible scheduling gap / GPU idle 时，才允许重开调度层 CUDA Graph 路线。
+  - 下一步应转向更可能有收益的 pressure-PML divergence / CPML memory traffic / memory coalescing ownership 结构，而不是继续调度层小修。

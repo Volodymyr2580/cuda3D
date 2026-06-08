@@ -909,3 +909,43 @@ Do not implement vx/vy split kernels with the current 32x4x2 PML tile shape.
 Future v_pml work must first change the memory layout/coalescing strategy or
 show a new budget that avoids the near-2x component overlap.
 ```
+
+## 2026-06-08 - Reject Current Single-GPU CUDA Graph Launch Gate
+
+Decision:
+
+```text
+Reject a CUDA Graph / launch aggregation CUDA prototype for the current
+single-GPU perf_1gpu_6shots loop.
+```
+
+Evidence:
+
+```text
+Nsight Systems run                         scheduling_nsys_20260608_142948
+Gradient TIME all                          2.349826s
+WP computing time                          2.238769s
+GPU kernel total                           2.232398465s
+WP minus GPU kernel total                  0.006370535s
+visible non-kernel gap fraction            0.2846%
+ideal speedup if gap vanished              1.002854x
+cudaLaunchKernel CPU API total             1.845401s
+cudaLaunchKernel calls                     36,024
+```
+
+Reason:
+
+```text
+The CPU API launch total is large, but it is mostly overlapped with GPU
+kernel execution.  The WP timer almost equals the Nsight Systems GPU kernel
+total, so a CUDA Graph implementation cannot satisfy the >=2% small-candidate
+gate for the current single-rank loop.
+```
+
+Rejected boundary:
+
+```text
+Do not implement CUDA Graph / launch aggregation for the current single-GPU
+loop unless future Nsight Systems or wall-clock multi-rank evidence shows
+>2% visible scheduling gap or GPU idle time.
+```

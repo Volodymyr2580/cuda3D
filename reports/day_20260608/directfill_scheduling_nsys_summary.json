@@ -1,0 +1,151 @@
+{
+  "run": {
+    "gradient_time_s": 2.349826,
+    "wp_time_s": 2.238769
+  },
+  "api": [
+    {
+      "name": "cudaLaunchKernel",
+      "time_pct": 81.5,
+      "total_time_s": 1.845401023,
+      "num_calls": 36024,
+      "avg_us": 51.227,
+      "median_us": 42.86
+    },
+    {
+      "name": "cudaMemcpy",
+      "time_pct": 17.9,
+      "total_time_s": 0.405178204,
+      "num_calls": 145,
+      "avg_us": 2794.3324,
+      "median_us": 4.237
+    },
+    {
+      "name": "cudaFree",
+      "time_pct": 0.2,
+      "total_time_s": 0.005528243,
+      "num_calls": 302,
+      "avg_us": 18.305400000000002,
+      "median_us": 1.668
+    },
+    {
+      "name": "cudaMalloc",
+      "time_pct": 0.2,
+      "total_time_s": 0.004109431,
+      "num_calls": 230,
+      "avg_us": 17.867099999999997,
+      "median_us": 3.672
+    },
+    {
+      "name": "cuKernelGetName",
+      "time_pct": 0.1,
+      "total_time_s": 0.001908375,
+      "num_calls": 36024,
+      "avg_us": 0.053,
+      "median_us": 0.05
+    },
+    {
+      "name": "cudaMemset",
+      "time_pct": 0.0,
+      "total_time_s": 0.001085533,
+      "num_calls": 92,
+      "avg_us": 11.799299999999999,
+      "median_us": 2.32
+    },
+    {
+      "name": "cudaMemcpyToSymbol",
+      "time_pct": 0.0,
+      "total_time_s": 0.000959761,
+      "num_calls": 72,
+      "avg_us": 13.33,
+      "median_us": 3.712
+    },
+    {
+      "name": "cudaEventRecord",
+      "time_pct": 0.0,
+      "total_time_s": 6.9228e-05,
+      "num_calls": 12,
+      "avg_us": 5.769,
+      "median_us": 5.58
+    },
+    {
+      "name": "cudaEventCreate",
+      "time_pct": 0.0,
+      "total_time_s": 3.2392e-05,
+      "num_calls": 24,
+      "avg_us": 1.3497000000000001,
+      "median_us": 0.321
+    },
+    {
+      "name": "cudaDeviceSynchronize",
+      "time_pct": 0.0,
+      "total_time_s": 7.093e-06,
+      "num_calls": 1,
+      "avg_us": 7.093,
+      "median_us": 7.093
+    },
+    {
+      "name": "cuModuleGetLoadingMode",
+      "time_pct": 0.0,
+      "total_time_s": 1.322e-06,
+      "num_calls": 1,
+      "avg_us": 1.322,
+      "median_us": 1.322
+    },
+    {
+      "name": "cuLibraryGetKernel",
+      "time_pct": 0.0,
+      "total_time_s": 5.51e-07,
+      "num_calls": 1,
+      "avg_us": 0.551,
+      "median_us": 0.551
+    }
+  ],
+  "kernels": [
+    {
+      "name": "cuda_fd3d_p_pml_tile_ns",
+      "full_name": "cuda_fd3d_p_pml_tile_ns(float *, const float *, const float *, const float *, const float *, float *, float, float, float, int, int, int, int, float, float *, float *, float *, float *, float *, float *, float *, float *, float *, const float *, float *, const float *, const float *, const PmlTile *, int)",
+      "time_pct": 56.0,
+      "total_time_s": 1.251216056,
+      "instances": 9006,
+      "avg_us": 138.9314,
+      "median_us": 136.448
+    },
+    {
+      "name": "cuda_fd3d_p_core_ns",
+      "full_name": "cuda_fd3d_p_core_ns(float *, float *, float *, float, float, float, int, int, int, int, float)",
+      "time_pct": 25.0,
+      "total_time_s": 0.557984513,
+      "instances": 9006,
+      "avg_us": 61.957,
+      "median_us": 60.927
+    },
+    {
+      "name": "cuda_fd3d_v_pml_tile_ns",
+      "full_name": "cuda_fd3d_v_pml_tile_ns(const float *, float *, float *, float *, float, float, float, int, int, int, int, float, float *, float *, float *, float *, float *, float *, const float *, const float *, const float *, float *, float *, float *, const PmlTile *, int)",
+      "time_pct": 17.5,
+      "total_time_s": 0.390575787,
+      "instances": 9006,
+      "avg_us": 43.3684,
+      "median_us": 41.983
+    },
+    {
+      "name": "lint3d_inject_bell_extract_gpu_zz",
+      "full_name": "lint3d_inject_bell_extract_gpu_zz(float *, int, int, int, int, int, int, float *, float *, int, int, int, int, int, int, int, float *, float *, float *, float *, float *, float *, float *, float *, float *, int *, unsigned long, float *, float *, float *, float *, float *, float *, float *, float *)",
+      "time_pct": 1.5,
+      "total_time_s": 0.032622109,
+      "instances": 9006,
+      "avg_us": 3.6223,
+      "median_us": 3.616
+    }
+  ],
+  "totals": {
+    "kernel_total_s": 2.232398465,
+    "cuda_launch_total_s": 1.845401023,
+    "cuda_launch_calls": 36024,
+    "cuda_launch_avg_us": 51.227,
+    "wp_minus_kernel_total_s": 0.006370534999999844,
+    "wp_minus_kernel_total_fraction": 0.002845552622892243,
+    "ideal_gap_elimination_speedup": 1.0028536728992956
+  }
+}

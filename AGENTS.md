@@ -349,7 +349,14 @@ Phase 4.8 direct-fill SourceCounters profile 已完成：
   - NCU rule 显示 L1TEX scoreboard stall 约 `11.8 cycles/warp`，uncoalesced excessive sectors 约 `22%`。
   - 静态预算拒绝 vx/vy component-owner split：tile 总量会变成当前 combined kernel 的 `1.985645x`，active component work 约 `1.963726x`。
   - 结论：当前 `32x4x2` tile 下不要写 vx/vy split kernel；后续 v_pml 必须从 memory layout / coalescing 设计入手。
-- 下一步不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load、z-safe shared `p1` direct second derivative、ptxas `dlcm` cache-policy sweep、p_core 显式 `__ldg`、inject/extract block-size 微调或当前 tile 下的 vx/vy split，应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构，或单独设计 CUDA Graph / wave-step scheduling 级优化。
+- Nsight Systems scheduling gate 已完成：
+  - 报告：`docs/day_20260608/scheduling_nsys_cuda_graph_gate.md`。
+  - `cudaLaunchKernel` CPU API total：`1.845401s`，调用 `36,024` 次，平均 `51.227us`。
+  - 但 GPU kernel total：`2.232398465s`，WP computing time：`2.238769s`。
+  - WP 与 GPU kernel total 只差 `0.006370535s`，visible gap fraction `0.2846%`。
+  - 即使完美消除该 gap，理想 WP speedup 也只有 `1.002854x`。
+  - 结论：当前 single-GPU / single-MPI-rank `perf_1gpu_6shots` 不允许写 CUDA Graph / launch aggregation prototype，除非未来 Nsight Systems 或多 rank wall-clock 证据显示 `>2%` visible scheduling gap 或 GPU idle。
+- 下一步不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load、z-safe shared `p1` direct second derivative、ptxas `dlcm` cache-policy sweep、p_core 显式 `__ldg`、inject/extract block-size 微调、当前 tile 下的 vx/vy split，或当前 single-GPU launch aggregation/CUDA Graph；应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构，或重新设计能改变 memory coalescing/ownership 的路线。
 
 ## 速度阈值存档规则
 
