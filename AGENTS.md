@@ -294,6 +294,28 @@ Phase 4.7 direct-fill NCU profile 已完成：
   - 禁止继续重复 warp-broadcast active-range caching；shuffle/control overhead 没有换来收益。
   - 当前源码已恢复到 direct-fill z-cache best，不保留 warp-range 候选代码。
 
+Phase 4.8 direct-fill SourceCounters profile 已完成：
+
+- 报告：`reports/day_20260608/directfill_source_profile_summary.md`。
+- raw CSV：`reports/day_20260608/directfill_p_pml_source_ncu.csv`。
+- direct-fill `p_pml_tile` source-level 主要信号：
+  - No Eligible 约 `60%`。
+  - eligible warps/scheduler 约 `0.81`。
+  - L1TEX scoreboard stall 约 `14.4 cycles/warp`。
+  - uncoalesced global accesses 约 `19% excessive sectors`。
+  - avg active threads/warp 约 `19.84`，not-predicated-off 约 `18.69`。
+- 最高采样行集中在：
+  - `mem_dzz[pind]=mem_dzz[pind]*coef+c1*(coef-1);`
+  - `mem_dxx/mem_dyy` CPML memory update。
+  - `p0[outIndex]=2*__ldg(p1+outIndex)-p0[outIndex]...`
+  - z-cache shared loads 已可见但不再是主导。
+- `pml_local_mem_accum` 已测试并拒绝：
+  - correctness pass，6 个输出 rel L2 全部 `0`。
+  - `perf_1gpu_6shots` repeat mean WP speedup vs direct-fill：`1.000647x`。
+  - mean Gradient speedup vs direct-fill：`0.998957x`。
+  - 结论：编译器已基本处理好写后使用表达式，显式 `new_mem` 不满足 `>=2%` gate。
+- 下一步不要继续抠 z-cache fill 或 `new_mem` 表达式，应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

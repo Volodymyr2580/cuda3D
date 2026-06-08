@@ -234,3 +234,74 @@ Do not keep or retry warp-broadcast active-range caching.  It is
 correctness-safe, but the shuffle/control overhead is not repaid.  The
 accepted source was restored to direct-fill z-cache after this test.
 ```
+
+## SourceCounters Follow-Up
+
+Direct-fill `p_pml_tile` was profiled with `-lineinfo` and SourceCounters:
+
+```text
+raw csv      reports/day_20260608/directfill_p_pml_source_ncu.csv
+summary      reports/day_20260608/directfill_source_profile_summary.md
+kernel       cuda_fd3d_p_pml_tile_ns
+launches     skip 10 / count 10
+```
+
+Profile read:
+
+```text
+No Eligible                         ~60%
+Eligible warps/scheduler            ~0.81
+L1TEX scoreboard stall               ~14.4 cycles/warp
+Uncoalesced global accesses          ~19% excessive sectors
+Avg active threads/warp              ~19.84
+Avg not-predicated-off threads/warp  ~18.69
+```
+
+Dominant source lines:
+
+```text
+mem_dzz / mem_dxx / mem_dyy CPML memory updates
+final p0[outIndex] pressure writeback
+```
+
+The z-cache shared loads are visible in the source page but are not the
+dominant remaining issue.
+
+## Rejected Local-Mem Accum Candidate
+
+Tested:
+
+```text
+pml_local_mem_accum
+```
+
+The candidate rewrote:
+
+```text
+mem_dzz[pind]=mem_dzz[pind]*coef+c1*(coef-1);
+c1+=mem_dzz[pind];
+```
+
+into explicit local accumulation:
+
+```text
+const float new_mem = mem_dzz[pind]*coef+c1*(coef-1);
+mem_dzz[pind]=new_mem;
+c1+=new_mem;
+```
+
+Result:
+
+```text
+correctness                    pass, rel L2 = 0 for 6 outputs
+perf6 repeat compares          pass
+mean WP speedup vs direct-fill 1.000647x
+mean Gradient speedup          0.998957x
+```
+
+Decision:
+
+```text
+Reject local new_mem accumulation.  It is numerically safe but performance
+neutral, so it fails the >=2% small-candidate gate.
+```

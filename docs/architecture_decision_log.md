@@ -632,3 +632,45 @@ Do not retry warp-broadcast active-range caching for pressure z-cache
 without new profiler evidence.  Keep the direct-fill z-cache implementation
 as current best.
 ```
+
+## 2026-06-08 - Reject Local CPML New-Mem Accumulation
+
+Decision:
+
+```text
+Reject the pml_local_mem_accum candidate that rewrites CPML memory updates
+as explicit local new_mem values inside cuda_fd3d_p_pml_tile_ns.
+```
+
+Evidence:
+
+```text
+direct-fill SourceCounters:
+  p_pml_tile No Eligible                 about 60%
+  eligible warps/scheduler               about 0.81
+  L1TEX scoreboard stall                 about 14.4 cycles/warp
+  excessive global sectors               about 19%
+
+pml_local_mem_accum:
+  correctness rel L2                     0 for 6 outputs
+  perf6 output compares                  pass
+  mean WP speedup vs direct-fill         1.000647x
+  mean Gradient speedup vs direct-fill   0.998957x
+```
+
+Reason:
+
+```text
+The source profile shows CPML memory update and final p0 writeback dominate,
+but a syntactic local new_mem rewrite does not materially reduce the memory
+dependency chain.  The compiler already preserves the value well enough, and
+the candidate fails the >=2% small-candidate gate.
+```
+
+Rejected boundary:
+
+```text
+Do not retry plain local new_mem accumulation for p_pml_tile CPML updates.
+Future pressure-PML work should target larger divergence or CPML traffic
+structure, not this expression-level rewrite.
+```

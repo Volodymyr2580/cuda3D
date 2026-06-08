@@ -1,0 +1,58 @@
+{
+  "rows": [
+    {
+      "round": 1,
+      "direct_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_pml_local_mem_accum_directfill_r1_20260608_123400",
+      "candidate_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_pml_local_mem_accum_candidate_r1_20260608_123412",
+      "compare_dir": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/reports/day_20260608/pml_local_mem_accum_perf6_repeat_20260608_123353/compare_r1",
+      "direct": {
+        "wp": 2.206771,
+        "gradient": 2.313642
+      },
+      "candidate": {
+        "wp": 2.202571,
+        "gradient": 2.313711
+      },
+      "wp_speedup_vs_direct": 1.001906862480256,
+      "gradient_speedup_vs_direct": 0.9999701777793337,
+      "compare_pass": true
+    },
+    {
+      "round": 2,
+      "direct_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_pml_local_mem_accum_directfill_r2_20260608_123424",
+      "candidate_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_pml_local_mem_accum_candidate_r2_20260608_123436",
+      "compare_dir": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/reports/day_20260608/pml_local_mem_accum_perf6_repeat_20260608_123353/compare_r2",
+      "direct": {
+        "wp": 2.203253,
+        "gradient": 2.314265
+      },
+      "candidate": {
+        "wp": 2.204237,
+        "gradient": 2.315192
+      },
+      "wp_speedup_vs_direct": 0.999553587023537,
+      "gradient_speedup_vs_direct": 0.999599601242575,
+      "compare_pass": true
+    },
+    {
+      "round": 3,
+      "direct_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_pml_local_mem_accum_directfill_r3_20260608_123448",
+      "candidate_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_pml_local_mem_accum_candidate_r3_20260608_123501",
+      "compare_dir": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/reports/day_20260608/pml_local_mem_accum_perf6_repeat_20260608_123353/compare_r3",
+      "direct": {
+        "wp": 2.207174,
+        "gradient": 2.314334
+      },
+      "candidate": {
+        "wp": 2.206112,
+        "gradient": 2.320597
+      },
+      "wp_speedup_vs_direct": 1.0004813898841038,
+      "gradient_speedup_vs_direct": 0.9973011255293359,
+      "compare_pass": true
+    }
+  ],
+  "mean_wp_speedup_vs_direct": 1.0006472797959656,
+  "mean_gradient_speedup_vs_direct": 0.9989569681837481,
+  "all_compare_pass": true
+}

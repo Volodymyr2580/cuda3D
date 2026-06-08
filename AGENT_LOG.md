@@ -3310,3 +3310,63 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 原因：shuffle/control overhead 未抵消减少 active-range 重复计算的收益，未达到 `>=2%` small-candidate gate。
   - 当前 best 仍是 direct-fill z-cache combo：mean WP speedup `1.100929x`，mean Gradient speedup `1.097530x`。
   - 下一步需要离开这个微控制逻辑点，转向更大粒度的 pressure PML 数据流或 source-level profiling。
+
+## 2026-06-08 12:36:00 +08:00 - Direct-fill SourceCounters and local-mem accumulation rejection
+
+- 操作目标：
+  - 使用 Nsight Compute SourceCounters 定位 direct-fill `p_pml_tile` 的剩余源码级瓶颈。
+  - 测试一个由 source profile 引出的低风险候选：将 CPML memory update 显式改写为 local `new_mem` 变量。
+- 修改文件：
+  - 临时修改 `src/single_solver.cu`：在 `cuda_fd3d_p_pml_tile_ns` 中把 `mem_dzz/mem_dxx/mem_dyy` 更新改成 `new_mem` 局部变量。
+  - 测试后已将 `src/single_solver.cu` 恢复到 commit `68de1a7` 的 direct-fill best 形态；本地和远端均无该候选源码残留。
+  - 新增报告：
+    - `reports/day_20260608/directfill_p_pml_source_ncu.csv`
+    - `reports/day_20260608/directfill_source_profile_20260608_122553_bin.sha256`
+    - `reports/day_20260608/directfill_source_profile_summary.md`
+    - `reports/day_20260608/pml_local_mem_accum_correctness_comparison.md`
+    - `reports/day_20260608/pml_local_mem_accum_perf6_repeat_summary.md`
+    - `reports/day_20260608/pml_local_mem_accum_perf6_repeat_summary.json`
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 更新 `docs/day_20260608/pressure_pml_zrecomp_cache_prototype.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 编译 direct-fill combo + `-lineinfo`。
+  - 运行 NCU：
+    - `--section SourceCounters`
+    - `--section SchedulerStats`
+    - `--section WarpStateStats`
+    - `--launch-skip 10`
+    - `--launch-count 10`
+    - kernel filter：`regex:.*cuda_fd3d_p_pml_tile.*`
+  - 生成 `.ncu-rep` 并在远端导出 `source_page.txt`；该文件约 19MB，未提交，只提交精简 CSV/summary。
+  - 上传 local-mem-accum 临时源码并编译。
+  - 运行 correctness，对比 zmem baseline outputs。
+  - 运行 `perf_1gpu_6shots` direct-fill vs local-mem-accum 3 轮 A/B，每轮输出对比。
+  - 用 `apply_patch` 恢复本地源码到 direct-fill best，并重新上传到远端 worktree。
+- 测试结果：
+  - SourceCounters profile 成功。
+  - local-mem-accum 编译通过。
+  - correctness 通过，6 个输出 rel L2 全部 `0`。
+  - `perf_1gpu_6shots` repeat 3 轮输出对比全部通过。
+  - mean WP speedup vs direct-fill：`1.000647x`。
+  - mean Gradient speedup vs direct-fill：`0.998957x`。
+- 输出/哈希/误差摘要：
+  - direct-fill SourceCounters：
+    - No Eligible：约 `60%`。
+    - eligible warps/scheduler：约 `0.81`。
+    - L1TEX scoreboard stall：约 `14.4 cycles/warp`。
+    - uncoalesced global accesses：约 `19% excessive sectors`。
+    - avg active threads/warp：约 `19.84`。
+  - source page top lines：
+    - `mem_dzz[pind]=mem_dzz[pind]*coef+c1*(coef-1);`
+    - `mem_dxx/mem_dyy` CPML memory update。
+    - `p0[outIndex]=2*__ldg(p1+outIndex)-p0[outIndex]...`
+  - local-mem-accum repeat：
+    - round 1：WP `2.206771 -> 2.202571`，speedup `1.001907x`；Gradient `0.999970x`。
+    - round 2：WP `2.203253 -> 2.204237`，speedup `0.999554x`；Gradient `0.999600x`。
+    - round 3：WP `2.207174 -> 2.206112`，speedup `1.000481x`；Gradient `0.997301x`。
+- 风险与下一步：
+  - 决策：拒绝 local `new_mem` accumulation，未达到 `>=2%` gate。
+  - direct-fill best 仍是当前主线。
+  - 下一步应考虑更大粒度结构：降低 pressure PML divergence / active-thread loss，或重新组织 CPML memory traffic；不要继续重复 z-cache fill、warp-range、plain `new_mem` 表达式优化。
