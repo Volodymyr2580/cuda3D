@@ -1,0 +1,122 @@
+Shot input file is ./d_obs/d_obs_perf_1gpu_6shots_shot_
+
+Shot input file is noinput
+
+Nav input file is ./nav_perf_1gpu_6shots_6shots_441rec.nav
+
+Source file is ricker1_perf_1gpu_6shots
+
+wb file is noinput
+
+wb file is ./tmut_zz/
+
+wb file is ./bmut_zz/
+
+avail=1 gpus
+dt=0.002000, limit ddtt=0.554256
+
+Read NAV file to get ns
+ TOTAL SHOT=6, each core process 6 shots
+Read NAV file for src, and rec locations
+ns=6 iscount=6
+NAV loaded ntr=2646, ntr_input=2646
+shot 1, (sy=2.3938 sx=2.3938,sz=0.0250), indy=95 indx=95, indz=1, sw000=0.061505 sw001=0.000000, sw010=0.186497, sw011=0.000000 sw100=0.186497 sw101=0.000000 sw110=0.565502 sw111=0.000000
+shot 2, (sy=2.3938 sx=4.7875,sz=0.0250), indy=95 indx=191, indz=1, sw000=0.124001 sw001=0.000000, sw010=0.124001, sw011=0.000000 sw100=0.375999 sw101=0.000000 sw110=0.375999 sw111=0.000000
+shot 3, (sy=2.3938 sx=7.1813,sz=0.0250), indy=95 indx=287, indz=1, sw000=0.185501 sw001=0.000000, sw010=0.062500, sw011=0.000000 sw100=0.562485 sw101=0.000000 sw110=0.189514 sw111=0.000000
+shot 4, (sy=7.1813 sx=2.3938,sz=0.0250), indy=287 indx=95, indz=1, sw000=0.185501 sw001=0.000000, sw010=0.562485, sw011=0.000000 sw100=0.062500 sw101=0.000000 sw110=0.189514 sw111=0.000000
+shot 5, (sy=7.1813 sx=4.7875,sz=0.0250), indy=287 indx=191, indz=1, sw000=0.373993 sw001=0.000000, sw010=0.373993, sw011=0.000000 sw100=0.126007 sw101=0.000000 sw110=0.126007 sw111=0.000000
+shot 6, (sy=7.1813 sx=7.1813,sz=0.0250), indy=287 indx=287, indz=1, sw000=0.559483 sw001=0.000000, sw010=0.188503, sw011=0.000000 sw100=0.188503 sw101=0.000000 sw110=0.063511 sw111=0.000000
+
+Computing GRADIENT, Random shot starting point=0
+shot =0 
+Round 1 of 6
+id =0 start modeling
+ indxy=95, indxx=95, indxz=1
+PML tile-list enabled: v_tiles=18800, p_tiles=7168, block=32x4x2
+PML pressure len16 halfwarp enabled: len16_tiles=10816 residual_p_tiles=7168 block=32x4x1
+FP it=0
+FP it=500
+FP it=1000
+FP it=1500
+mod time 0.000000s
+shot =1 
+Round 2 of 6
+id =0 start modeling
+ indxy=95, indxx=191, indxz=1
+PML tile-list enabled: v_tiles=20960, p_tiles=8032, block=32x4x2
+PML pressure len16 halfwarp enabled: len16_tiles=12064 residual_p_tiles=8032 block=32x4x1
+FP it=0
+FP it=500
+FP it=1000
+FP it=1500
+mod time 0.000000s
+shot =2 
+Round 3 of 6
+id =0 start modeling
+ indxy=95, indxx=287, indxz=1
+PML tile-list enabled: v_tiles=19280, p_tiles=7648, block=32x4x2
+PML pressure len16 halfwarp enabled: len16_tiles=10816 residual_p_tiles=7648 block=32x4x1
+FP it=0
+FP it=500
+FP it=1000
+FP it=1500
+mod time 0.000000s
+shot =3 
+Round 4 of 6
+id =0 start modeling
+ indxy=287, indxx=95, indxz=1
+PML tile-list enabled: v_tiles=19040, p_tiles=7408, block=32x4x2
+PML pressure len16 halfwarp enabled: len16_tiles=10816 residual_p_tiles=7408 block=32x4x1
+FP it=0
+FP it=500
+FP it=1000
+FP it=1500
+mod time 0.000000s
+shot =4 
+Round 5 of 6
+id =0 start modeling
+ indxy=287, indxx=191, indxz=1
+PML tile-list enabled: v_tiles=21228, p_tiles=8300, block=32x4x2
+PML pressure len16 halfwarp enabled: len16_tiles=12064 residual_p_tiles=8300 block=32x4x1
+FP it=0
+FP it=500
+FP it=1000
+FP it=1500
+mod time 0.000000s
+shot =5 
+Round 6 of 6
+id =0 start modeling
+ indxy=287, indxx=287, indxz=1
+PML tile-list enabled: v_tiles=19524, p_tiles=7892, block=32x4x2
+PML pressure len16 halfwarp enabled: len16_tiles=10816 residual_p_tiles=7892 block=32x4x1
+FP it=0
+FP it=500
+FP it=1000
+FP it=1500
+mod time 0.000000s
+Gradient TIME all= 2.157764s, WP computing time = 2.032380s, read time =0.000256s 
+
+*******************ALL DONE******************
+	Command being timed: "bash -lc source /opt/intel/oneapi/setvars.sh >/dev/null 2>&1; cd /work/wenzhe/cuda3D/.codex_worktrees/formal_table_20260608_182525/benchmarks/cases/perf_1gpu_6shots; CUDA_VISIBLE_DEVICES=0 timeout 2400s /opt/intel/oneapi/mpi/latest/bin/mpirun -np 1  /work/wenzhe/cuda3D/.codex_worktrees/formal_table_20260608_182525/bin/cuda_3D_FM < input_perf_1gpu_6shots.in"
+	User time (seconds): 1.23
+	System time (seconds): 1.34
+	Percent of CPU this job got: 86%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:02.98
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 511076
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 155034
+	Voluntary context switches: 775
+	Involuntary context switches: 222
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 31336
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

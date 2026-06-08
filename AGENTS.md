@@ -577,6 +577,38 @@ Phase 4.15 pressure-PML writeback / CPML state gate 已完成并拒绝 micro CUD
   - 若继续底层核心重写，进入 math-level pressure state representation / PML ownership design gate。
   - 或先做 zmem/direct-fill/len16/current-best 同 session 正式总提速表，固化当前 best。
 
+Phase 4.16 formal same-session speed table 已完成：
+
+- 报告目录：`reports/day_20260608/formal_current_best_table_20260608_182525/`。
+- 远端隔离 worktree：
+  - `/work/wenzhe/cuda3D/.codex_worktrees/formal_table_20260608_182525`
+- case：`perf_1gpu_6shots`。
+- rounds：`3`。
+- 每轮顺序：
+  - 重建 `zmem` binary 并运行。
+  - 重建 `directfill` binary 并运行，对比同轮 `zmem` 输出。
+  - 重建 `len16_current_best` binary 并运行，对比同轮 `zmem` 输出。
+- `directfill` vs `zmem`：
+  - mean WP speedup：`1.099957x`。
+  - mean Gradient speedup：`1.097977x`。
+  - mean elapsed speedup：`1.105408x`。
+  - all compare pass：`True`。
+  - max rel L2：`0`。
+- `len16_current_best` vs `zmem`：
+  - mean WP speedup：`1.192835x`。
+  - mean Gradient speedup：`1.179213x`。
+  - mean elapsed speedup：`1.156108x`。
+  - mean candidate WP：`2.031753s`。
+  - all compare pass：`True`。
+  - max rel L2：`6.384336e-07`。
+  - max abs：`4.768372e-06`。
+- 决策：
+  - `CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK` + direct-fill z-cache + CPML vmem double-buffer scaffold 是当前 RTX 5090 single-GPU formal best。
+  - 当前正式累计 WP speedup vs `zmem_reference`：`1.192835x`。
+  - 正式结果仍未达到 `1.5x` 存档阈值，因此不创建 `archives/speedups/1.5x_*`。
+- 当前下一步：
+  - 若继续 CUDA 核心结构重写，应从 math-level pressure state representation / PML ownership 设计 gate 开始，而不是继续微调已拒绝路线。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

@@ -1,0 +1,2 @@
+worktree=/work/wenzhe/cuda3D/.codex_worktrees/formal_table_20260608_182525
+report=/work/wenzhe/cuda3D/.codex_worktrees/formal_table_20260608_182525/reports/day_20260608/formal_current_best_table_20260608_182525

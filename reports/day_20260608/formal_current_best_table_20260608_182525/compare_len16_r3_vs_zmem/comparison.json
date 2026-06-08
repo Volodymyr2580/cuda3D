@@ -1,0 +1,81 @@
+{
+  "pass": true,
+  "baseline": "/work/wenzhe/cuda3D/.codex_worktrees/formal_table_20260608_182525/benchmarks/runs/perf_1gpu_6shots_formal_zmem_r3_20260608_182634/outputs",
+  "candidate": "/work/wenzhe/cuda3D/.codex_worktrees/formal_table_20260608_182525/benchmarks/runs/perf_1gpu_6shots_formal_len16_current_best_r3_20260608_182655/outputs",
+  "missing": [],
+  "extra": [],
+  "results": [
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_0.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 661941,
+      "rel_l2": 5.833018452941602e-07,
+      "rms": 3.488843574295212e-08,
+      "max_abs": 4.76837158203125e-06,
+      "max_rel": 1.9967523870982185,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_1.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 661941,
+      "rel_l2": 5.934596824732198e-07,
+      "rms": 3.511949193217666e-08,
+      "max_abs": 3.0994415283203125e-06,
+      "max_rel": 1.9903228897091245,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_2.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 661941,
+      "rel_l2": 5.624091840154077e-07,
+      "rms": 3.566670192074673e-08,
+      "max_abs": 3.337860107421875e-06,
+      "max_rel": 1.9983078345420278,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_3.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 661941,
+      "rel_l2": 5.607820668214896e-07,
+      "rms": 3.33105934586224e-08,
+      "max_abs": 4.291534423828125e-06,
+      "max_rel": 1.9852352600760492,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_4.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 661941,
+      "rel_l2": 6.384336369813099e-07,
+      "rms": 3.752102386478944e-08,
+      "max_abs": 2.384185791015625e-06,
+      "max_rel": 1.9944218525474844,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_5.dir",
+      "pass": true,
+      "criterion": "rel_l2",
+      "count": 661941,
+      "rel_l2": 5.921805141748884e-07,
+      "rms": 3.729028557948357e-08,
+      "max_abs": 1.9073486328125e-06,
+      "max_rel": 1.984497178624874,
+      "rel_tol": 1e-05,
+      "abs_tol": 1e-07
+    }
+  ]
+}

@@ -1443,3 +1443,77 @@ Report:
 docs/day_20260608/pressure_pml_writeback_state_model.md
 reports/day_20260608/pressure_pml_writeback_state_model.json
 ```
+
+## 2026-06-08 - Formal Current-Best Same-Session Table
+
+Decision:
+
+```text
+Freeze the current RTX 5090 single-GPU formal best as the accepted len16
+half-warp pressure-PML path on top of direct-fill z-cache and CPML vmem
+double-buffer scaffold.
+```
+
+Run protocol:
+
+```text
+remote worktree:
+/work/wenzhe/cuda3D/.codex_worktrees/formal_table_20260608_182525
+
+case:
+perf_1gpu_6shots
+
+rounds:
+3
+
+per round:
+rebuild zmem -> run zmem
+rebuild directfill -> run directfill -> compare outputs vs same-round zmem
+rebuild len16_current_best -> run len16 -> compare outputs vs same-round zmem
+```
+
+Results:
+
+```text
+directfill vs zmem:
+  mean WP speedup              1.099957x
+  mean Gradient speedup        1.097977x
+  mean elapsed speedup         1.105408x
+  all compare pass             True
+  max rel L2                   0
+
+len16_current_best vs zmem:
+  mean WP speedup              1.192835x
+  mean Gradient speedup        1.179213x
+  mean elapsed speedup         1.156108x
+  mean candidate WP            2.031753s
+  all compare pass             True
+  max rel L2                   6.384336e-07
+  max abs                      4.768372e-06
+```
+
+Boundary:
+
+```text
+The formal current-best speedup is 1.192835x vs zmem_reference on RTX 5090
+single-GPU perf_1gpu_6shots.  This confirms the earlier estimated product
+speedup, but it does not reach the 1.5x archive threshold.
+
+Do not create an archives/speedups/1.5x_* milestone from this result.
+```
+
+Next:
+
+```text
+If continuing CUDA-core restructuring, start with a math-level pressure state
+representation or PML ownership design gate.  Do not return to the rejected
+micro routes unless new profiler evidence and a >=5% repeat ceiling are both
+present.
+```
+
+Report:
+
+```text
+reports/day_20260608/formal_current_best_table_20260608_182525/summary.md
+reports/day_20260608/formal_current_best_table_20260608_182525/summary.json
+```

@@ -4259,3 +4259,71 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 下一步建议：
     - 若继续底层重写，做 math-level pressure state representation / PML ownership design gate。
     - 或先同 session 重跑 zmem/direct-fill/len16/current-best，生成正式总提速表并固化当前 best。
+
+## 2026-06-08 18:28:45 +08:00
+
+- 操作目标：
+  - 按 Phase 4.15 的下一步建议，重跑 `zmem`、`directfill`、`len16_current_best` 三者同机同 session formal speed table。
+  - 固化当前 RTX 5090 single-GPU `perf_1gpu_6shots` formal best，并验证数值差异。
+- 修改文件：
+  - 新增 `reports/day_20260608/formal_current_best_table_20260608_182525/summary.md`。
+  - 新增 `reports/day_20260608/formal_current_best_table_20260608_182525/summary.json`。
+  - 新增 `reports/day_20260608/formal_current_best_table_20260608_182525/records.jsonl`。
+  - 新增 `reports/day_20260608/formal_current_best_table_20260608_182525/remote_paths.txt`。
+  - 新增 6 组 output comparison artifact：
+    - `compare_directfill_r{1,2,3}_vs_zmem/comparison.{md,json}`
+    - `compare_len16_r{1,2,3}_vs_zmem/comparison.{md,json}`
+  - 新增 9 组轻量 run artifact：
+    - `run_artifacts/{zmem,directfill,len16_current_best}_r{1,2,3}/run.log`
+    - `run_artifacts/{zmem,directfill,len16_current_best}_r{1,2,3}/manifest.json`
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 远端只读检查：
+    - `cd /work/wenzhe/cuda3D`
+    - `git status --short --branch`
+    - `nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu --format=csv,noheader`
+  - 远端创建隔离 worktree：
+    - `git -c http.proxy= -c https.proxy= fetch origin exp/day-20260608-cpml-compact-temporal`
+    - `git worktree add --detach /work/wenzhe/cuda3D/.codex_worktrees/formal_table_20260608_182525 FETCH_HEAD`
+  - 远端环境：
+    - `source ./env_5090.sh`
+    - 新建 case output dir：`benchmarks/cases/perf_1gpu_6shots/d_obs`
+    - 如缺失则为 velocity 数据创建 symlink 到主目录已有数据文件。
+  - 每轮 protocol：
+    - `make -B -f makefile.rtx5090 test NVFLAGS="<zmem flags>"`
+    - `python3 tools/run_benchmark.py --case perf_1gpu_6shots --tag formal_zmem_rN`
+    - `make -B -f makefile.rtx5090 test NVFLAGS="<directfill flags>"`
+    - `python3 tools/run_benchmark.py --case perf_1gpu_6shots --tag formal_directfill_rN`
+    - `python3 tools/compare_outputs.py --baseline <same-round-zmem>/outputs --candidate <directfill>/outputs --out <report>/compare_directfill_rN_vs_zmem`
+    - `make -B -f makefile.rtx5090 test NVFLAGS="<len16 flags>"`
+    - `python3 tools/run_benchmark.py --case perf_1gpu_6shots --tag formal_len16_current_best_rN`
+    - `python3 tools/compare_outputs.py --baseline <same-round-zmem>/outputs --candidate <len16>/outputs --out <report>/compare_len16_rN_vs_zmem`
+  - 本地取回：
+    - `tools/remote_get.py` 拉取 summary、records、comparison、run.log、manifest.json。
+- 测试结果：
+  - 远端 GPU 运行前基本空闲：RTX 5090 memory used `481 MiB`，utilization `0%`。
+  - `zmem`、`directfill`、`len16_current_best` 各 3 轮均构建和运行完成。
+  - 6 组 output comparison 全部 pass。
+- 输出/哈希/误差摘要：
+  - `directfill` vs `zmem`：
+    - mean WP speedup：`1.099957x`。
+    - mean Gradient speedup：`1.097977x`。
+    - mean elapsed speedup：`1.105408x`。
+    - mean candidate WP：`2.203315s`。
+    - max rel L2：`0`。
+    - max abs：`0`。
+  - `len16_current_best` vs `zmem`：
+    - mean WP speedup：`1.192835x`。
+    - mean Gradient speedup：`1.179213x`。
+    - mean elapsed speedup：`1.156108x`。
+    - mean candidate WP：`2.031753s`。
+    - max rel L2：`6.384336e-07`。
+    - max abs：`4.768372e-06`。
+  - report：`reports/day_20260608/formal_current_best_table_20260608_182525/summary.md`。
+- 风险与下一步：
+  - 决策：`CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK` + direct-fill z-cache + CPML vmem double-buffer scaffold 是当前 RTX 5090 single-GPU formal best。
+  - 正式 WP speedup vs `zmem_reference`：`1.192835x`。
+  - 该结果未达到 `1.5x` archive threshold，不创建 `archives/speedups/1.5x_*`。
+  - 下一步若继续底层核心重写，应先做 math-level pressure state representation / PML ownership design gate；不要回到已拒绝的 micro routes。

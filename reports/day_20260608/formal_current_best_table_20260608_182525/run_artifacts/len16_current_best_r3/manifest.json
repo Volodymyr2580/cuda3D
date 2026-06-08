@@ -1,0 +1,54 @@
+{
+  "timestamp": "20260608_182655",
+  "case": "perf_1gpu_6shots",
+  "tag": "formal_len16_current_best_r3",
+  "baseline": false,
+  "case_dir": "benchmarks/cases/perf_1gpu_6shots",
+  "input": "input_perf_1gpu_6shots.in",
+  "np": 1,
+  "gpus": "0",
+  "timeout_seconds": 2400,
+  "hashes": {
+    "bin/cuda_3D_FM": "20d79b35e73583781904249556ddb0007c28390044fe09542c03000b0bd5eb41",
+    "benchmarks/cases/perf_1gpu_6shots/input_perf_1gpu_6shots.in": "f53a53ec26393879491cca2166e470268ef175dfeaa8ea614890ee83baac3d9d",
+    "benchmarks/cases/perf_1gpu_6shots/case_manifest.txt": "87c327fc3ee4f5f797106f58471169ad32dfd077b2aaf6a3e32057508af5aea3",
+    "benchmarks/cases/perf_1gpu_6shots/vel_perf_1gpu_6shots_ny384_nx384_nz95.dir": "f7504ad7e4c867bf4c81e5d8c2cbd1d1a0fe36aeb8f75feabe8750d63a97dfa9",
+    "benchmarks/cases/perf_1gpu_6shots/nav_perf_1gpu_6shots_6shots_441rec.nav": "520c1fa1386c00de599a9f4029608d13d5cb0c3742382bfd3c6d0e7c4dc8fed8"
+  },
+  "nvidia_smi_before": "0, NVIDIA GeForce RTX 5090, 481 MiB, 32607 MiB, 0 %\n",
+  "tool_versions": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Jul_16_07:30:01_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.48\nBuild cuda_13.0.r13.0/compiler.36260728_0\nIntel(R) MPI Library for Linux* OS, Version 2021.18.0 Build 20260327 (id: 821f207)\nCopyright 2003-2026, Intel Corporation.\ngcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\n",
+  "returncode": 0,
+  "outputs": [
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_0.dir",
+      "bytes": 2647764,
+      "sha256": "6e1ade89d37655097cb7404652c49bcddba2d510d59546352681ff316a25f0c5"
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_1.dir",
+      "bytes": 2647764,
+      "sha256": "a717532d9f9df8188c1221d84bdc3c6989b13836777d23ab0995acca45badc97"
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_2.dir",
+      "bytes": 2647764,
+      "sha256": "c011bd8d8f84d3bbe54b744979ef968af9a5a57eae8933cbdd87217e79a16e0c"
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_3.dir",
+      "bytes": 2647764,
+      "sha256": "dc8005470205f5d7ee88bfb2c2f906c9d7b7e85b8b858b106c66fa06150fba61"
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_4.dir",
+      "bytes": 2647764,
+      "sha256": "e1c69c2c8846f832aae3d5b5f492dfefd36c92b1ba7f47af144ccf9caa4b27be"
+    },
+    {
+      "file": "d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot_5.dir",
+      "bytes": 2647764,
+      "sha256": "f7f47b0ddc1013b1c54b9b3dba36524315dfc1b6ae671376d459ab578f3ee17d"
+    }
+  ],
+  "nvidia_smi_after": "0, NVIDIA GeForce RTX 5090, 481 MiB, 32607 MiB, 92 %\n"
+}
