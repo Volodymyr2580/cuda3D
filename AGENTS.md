@@ -547,6 +547,36 @@ Phase 4.14 wave-step async streams prototype 已完成并拒绝：
 - 当前下一步：
   - 回到实际减少 global memory work 的 ownership 设计，重点关注 pressure-PML final `p0/cw2` writeback 与 CPML z-state dependency。
 
+Phase 4.15 pressure-PML writeback / CPML state gate 已完成并拒绝 micro CUDA prototype：
+
+- 工具：`tools/pressure_pml_writeback_state_model.py`。
+- 报告：`docs/day_20260608/pressure_pml_writeback_state_model.md`。
+- JSON：`reports/day_20260608/pressure_pml_writeback_state_model.json`。
+- NCU/source anchor：
+  - accepted len16 sampled main：`297.248us`。
+  - len16 packed pressure-PML：`65.771us`，sampled-main share `22.13%`。
+  - total pressure-PML：`138.453us`，sampled-main share `46.58%`。
+  - parsed source samples：`15,712`。
+- source group：
+  - final `p0/p1/cw2` update：`60.78%` len16 source samples。
+  - CPML `mem_dzz` update：`26.82%`。
+  - z-cache shared loads：`1.92%`，已不再主导。
+  - address/control visible lines：`4.31%`。
+- speedup requirement：
+  - 若只靠 packed len16 kernel 达到 `1.05x` sampled-main，需要 packed kernel speedup `1.2742x`。
+  - 若只改 final `p0/p1/cw2` group，需要 local speedup `1.5482x`。
+  - 若只改 CPML `mem_dzz` group，需要 local speedup `5.0614x`。
+  - 若 final + `mem_dzz` 一起改，需要 group speedup `1.3257x`。
+- 决策：
+  - 拒绝 writeback/state micro CUDA prototype。
+  - 不重试 len16 `p0 __ldg`、local `new_mem`、ptxas cache policy、branch-only lower/upper specialization、或 z-cache fill/shared-cache 小修。
+  - 原因：热点是数学必需的二阶时间推进写回和递归 CPML z-state，不是语法或 cache policy 问题；已有同类候选均为噪声级收益。
+- 允许重开条件：
+  - 只有状态表示或时间推进设计证明能真正减少 old-`p0`/`cw2` 或 `mem_dzz` traffic，并且扣除额外 storage/control 后仍有 `>=5%` `perf_1gpu_6shots` repeat speedup ceiling，才允许写 CUDA prototype。
+- 当前下一步：
+  - 若继续底层核心重写，进入 math-level pressure state representation / PML ownership design gate。
+  - 或先做 zmem/direct-fill/len16/current-best 同 session 正式总提速表，固化当前 best。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

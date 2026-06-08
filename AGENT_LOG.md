@@ -4217,3 +4217,45 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 禁止基于本结果写 single-GPU CUDA Graph / launch aggregation。
   - 三 stream pressure residual/len16 fanout 只有在 Nsight Systems 证明有真实 concurrent execution headroom 且新模型证明扣除 contention 后仍有 `>=5%` repeat speedup ceiling 时才允许重开。
   - 下一步回到实际减少 global memory work 的 ownership 设计，重点关注 pressure-PML final `p0/cw2` writeback 与 CPML z-state dependency。
+
+## 2026-06-08 18:17:54 +08:00
+
+- 操作目标：
+  - 根据上一轮 async overlap 拒绝后的下一步，审查 pressure-PML final writeback 与 CPML z-state dependency 是否值得打开新的 CUDA micro prototype。
+  - 将 len16 SourceCounters 热点转成 Amdahl ceiling 与 stop-rule，避免后续重复已证伪的小修路线。
+- 修改文件：
+  - 新增 `tools/pressure_pml_writeback_state_model.py`。
+  - 新增 `docs/day_20260608/pressure_pml_writeback_state_model.md`。
+  - 新增 `reports/day_20260608/pressure_pml_writeback_state_model.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - `git status --short --branch`
+  - `git log --oneline -5`
+  - `python -m py_compile tools\pressure_pml_writeback_state_model.py`
+  - `python tools\pressure_pml_writeback_state_model.py --json-out reports\day_20260608\pressure_pml_writeback_state_model.json --md-out docs\day_20260608\pressure_pml_writeback_state_model.md`
+  - `python -c "import json, pathlib; json.load(open('reports/day_20260608/pressure_pml_writeback_state_model.json', encoding='utf-8')); print('json ok')"`
+- 测试结果：
+  - 模型脚本 Python 编译通过。
+  - 生成 JSON 可被标准 `json.load` 读取。
+  - 本轮未修改 CUDA 源码，未运行远端构建或 benchmark。
+- 输出/哈希/误差摘要：
+  - accepted len16 sampled main：`297.248us`。
+  - len16 packed pressure-PML：`65.771us`，sampled-main share `22.13%`。
+  - total pressure-PML：`138.453us`，sampled-main share `46.58%`。
+  - len16 source parsed samples：`15,712`。
+  - final `p0/p1/cw2` update：`60.78%` len16 source samples。
+  - CPML `mem_dzz` update：`26.82%`。
+  - z-cache shared loads：`1.92%`。
+  - packed len16 kernel speedup required for `1.05x` sampled-main：`1.2742x`。
+  - final `p0/p1/cw2` group speedup required if alone：`1.5482x`。
+  - CPML `mem_dzz` group speedup required if alone：`5.0614x`。
+  - final + `mem_dzz` group speedup required：`1.3257x`。
+- 风险与下一步：
+  - 决策：拒绝 pressure-PML writeback/state micro CUDA prototype。
+  - 禁止重试 len16 `p0 __ldg`、old-p0 read syntax、explicit local `new_mem`、ptxas cache-policy、branch-only lower/upper specialization、或 accepted len16 z-cache fill/shared-cache 微调。
+  - 允许重开条件：必须是状态表示或时间推进设计，证明 old-`p0`/`cw2` 或 `mem_dzz` traffic 被真正移除，并且扣除额外 storage/control 后仍有 `>=5%` `perf_1gpu_6shots` repeat speedup ceiling。
+  - 下一步建议：
+    - 若继续底层重写，做 math-level pressure state representation / PML ownership design gate。
+    - 或先同 session 重跑 zmem/direct-fill/len16/current-best，生成正式总提速表并固化当前 best。

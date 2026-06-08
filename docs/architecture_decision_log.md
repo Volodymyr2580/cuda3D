@@ -1367,3 +1367,79 @@ docs/day_20260608/wavestep_stream_overlap_model.md
 docs/day_20260608/wavestep_async_streams_prototype.md
 reports/day_20260608/wavestep_async_perf6_repeat_20260608_175407/summary.md
 ```
+
+## 2026-06-08 - Reject Pressure-PML Writeback/State Micro Prototype
+
+Decision:
+
+```text
+Reject pressure-PML final writeback / CPML z-state micro CUDA prototypes after
+the accepted len16 half-warp path.  Do not retry syntax/cache-policy tweaks on
+the same hot lines.
+```
+
+Evidence:
+
+```text
+accepted len16 sampled main                         297.248us
+len16 packed pressure-PML                            65.771us
+len16 packed sampled-main share                       22.13%
+total pressure-PML sampled-main share                 46.58%
+
+parsed len16 source samples                           15,712
+final p0/p1/cw2 update share                           60.78%
+CPML mem_dzz update share                              26.82%
+z-cache shared-load share                               1.92%
+address/control visible-line share                      4.31%
+
+packed-kernel speedup required for 1.05x sampled-main   1.2742x
+final p0/p1/cw2 group speedup required if alone         1.5482x
+CPML mem_dzz group speedup required if alone            5.0614x
+final+mem_dzz group speedup required                    1.3257x
+```
+
+Reason:
+
+```text
+The source-hot lines are not a clear code-generation miss.  They are the
+mathematically required second-order pressure update and the recursive CPML
+z-state update.  Earlier concrete variants already failed:
+
+p0 __ldg read syntax                 1.000054x WP vs direct-fill
+local new_mem CPML accumulation      1.000647x WP vs direct-fill
+ptxas -dlcm=ca                       0.999263x WP vs direct-fill
+ptxas -dlcm=cg                       0.859344x WP vs direct-fill
+
+A >=5% sampled-main gain from this area requires changing what traffic exists,
+not changing how the same traffic is spelled.
+```
+
+Boundary:
+
+```text
+Do not retry len16 p0 __ldg, old-p0 read syntax, explicit local new_mem,
+ptxas cache-policy, branch-only lower/upper specialization, or accepted
+len16 z-cache fill/shared-cache micro-tuning without new profiler evidence and
+a modeled >=5% perf_1gpu_6shots repeat ceiling.
+
+Reopen only for a state-representation or time-integration design that proves
+old-p0/cw2 or mem_dzz traffic is actually removed, not merely moved, and
+accounts for extra storage/control costs.
+```
+
+Next allowed routes:
+
+```text
+1. Math-level pressure state representation design with equivalence proof.
+2. PML vx/vy round-trip ownership redesign that reduces global traffic without
+   doubling component work.
+3. Formal same-session zmem/direct-fill/len16/current-best benchmark table
+   before a larger phase switch.
+```
+
+Report:
+
+```text
+docs/day_20260608/pressure_pml_writeback_state_model.md
+reports/day_20260608/pressure_pml_writeback_state_model.json
+```
