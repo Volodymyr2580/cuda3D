@@ -1,0 +1,54 @@
+{
+  "run_log": "reports/day_20260608/cal_loop_timer_probe_20260608_212019/run.log",
+  "elapsed_s": 2.99,
+  "gradient_s": 2.164033,
+  "wp_s": 2.044622,
+  "read_time_s": 0.000294,
+  "timers": {
+    "main": {
+      "input_scan": 2.6e-05,
+      "gpu_setup": 0.180329,
+      "input_bcast": 1e-06,
+      "coeff_init": 1.2e-05,
+      "static_alloc": 0.000194,
+      "root_model_read": 0.018371,
+      "model_bcast": 1e-06,
+      "acqui_read": 0.000743,
+      "acqui_bcast": 0.0,
+      "lint": 4e-05,
+      "shot_list": 0.022557,
+      "total_pre_gradient": 0.222276,
+      "gradient_call_total": 2.191751,
+      "post_gradient_barrier_and_free": 0.001556,
+      "total_after_mpi_to_pre_finalize": 2.415582
+    },
+    "cal": {
+      "pre_gradient_init": 0.023527
+    },
+    "cal_loop": {
+      "shots": 6.0,
+      "obs_setup": 0.002679,
+      "domain_setup": 1e-05,
+      "wavefield_prep": 0.049816,
+      "fd_call": 2.089376,
+      "output_write": 0.004491,
+      "cleanup": 0.002593,
+      "post_loop_sync": 4e-06,
+      "copy_reduce": 0.015053
+    },
+    "process": {
+      "rank": 0.0,
+      "mpi_init": 0.253563,
+      "main_after_mpi_to_pre_finalize": 2.41832,
+      "mpi_finalize": 0.000242,
+      "process_total": 2.672125
+    }
+  },
+  "measured_pre_gradient_s": 0.245803,
+  "elapsed_minus_gradient_s": 0.8259670000000003,
+  "unaccounted_elapsed_minus_gradient_s": 0.5801640000000003,
+  "process_total_s": 2.672125,
+  "outside_process_s": 0.31787500000000035,
+  "known_non_gradient_s": 0.8190390000000003,
+  "residual_after_known_non_gradient_s": 0.006928000000000045
+}

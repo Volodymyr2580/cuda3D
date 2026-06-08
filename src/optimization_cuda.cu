@@ -29,6 +29,18 @@ void cal_fwi_grad_3d(float *obj_xc, float *obj_l,
   float **h_obs, **d_est, **d_1, **d_2, *h_tmut, *h_bmut, **h_wb_est, maxobs, maxest;
   float dis, decay;
   double t1, t2, t3, t4, t5, t6;
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  double timer_shot_start, timer_after_obs, timer_after_domain;
+  double timer_before_fd, timer_after_fd, timer_after_write, timer_after_free;
+  double timer_after_loop, timer_after_sync, timer_after_copy_reduce;
+  double timer_obs_setup = 0.0;
+  double timer_domain_setup = 0.0;
+  double timer_wavefield_prep = 0.0;
+  double timer_fd_call = 0.0;
+  double timer_output_write = 0.0;
+  double timer_shot_cleanup = 0.0;
+  int timer_valid_shots = 0;
+#endif
   char h_obs_file[800], tmut_file[800], bmut_file[800], tmp[800], wb_file[800];
   float a2, b2, c, sum, bscl=0.9;
   int isc, myisc;
@@ -87,6 +99,10 @@ void cal_fwi_grad_3d(float *obj_xc, float *obj_l,
     //    snum=mytid*myns*nds+is*nds+iis;
     snum=sht_num[is*ntids+mytid]; // get the shot number from the list
     if(snum >=0 && snum < ns){
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+      if(mytid==root)
+	timer_shot_start = MPI_Wtime();
+#endif
       printf("shot =%d \n", snum);
       myisc++;
       if(mytid==root)
@@ -152,6 +168,10 @@ void cal_fwi_grad_3d(float *obj_xc, float *obj_l,
     
       d_est=alloc2float(nr, nt);  // note nr fast direction, nt slow direction
       memset(&d_est[0][0], 0., bytet);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+      if(mytid==root)
+	timer_after_obs = MPI_Wtime();
+#endif
 
       //-------- find modeling domain  probably need work for different acqusition system---------
       sy=src0_indx[snum][0];
@@ -186,6 +206,10 @@ void cal_fwi_grad_3d(float *obj_xc, float *obj_l,
       nx_new=xr-xl+1;       //modeling domain size
       nypad=ny_new+2*(npml+radius);  // padded modeling domain
       nxpad=nx_new+2*(npml+radius);  // padded modeling domain
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+      if(mytid==root)
+	timer_after_domain = MPI_Wtime();
+#endif
       //      printf("ID=%d #shot =%d yl=%d yr=%d xl=%d xr=%d nynew=%d, nxnew=%d\n", mytid, snum, yl, yr, xl, xr, ny_new, nx_new);
       // end of domain truncation
       // end computing domain truncation
@@ -200,6 +224,10 @@ void cal_fwi_grad_3d(float *obj_xc, float *obj_l,
 	  for(iz=0; iz<nz; iz++)
 	    vc[iy][ix][iz]=vin[yl+iy][xl+ix][iz]*vin[yl+iy][xl+ix][iz];//*dt2; // need check
       vpad_3d(vc, vc_pad, ny_new, nx_new, nz, npml+radius); // need new check 
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+      if(mytid==root)
+	timer_before_fd = MPI_Wtime();
+#endif
       //      writesu(vc[10], nx_new, nz, dx, dz,"v_y_slice.su");
       //      writesu(vc_pad[10], nxpad, nzpad, dx, dz, "test_y_v_pad.su");
 
@@ -223,8 +251,16 @@ void cal_fwi_grad_3d(float *obj_xc, float *obj_l,
 		ay, by, ax, bx, az, bz,
 		ay_h, by_h, ax_h, bx_h, az_h, bz_h,
 		mytid, order);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+      if(mytid==root)
+	timer_after_fd = MPI_Wtime();
+#endif
 	sprintf(tmp,"%s_%d.dir","./d_obs/d_obs_salt_gpu_cpu_checked_ricker1_8hz_3d_ny_384_nx_384_nz95_nbell_1_bscl_0.9_moffy_9.5625_moffx_9.5625_h_obs_nt_1501_dt_2ms_shot", snum);
 	writedir(h_obs, nt, nr, tmp);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+      if(mytid==root)
+	timer_after_write = MPI_Wtime();
+#endif
 	// need computing gradient, to be implemented
       
 
@@ -238,11 +274,31 @@ void cal_fwi_grad_3d(float *obj_xc, float *obj_l,
       //      free2float(d_1);
       //      free2float(d_2);
       free2float(h_wb_est);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+      if(mytid==root){
+	timer_after_free = MPI_Wtime();
+	timer_obs_setup += timer_after_obs - timer_shot_start;
+	timer_domain_setup += timer_after_domain - timer_after_obs;
+	timer_wavefield_prep += timer_before_fd - timer_after_domain;
+	timer_fd_call += timer_after_fd - timer_before_fd;
+	timer_output_write += timer_after_write - timer_after_fd;
+	timer_shot_cleanup += timer_after_free - timer_after_write;
+	timer_valid_shots++;
+      }
+#endif
     }    // end positive s_array
     if (mytid==root)
       t2=MPI_Wtime();
   }// end all shots
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  if(mytid==root)
+    timer_after_loop = MPI_Wtime();
+#endif
   cudaDeviceSynchronize();
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  if(mytid==root)
+    timer_after_sync = MPI_Wtime();
+#endif
 
   // ------------------copy device gradint to host-------------------
   h_grad=alloc1float(nxyz);
@@ -256,11 +312,27 @@ void cal_fwi_grad_3d(float *obj_xc, float *obj_l,
   MPI_Reduce(&myobj_xc, obj_xc, 1, MPI_FLOAT, MPI_SUM, root, comm);
   MPI_Reduce(&myisc, &isc,1,MPI_INT,MPI_SUM,root,comm);
   MPI_Reduce(&h_grad[0],&grad[0],nxyz,MPI_FLOAT,MPI_SUM,root,comm);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  if(mytid==root)
+    timer_after_copy_reduce = MPI_Wtime();
+#endif
 
 
   if(mytid==root){
     *obj_xc=*obj_xc/isc;
     t4=MPI_Wtime();
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+    printf("HOST_SETUP_TIMER cal_loop shots=%d obs_setup=%lf domain_setup=%lf wavefield_prep=%lf fd_call=%lf output_write=%lf cleanup=%lf post_loop_sync=%lf copy_reduce=%lf\n",
+	   timer_valid_shots,
+	   timer_obs_setup,
+	   timer_domain_setup,
+	   timer_wavefield_prep,
+	   timer_fd_call,
+	   timer_output_write,
+	   timer_shot_cleanup,
+	   timer_after_sync - timer_after_loop,
+	   timer_after_copy_reduce - timer_after_sync);
+#endif
     printf("Gradient TIME all= %lfs, WP computing time = %lfs, read time =%lfs \n",t4-t3, (t2-t1)*myns, (t6-t5)*myns);
   }
   MPI_Bcast(obj_xc, 1, MPI_FLOAT, root, comm);

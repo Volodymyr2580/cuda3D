@@ -96,6 +96,7 @@ def parse_log(path: Path) -> dict[str, Any]:
 def write_markdown(summary: dict[str, Any], path: Path) -> None:
     main = summary["timers"].get("main", {})
     cal = summary["timers"].get("cal", {})
+    cal_loop = summary["timers"].get("cal_loop", {})
     process = summary["timers"].get("process", {})
     elapsed = summary["elapsed_s"]
     gradient = summary["gradient_s"]
@@ -155,6 +156,27 @@ def write_markdown(summary: dict[str, Any], path: Path) -> None:
     for key in ["pre_gradient_init"]:
         if key in cal:
             lines.append(f"| `{key}` | `{cal[key]:.6f}` |")
+    if cal_loop:
+        lines += [
+            "",
+            "## Cal Loop Timers",
+            "",
+            "| stage | seconds |",
+            "| --- | ---: |",
+        ]
+        for key in [
+            "shots",
+            "obs_setup",
+            "domain_setup",
+            "wavefield_prep",
+            "fd_call",
+            "output_write",
+            "cleanup",
+            "post_loop_sync",
+            "copy_reduce",
+        ]:
+            if key in cal_loop:
+                lines.append(f"| `{key}` | `{cal_loop[key]:.6f}` |")
     lines += [
         "",
         "## Accounting",

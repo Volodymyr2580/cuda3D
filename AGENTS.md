@@ -903,6 +903,40 @@ Phase 4.24 process-level timer probe 已完成：
   - 停止 host/setup wall-clock 小修。
   - 若继续提速，应回到 compute metric：`Gradient TIME all` / WP，或等待 true multi-GPU 平台做 batching。
 
+Phase 4.25 cal-loop internal timer probe 已完成：
+
+- 扩展 `CUDA3D_HOST_SETUP_TIMERS`：
+  - `src/optimization_cuda.cu` 新增 `cal_loop` timers。
+  - 解析器 `tools/host_setup_timer_summary.py` 新增 `Cal Loop Timers` 表。
+- 报告：`reports/day_20260608/cal_loop_timer_probe_20260608_212019/summary.md`。
+- JSON：`reports/day_20260608/cal_loop_timer_probe_20260608_212019/summary.json`。
+- 远端 worktree：`/work/wenzhe/cuda3D/.codex_worktrees/cal_loop_timers_20260608_212019`。
+- 正确性：
+  - cal-loop timer binary vs formal len16 current-best r1 输出对比 pass。
+  - 6 个输出 max rel L2 `0`，max abs `0`。
+  - default-off current-best build 通过。
+- timer 结果：
+  - elapsed：`2.990s`。
+  - `Gradient TIME all`：`2.164033s`。
+  - WP：`2.044622s`。
+  - cal `pre_gradient_init`：`0.023527s`。
+  - `cal_loop` across 6 shots：
+    - `obs_setup`：`0.002679s`。
+    - `domain_setup`：`0.000010s`。
+    - `wavefield_prep`：`0.049816s`。
+    - `fd_call`：`2.089376s`。
+    - `output_write`：`0.004491s`。
+    - `cleanup`：`0.002593s`。
+    - `copy_reduce`：`0.015053s`。
+- 决策：
+  - 不写 host-side `vc/vc_pad` wavefield prep optimization prototype。
+  - 不写 output write / cleanup / copy-reduce micro prototype。
+  - 原因：最大非-FD项 `wavefield_prep` 即使理想消除，也只有约 `2.4%` Gradient speedup ceiling；不足 `>=5%` prototype gate。
+  - `fd_call` 仍占 Gradient 主体，后续 compute route 仍应看 CUDA kernels 本身。
+- 当前下一步：
+  - 停止 host/pre-FD loop 小修。
+  - 计算核心提速只能继续从 `fd_3d_f` 内部 kernel/dataflow 入手，或等待 true multi-GPU batching 平台。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

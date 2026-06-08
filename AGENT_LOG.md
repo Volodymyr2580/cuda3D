@@ -4807,3 +4807,68 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 这些属于 benchmark/deployment/startup policy 或 long-running service/multi-shot batching 议题，不能作为 CUDA kernel speedup。
   - 后续 CUDA-core 提速继续使用 `Gradient TIME all` 与 WP 指标。
   - wall-clock route 只在 true multi-GPU/multi-job batching 或明确 deployment benchmark 下重开。
+
+## 2026-06-08 21:23:24 +08:00
+
+- 操作目标：
+  - 继续 Phase 4.24 后的 compute-metric route，分解 `Gradient TIME all - WP` 的 cal-loop 内部非 FD 开销。
+  - 判断 host-side per-shot setup、`vc/vc_pad` preparation、output write、cleanup、copy/reduce 是否值得写 optimization prototype。
+- 修改文件：
+  - 修改 `src/optimization_cuda.cu`：在 `CUDA3D_HOST_SETUP_TIMERS` 下新增 `cal_loop` timers。
+  - 修改 `tools/host_setup_timer_summary.py`：新增 `Cal Loop Timers` Markdown 输出。
+  - 新增 `reports/day_20260608/cal_loop_timer_probe_20260608_212019/run.log`。
+  - 新增 `reports/day_20260608/cal_loop_timer_probe_20260608_212019/manifest.json`。
+  - 新增 `reports/day_20260608/cal_loop_timer_probe_20260608_212019/run.stdout`。
+  - 新增 `reports/day_20260608/cal_loop_timer_probe_20260608_212019/run_dir.txt`。
+  - 新增 `reports/day_20260608/cal_loop_timer_probe_20260608_212019/binary.sha256`。
+  - 新增 `reports/day_20260608/cal_loop_timer_probe_20260608_212019/build.log`。
+  - 新增 `reports/day_20260608/cal_loop_timer_probe_20260608_212019/summary.md`。
+  - 新增 `reports/day_20260608/cal_loop_timer_probe_20260608_212019/summary.json`。
+  - 新增 `reports/day_20260608/cal_loop_timer_probe_20260608_212019/compare_vs_formal_len16_r1/comparison.md`。
+  - 新增 `reports/day_20260608/cal_loop_timer_probe_20260608_212019/compare_vs_formal_len16_r1/comparison.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地：
+    - `git status --short --branch`
+    - `git log --oneline -5`
+    - `python -m py_compile tools\host_setup_timer_summary.py`
+    - `git diff --check`
+  - 远端：
+    - `git -c http.proxy= -c https.proxy= fetch origin exp/day-20260608-cpml-compact-temporal`
+    - `git worktree add --detach /work/wenzhe/cuda3D/.codex_worktrees/cal_loop_timers_20260608_212019 FETCH_HEAD`
+    - `tools/remote_put.py` 上传 `src/optimization_cuda.cu` 与 `tools/host_setup_timer_summary.py`。
+    - `make -B -f makefile.rtx5090 test NVFLAGS="<current-best flags> -DCUDA3D_HOST_SETUP_TIMERS"`
+    - `python3 tools/run_benchmark.py --case perf_1gpu_6shots --tag cal_loop_timers --np 1 --gpus 0 --timeout 2400`
+    - `python3 tools/compare_outputs.py --baseline <formal len16 r1>/outputs --candidate <cal-loop timer run>/outputs --out <report>/compare_vs_formal_len16_r1`
+    - `python3 tools/host_setup_timer_summary.py --run-log <report>/run.log --json-out <report>/summary.json --md-out <report>/summary.md`
+    - `make -B -f makefile.rtx5090 test NVFLAGS="<current-best flags>"` 验证 default-off build。
+  - 本地拉取：
+    - `tools/remote_get.py` 拉取 cal-loop timer run log、manifest、summary、comparison、binary sha 和 build log。
+- 测试结果：
+  - cal-loop timer binary 构建通过。
+  - cal-loop timer run returncode `0`，输出 `6` 个文件。
+  - cal-loop timer binary vs formal len16 current-best r1 输出对比 pass。
+  - 6 个输出 max rel L2 `0`，max abs `0`。
+  - default-off current-best build 通过，binary sha256 `48d4f4421b48fe4e3e8f2ba07c292de3178727dddb0181f1bda2e238aca50d1c`。
+- 输出/哈希/误差摘要：
+  - cal-loop timer binary sha256：`24e4dc2a31a05d76ef789b34a28600ffbd03e8e611b1f604caa353a47ea746be`。
+  - elapsed：`2.990s`。
+  - `Gradient TIME all`：`2.164033s`。
+  - WP：`2.044622s`。
+  - cal `pre_gradient_init`：`0.023527s`。
+  - `cal_loop` across 6 shots：
+    - `obs_setup`：`0.002679s`。
+    - `domain_setup`：`0.000010s`。
+    - `wavefield_prep`：`0.049816s`。
+    - `fd_call`：`2.089376s`。
+    - `output_write`：`0.004491s`。
+    - `cleanup`：`0.002593s`。
+    - `post_loop_sync`：`0.000004s`。
+    - `copy_reduce`：`0.015053s`。
+- 风险与下一步：
+  - 决策：拒绝 host-side cal-loop micro optimization prototypes。
+  - 不写 `vc/vc_pad` preparation optimization、output write / cleanup / copy-reduce micro prototype。
+  - 最大非-FD cal-loop 项 `wavefield_prep=0.049816s`，即使理想消除也只有约 `2.4%` Gradient speedup ceiling，低于 `>=5%` prototype gate。
+  - 后续 exact compute 优化应聚焦 `fd_3d_f` kernel/dataflow，或等待 true multi-GPU batching 平台。

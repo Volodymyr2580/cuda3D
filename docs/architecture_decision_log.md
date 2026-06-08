@@ -2189,3 +2189,71 @@ Report:
 reports/day_20260608/process_timer_probe_20260608_205311/summary.md
 reports/day_20260608/process_timer_probe_20260608_205311/summary.json
 ```
+
+## 2026-06-08 - Reject Cal-Loop Host Micro Optimizations
+
+Decision:
+
+```text
+Do not implement host-side cal-loop micro prototypes for vc/vc_pad preparation,
+output writing, cleanup, or copy/reduce under the current perf_1gpu_6shots gate.
+```
+
+Evidence:
+
+```text
+timer binary flags:
+  current-best flags + -DCUDA3D_HOST_SETUP_TIMERS
+
+correctness:
+  cal-loop timer binary vs formal len16 current-best r1
+  pass, max rel L2 0, max abs 0
+
+program timing:
+  elapsed                         2.990s
+  Gradient TIME all               2.164033s
+  WP computing time               2.044622s
+
+cal pre_gradient_init             0.023527s
+
+cal_loop across 6 shots:
+  obs_setup                       0.002679s
+  domain_setup                    0.000010s
+  wavefield_prep                  0.049816s
+  fd_call                         2.089376s
+  output_write                    0.004491s
+  cleanup                         0.002593s
+  copy_reduce                     0.015053s
+```
+
+Reason:
+
+```text
+The largest non-FD cal-loop item is wavefield_prep at about 0.049816s.  Even an
+unrealistic perfect removal gives only about 2.4% Gradient speedup, below the
+>=5% prototype gate.  Output write, cleanup, obs setup, and copy/reduce are even
+smaller.
+```
+
+Boundary:
+
+```text
+Do not write host-side vc/vc_pad preparation micro prototypes.
+Do not write output write / cleanup / copy-reduce micro prototypes.
+Do not treat removing diagnostic or output work as CUDA-core speedup.
+```
+
+Next:
+
+```text
+If exact compute optimization continues, focus on fd_3d_f kernel/dataflow
+instead of host/pre-FD loop overhead.  Otherwise wait for true multi-GPU
+batching validation on a platform with >=2 GPUs.
+```
+
+Report:
+
+```text
+reports/day_20260608/cal_loop_timer_probe_20260608_212019/summary.md
+reports/day_20260608/cal_loop_timer_probe_20260608_212019/summary.json
+```
