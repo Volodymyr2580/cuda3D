@@ -487,6 +487,32 @@ Phase 4.12 len16 source-level NCU profile 已完成：
   - 转向 v-PML memory layout / coalescing design。
   - 或提出更大粒度 pressure-PML memory-ownership design，但必须先证明 `>=5%` repeat speedup ceiling。
 
+Phase 4.13 v-PML coalescing/layout gate 已完成并拒绝 CUDA prototype：
+
+- 工具：`tools/v_pml_coalescing_layout_budget.py`。
+- 报告：`docs/day_20260608/v_pml_coalescing_layout_budget.md`。
+- JSON：`reports/day_20260608/v_pml_coalescing_layout_budget.json`。
+- NCU anchor：
+  - accepted len16 sampled main：`297.248us`。
+  - `cuda_fd3d_v_pml_tile_ns`：`65.248us`，sampled-main share `21.95%`。
+  - 若只优化 v-PML，要让 sampled-main 达到 `>=5%`，v kernel 需要约 `1.2770x` speedup。
+- 当前 `32x4x2` velocity-PML 映射：
+  - `threadIdx.x` 是 z 方向。
+  - 一个 warp 对应固定 x/y 的连续 32 个 z-lane。
+  - 对 `p1`、`mem_dx`、`mem_dy` 主路径已经是最有利的 coalescing 形态。
+- reasoned v-only tile shape gate：
+  - `current_32x4x2` launched lanes ratio：`1.0000`。
+  - `z8_x8_y4` launched lanes ratio：`0.8830`，但 warp 被拆成 `4` 个 z segment。
+  - `z8_x8_y4` optimistic v-kernel ceiling：`1.1325x`。
+  - `z8_x8_y4` optimistic sampled-main ceiling：`1.0264x`，低于 `>=5%` prototype gate。
+- 决策：
+  - 不写 v-only tile-layout CUDA prototype。
+  - 不做随机 `PmlTileBlockSize` sweep。
+  - 不重开 current-geometry vx/vy component split。
+  - 只有新模型证明扣除 tile-list/control overhead 后仍有 `>=5%` `perf_1gpu_6shots` repeat speedup ceiling，才允许重开 v-PML tile/layout 路线。
+- 当前下一步：
+  - 从更大粒度的 memory ownership / wave-step scheduling 入手，重点是减少 `vx/vy` global round trip 或 pressure final writeback/CPML state dependency。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

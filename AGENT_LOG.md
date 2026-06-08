@@ -4055,3 +4055,71 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 原因：direct-fill 路线已经拒绝过 `p0 __ldg` 与 `new_mem`，当前 source profile 显示瓶颈仍是 final pressure writeback 与 CPML z-state dependency，不是简单表达式写法。
   - branch efficiency 虽低，但热点行不是 branch 本身；branch-only specialization 没有 `>=5%` speedup ceiling 且会增加 tile-list/launch overhead。
   - 下一步转向 v-PML memory layout/coalescing design，或提出更大粒度 pressure-PML memory-ownership design，但必须先证明 `>=5%` repeat speedup ceiling。
+
+## 2026-06-08 17:23:20 +08:00 - V-PML coalescing/layout gate rejects CUDA prototype
+
+- 操作目标：
+  - 按照 Phase 4.12 的下一步，对 v-PML memory layout / coalescing 方向做 gate。
+  - 判断是否值得写 v-only tile-layout CUDA prototype，还是继续禁止随机 `PmlTileBlockSize` sweep。
+- 修改文件：
+  - 新增工具：`tools/v_pml_coalescing_layout_budget.py`。
+  - 新增报告：`docs/day_20260608/v_pml_coalescing_layout_budget.md`。
+  - 新增 JSON：`reports/day_20260608/v_pml_coalescing_layout_budget.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地检查状态：`git status --short --branch`。
+  - 读取既有证据：
+    - `docs/day_20260608/v_pml_source_profile_gate.md`
+    - `reports/day_20260608/directfill_v_pml_source_summary.md/json`
+    - `reports/day_20260608/len16_vs_directfill_ncu_20260608_1600/summary.json`
+    - `src/single_solver.cu` 中 `cuda_fd3d_v_pml_tile_ns`
+    - `src/rem_fd.cu` 中 `build_pml_tile_list`
+  - 初版逐 warp sector 精算模型超时：
+    - `python tools/v_pml_coalescing_layout_budget.py --json-out reports/day_20260608/v_pml_coalescing_layout_budget.json --md-out docs/day_20260608/v_pml_coalescing_layout_budget.md`
+    - 该进程被明确停止：`Stop-Process -Id 58816`
+  - 将模型改为快速 gate：
+    - 精确统计 tile/lane/component work。
+    - 用 warp z-segment split factor 建模 coalescing 下界，而不是伪装成硬件 sector 计数。
+  - 重新执行：
+    - `python -m py_compile tools/v_pml_coalescing_layout_budget.py`
+    - `python tools/v_pml_coalescing_layout_budget.py --json-out reports/day_20260608/v_pml_coalescing_layout_budget.json --md-out docs/day_20260608/v_pml_coalescing_layout_budget.md`
+  - 远端只读状态检查：
+    - Windows Python 直接运行 `tools/remote_exec.py` 失败：缺少本地 `paramiko` 模块。
+    - 改用 WSL Python 与临时环境变量密码重试成功。
+    - 命令：
+      - `cd /work/wenzhe/cuda3D`
+      - `git status --short --branch`
+      - `git log --oneline -3`
+- 测试结果：
+  - `py_compile` 通过。
+  - v-PML coalescing/layout budget 生成成功。
+  - 本轮没有修改 CUDA 求解器源码，没有运行 correctness/perf。
+  - 远端状态检查成功，但未修改服务器文件。
+- 输出/哈希/误差摘要：
+  - NCU anchor 使用 accepted len16 summary：
+    - sampled main：`297.248us`。
+    - `cuda_fd3d_v_pml_tile_ns`：`65.248us`。
+    - v-PML sampled-main share：`21.95%`。
+    - 若只优化 v-PML，要达到 `>=5%` sampled-main gain，v kernel 需要约 `1.2770x` speedup。
+  - 当前 `32x4x2` 映射：
+    - `threadIdx.x` 对应 z。
+    - 一个 warp 是固定 x/y 的连续 32 个 z-lane。
+    - 对 `p1`、`mem_dx`、`mem_dy` 主路径已经是有利 coalescing 形态。
+  - best reasoned shape：`z8_x8_y4`。
+    - launched lanes ratio vs current：`0.8830`。
+    - warp z segments：`4`。
+    - optimistic v-kernel speedup ceiling：`1.1325x`。
+    - optimistic sampled-main ceiling：`1.0264x`。
+  - 远端 `/work/wenzhe/cuda3D` 当前状态：
+    - branch：`exp/wavestep-v2-shared-vp-night`。
+    - 工作树有既有修改和未跟踪目录，包括 `AGENTS.md`、`AGENT_LOG.md`、`docs/day_20260608/`、`reports/day_20260608/`、`.codex_worktrees/`、`src/*.cu` 等。
+    - 本轮未在远端执行 pull、reset、覆盖或文件写入。
+- 风险与下一步：
+  - 决策：拒绝 v-only tile-layout CUDA prototype。
+  - 决策：继续禁止随机 `PmlTileBlockSize` sweep。
+  - 决策：继续禁止 current-geometry vx/vy component split。
+  - 原因：最佳 reasoned shape 的 optimistic sampled-main ceiling 只有 `2.64%`，低于 `>=5%` gate，而且还没计入 separate velocity tile-list plumbing、control overhead 和 pressure-path compatibility 成本。
+  - 远端根目录当前不干净，不适合直接同步覆盖；后续若要服务器复现，应使用干净 worktree 或先整理远端未提交状态。
+  - 下一步应转向更大粒度 memory ownership / wave-step scheduling 设计，重点是减少 `vx/vy` global round trip，或减少 pressure final writeback / CPML state dependency。

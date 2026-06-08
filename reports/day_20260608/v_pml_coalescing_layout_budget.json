@@ -1,0 +1,1319 @@
+{
+  "case": {
+    "case_dir": "benchmarks/cases/perf_1gpu_6shots",
+    "core_pml_margin": 4,
+    "npml": 12,
+    "shape_count": 9
+  },
+  "gate": {
+    "best_optimistic_sampled_main_speedup_ceiling": 1.026366393815676,
+    "best_optimistic_v_kernel_speedup_ceiling": 1.1325422921134143,
+    "best_shape": "z8_x8_y4",
+    "decision": "reject_tile_layout_cuda_prototype",
+    "next_allowed": [
+      "profile current-best v_pml source hotlines if source-level evidence is stale",
+      "design a memory-ownership change that reduces global vx/vy round trip without doubling component work",
+      "revisit v-PML only if a new model shows >=5% perf_1gpu_6shots repeat ceiling after tile-list overhead"
+    ],
+    "prohibited": [
+      "random PmlTileBlockSize sweep",
+      "current-geometry vx/vy component split",
+      "v-only tile-layout CUDA prototype below the 5% gate"
+    ],
+    "reason": "The current 32x4x2 layout already maps each warp to one contiguous z-line segment. The best reasoned v-only shape does not reach the >=5% sampled-main ceiling, and the real implementation would also need separate velocity tile-list plumbing plus pressure-path compatibility.",
+    "required_v_kernel_speedup_for_5pct_sampled_main": 1.2770354906054284
+  },
+  "profile_anchor": {
+    "p_core_us": 93.54666666666667,
+    "p_pml_us": 138.45333333333335,
+    "profile_label": "len16",
+    "sampled_main_us": 297.248,
+    "v_pml_sampled_main_share": 0.21950694369684576,
+    "v_pml_us": 65.248
+  },
+  "shapes": {
+    "current_32x4x2": {
+      "derived": {
+        "active_lane_efficiency": 0.7370349395575266,
+        "avg_active_lanes_per_component_warp": 31.826639504229533,
+        "component_lane_efficiency": 1.3080259512904773,
+        "p1_sector_excess_over_active_contiguous": 0.0,
+        "p1_sector_unit_note": "sector units are component_lanes weighted by warp z-segment split factor"
+      },
+      "shots": [
+        {
+          "active_lanes": 3622320,
+          "component_lanes": 6434208,
+          "component_warp_active_lanes": 6434208,
+          "component_warps": 202108,
+          "in_domain_lanes": 4294400,
+          "launched_lanes": 4812800,
+          "p1_component_ideal_sector_units": 6434208,
+          "p1_component_sector_units": 6434208.0,
+          "shot": 0,
+          "tiles": 18800,
+          "vx_active_lanes": 3217104,
+          "vy_active_lanes": 3217104,
+          "warps": 150400
+        },
+        {
+          "active_lanes": 3934320,
+          "component_lanes": 6972633,
+          "component_warp_active_lanes": 6972633,
+          "component_warps": 219092,
+          "in_domain_lanes": 4701200,
+          "launched_lanes": 5365760,
+          "p1_component_ideal_sector_units": 6972633,
+          "p1_component_sector_units": 6972633.0,
+          "shot": 1,
+          "tiles": 20960,
+          "vx_active_lanes": 3478704,
+          "vy_active_lanes": 3493929,
+          "warps": 167680
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 202886,
+          "in_domain_lanes": 4322960,
+          "launched_lanes": 4935680,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 6455745.0,
+          "shot": 2,
+          "tiles": 19280,
+          "vx_active_lanes": 3227568,
+          "vy_active_lanes": 3228177,
+          "warps": 154240
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 202784,
+          "in_domain_lanes": 4322960,
+          "launched_lanes": 4874240,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 6455745.0,
+          "shot": 3,
+          "tiles": 19040,
+          "vx_active_lanes": 3228177,
+          "vy_active_lanes": 3227568,
+          "warps": 152320
+        },
+        {
+          "active_lanes": 3947775,
+          "component_lanes": 6995770,
+          "component_warp_active_lanes": 6995770,
+          "component_warps": 219820,
+          "in_domain_lanes": 4732735,
+          "launched_lanes": 5434368,
+          "p1_component_ideal_sector_units": 6995770,
+          "p1_component_sector_units": 6995770.0,
+          "shot": 4,
+          "tiles": 21228,
+          "vx_active_lanes": 3490577,
+          "vy_active_lanes": 3505193,
+          "warps": 169824
+        },
+        {
+          "active_lanes": 3647319,
+          "component_lanes": 6477346,
+          "component_warp_active_lanes": 6477346,
+          "component_warps": 203566,
+          "in_domain_lanes": 4351639,
+          "launched_lanes": 4998144,
+          "p1_component_ideal_sector_units": 6477346,
+          "p1_component_sector_units": 6477346.0,
+          "shot": 5,
+          "tiles": 19524,
+          "vx_active_lanes": 3238673,
+          "vy_active_lanes": 3238673,
+          "warps": 156192
+        }
+      ],
+      "static_warp_shape": {
+        "avg_z_segments_per_warp": 1.0,
+        "max_z_segments_per_warp": 1,
+        "warps_per_block": 8
+      },
+      "tile_block_zxy": [
+        32,
+        4,
+        2
+      ],
+      "totals": {
+        "active_lanes": 22421334,
+        "component_lanes": 39791447,
+        "component_warp_active_lanes": 39791447,
+        "component_warps": 1250256,
+        "in_domain_lanes": 26725894,
+        "launched_lanes": 30420992,
+        "p1_component_ideal_sector_units": 39791447.0,
+        "p1_component_sector_units": 39791447.0,
+        "tiles": 118832,
+        "vx_active_lanes": 19880803,
+        "vy_active_lanes": 19910644,
+        "warps": 950656
+      },
+      "vs_current": {
+        "active_lane_ratio": 1.0,
+        "component_lane_ratio": 1.0,
+        "component_work_speedup_ceiling": 1.0,
+        "lane_speedup_ceiling": 1.0,
+        "launched_lane_ratio": 1.0,
+        "optimistic_sampled_main_speedup_ceiling": 1.0,
+        "optimistic_v_kernel_speedup_ceiling": 1.0,
+        "p1_sector_excess_delta": 0.0,
+        "p1_sector_ratio": 1.0,
+        "p1_sector_speedup_ceiling": 1.0
+      }
+    },
+    "z16_x16_y1": {
+      "derived": {
+        "active_lane_efficiency": 0.6827300048135387,
+        "avg_active_lanes_per_component_warp": 31.832750140798197,
+        "component_lane_efficiency": 1.2116502435514171,
+        "p1_sector_excess_over_active_contiguous": 1.0,
+        "p1_sector_unit_note": "sector units are component_lanes weighted by warp z-segment split factor"
+      },
+      "shots": [
+        {
+          "active_lanes": 3622320,
+          "component_lanes": 6434208,
+          "component_warp_active_lanes": 6434208,
+          "component_warps": 201732,
+          "in_domain_lanes": 4590336,
+          "launched_lanes": 5108736,
+          "p1_component_ideal_sector_units": 6434208,
+          "p1_component_sector_units": 12868416.0,
+          "shot": 0,
+          "tiles": 19956,
+          "vx_active_lanes": 3217104,
+          "vy_active_lanes": 3217104,
+          "warps": 159648
+        },
+        {
+          "active_lanes": 3934320,
+          "component_lanes": 6972633,
+          "component_warp_active_lanes": 6972633,
+          "component_warps": 218581,
+          "in_domain_lanes": 4892688,
+          "launched_lanes": 5680128,
+          "p1_component_ideal_sector_units": 6972633,
+          "p1_component_sector_units": 13945266.0,
+          "shot": 1,
+          "tiles": 22188,
+          "vx_active_lanes": 3478704,
+          "vy_active_lanes": 3493929,
+          "warps": 177504
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 203652,
+          "in_domain_lanes": 4618896,
+          "launched_lanes": 5600256,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 12911490.0,
+          "shot": 2,
+          "tiles": 21876,
+          "vx_active_lanes": 3227568,
+          "vy_active_lanes": 3228177,
+          "warps": 175008
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 202408,
+          "in_domain_lanes": 4607632,
+          "launched_lanes": 5128192,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 12911490.0,
+          "shot": 3,
+          "tiles": 20032,
+          "vx_active_lanes": 3228177,
+          "vy_active_lanes": 3227568,
+          "warps": 160256
+        },
+        {
+          "active_lanes": 3947775,
+          "component_lanes": 6995770,
+          "component_warp_active_lanes": 6995770,
+          "component_warps": 219307,
+          "in_domain_lanes": 4910911,
+          "launched_lanes": 5701632,
+          "p1_component_ideal_sector_units": 6995770,
+          "p1_component_sector_units": 13991540.0,
+          "shot": 4,
+          "tiles": 22272,
+          "vx_active_lanes": 3490577,
+          "vy_active_lanes": 3505193,
+          "warps": 178176
+        },
+        {
+          "active_lanes": 3647319,
+          "component_lanes": 6477346,
+          "component_warp_active_lanes": 6477346,
+          "component_warps": 204336,
+          "in_domain_lanes": 4636311,
+          "launched_lanes": 5621760,
+          "p1_component_ideal_sector_units": 6477346,
+          "p1_component_sector_units": 12954692.0,
+          "shot": 5,
+          "tiles": 21960,
+          "vx_active_lanes": 3238673,
+          "vy_active_lanes": 3238673,
+          "warps": 175680
+        }
+      ],
+      "static_warp_shape": {
+        "avg_z_segments_per_warp": 2.0,
+        "max_z_segments_per_warp": 2,
+        "warps_per_block": 8
+      },
+      "tile_block_zxy": [
+        16,
+        16,
+        1
+      ],
+      "totals": {
+        "active_lanes": 22421334,
+        "component_lanes": 39791447,
+        "component_warp_active_lanes": 39791447,
+        "component_warps": 1250016,
+        "in_domain_lanes": 28256774,
+        "launched_lanes": 32840704,
+        "p1_component_ideal_sector_units": 39791447.0,
+        "p1_component_sector_units": 79582894.0,
+        "tiles": 128284,
+        "vx_active_lanes": 19880803,
+        "vy_active_lanes": 19910644,
+        "warps": 1026272
+      },
+      "vs_current": {
+        "active_lane_ratio": 1.0,
+        "component_lane_ratio": 1.0,
+        "component_work_speedup_ceiling": 1.0,
+        "lane_speedup_ceiling": 0.9263197281032709,
+        "launched_lane_ratio": 1.079540864413626,
+        "optimistic_sampled_main_speedup_ceiling": 1.0,
+        "optimistic_v_kernel_speedup_ceiling": 1.0,
+        "p1_sector_excess_delta": 1.0,
+        "p1_sector_ratio": 2.0,
+        "p1_sector_speedup_ceiling": 0.5
+      }
+    },
+    "z16_x4_y4": {
+      "derived": {
+        "active_lane_efficiency": 0.732400119894802,
+        "avg_active_lanes_per_component_warp": 31.975358413938466,
+        "component_lane_efficiency": 1.2998004736733175,
+        "p1_sector_excess_over_active_contiguous": 1.0,
+        "p1_sector_unit_note": "sector units are component_lanes weighted by warp z-segment split factor"
+      },
+      "shots": [
+        {
+          "active_lanes": 3622320,
+          "component_lanes": 6434208,
+          "component_warp_active_lanes": 6434208,
+          "component_warps": 201159,
+          "in_domain_lanes": 4294400,
+          "launched_lanes": 4812800,
+          "p1_component_ideal_sector_units": 6434208,
+          "p1_component_sector_units": 12868416.0,
+          "shot": 0,
+          "tiles": 18800,
+          "vx_active_lanes": 3217104,
+          "vy_active_lanes": 3217104,
+          "warps": 150400
+        },
+        {
+          "active_lanes": 3934320,
+          "component_lanes": 6972633,
+          "component_warp_active_lanes": 6972633,
+          "component_warps": 218046,
+          "in_domain_lanes": 4701200,
+          "launched_lanes": 5365760,
+          "p1_component_ideal_sector_units": 6972633,
+          "p1_component_sector_units": 13945266.0,
+          "shot": 1,
+          "tiles": 20960,
+          "vx_active_lanes": 3478704,
+          "vy_active_lanes": 3493929,
+          "warps": 167680
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 201888,
+          "in_domain_lanes": 4322960,
+          "launched_lanes": 4935680,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 12911490.0,
+          "shot": 2,
+          "tiles": 19280,
+          "vx_active_lanes": 3227568,
+          "vy_active_lanes": 3228177,
+          "warps": 154240
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 201888,
+          "in_domain_lanes": 4322960,
+          "launched_lanes": 4935680,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 12911490.0,
+          "shot": 3,
+          "tiles": 19280,
+          "vx_active_lanes": 3228177,
+          "vy_active_lanes": 3227568,
+          "warps": 154240
+        },
+        {
+          "active_lanes": 3947775,
+          "component_lanes": 6995770,
+          "component_warp_active_lanes": 6995770,
+          "component_warps": 218836,
+          "in_domain_lanes": 4732735,
+          "launched_lanes": 5502976,
+          "p1_component_ideal_sector_units": 6995770,
+          "p1_component_sector_units": 13991540.0,
+          "shot": 4,
+          "tiles": 21496,
+          "vx_active_lanes": 3490577,
+          "vy_active_lanes": 3505193,
+          "warps": 171968
+        },
+        {
+          "active_lanes": 3647319,
+          "component_lanes": 6477346,
+          "component_warp_active_lanes": 6477346,
+          "component_warps": 202624,
+          "in_domain_lanes": 4351639,
+          "launched_lanes": 5060608,
+          "p1_component_ideal_sector_units": 6477346,
+          "p1_component_sector_units": 12954692.0,
+          "shot": 5,
+          "tiles": 19768,
+          "vx_active_lanes": 3238673,
+          "vy_active_lanes": 3238673,
+          "warps": 158144
+        }
+      ],
+      "static_warp_shape": {
+        "avg_z_segments_per_warp": 2.0,
+        "max_z_segments_per_warp": 2,
+        "warps_per_block": 8
+      },
+      "tile_block_zxy": [
+        16,
+        4,
+        4
+      ],
+      "totals": {
+        "active_lanes": 22421334,
+        "component_lanes": 39791447,
+        "component_warp_active_lanes": 39791447,
+        "component_warps": 1244441,
+        "in_domain_lanes": 26725894,
+        "launched_lanes": 30613504,
+        "p1_component_ideal_sector_units": 39791447.0,
+        "p1_component_sector_units": 79582894.0,
+        "tiles": 119584,
+        "vx_active_lanes": 19880803,
+        "vy_active_lanes": 19910644,
+        "warps": 956672
+      },
+      "vs_current": {
+        "active_lane_ratio": 1.0,
+        "component_lane_ratio": 1.0,
+        "component_work_speedup_ceiling": 1.0,
+        "lane_speedup_ceiling": 0.9937115333154937,
+        "launched_lane_ratio": 1.0063282617476774,
+        "optimistic_sampled_main_speedup_ceiling": 1.0,
+        "optimistic_v_kernel_speedup_ceiling": 1.0,
+        "p1_sector_excess_delta": 1.0,
+        "p1_sector_ratio": 2.0,
+        "p1_sector_speedup_ceiling": 0.5
+      }
+    },
+    "z16_x8_y2": {
+      "derived": {
+        "active_lane_efficiency": 0.7111345886448522,
+        "avg_active_lanes_per_component_warp": 31.96467305080021,
+        "component_lane_efficiency": 1.2620602455647125,
+        "p1_sector_excess_over_active_contiguous": 1.0,
+        "p1_sector_unit_note": "sector units are component_lanes weighted by warp z-segment split factor"
+      },
+      "shots": [
+        {
+          "active_lanes": 3622320,
+          "component_lanes": 6434208,
+          "component_warp_active_lanes": 6434208,
+          "component_warps": 201209,
+          "in_domain_lanes": 4396800,
+          "launched_lanes": 4915200,
+          "p1_component_ideal_sector_units": 6434208,
+          "p1_component_sector_units": 12868416.0,
+          "shot": 0,
+          "tiles": 19200,
+          "vx_active_lanes": 3217104,
+          "vy_active_lanes": 3217104,
+          "warps": 153600
+        },
+        {
+          "active_lanes": 3934320,
+          "component_lanes": 6972633,
+          "component_warp_active_lanes": 6972633,
+          "component_warps": 218144,
+          "in_domain_lanes": 4803600,
+          "launched_lanes": 5591040,
+          "p1_component_ideal_sector_units": 6972633,
+          "p1_component_sector_units": 13945266.0,
+          "shot": 1,
+          "tiles": 21840,
+          "vx_active_lanes": 3478704,
+          "vy_active_lanes": 3493929,
+          "warps": 174720
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 201986,
+          "in_domain_lanes": 4425360,
+          "launched_lanes": 5160960,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 12911490.0,
+          "shot": 2,
+          "tiles": 20160,
+          "vx_active_lanes": 3227568,
+          "vy_active_lanes": 3228177,
+          "warps": 161280
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 201913,
+          "in_domain_lanes": 4425360,
+          "launched_lanes": 4976640,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 12911490.0,
+          "shot": 3,
+          "tiles": 19440,
+          "vx_active_lanes": 3228177,
+          "vy_active_lanes": 3227568,
+          "warps": 155520
+        },
+        {
+          "active_lanes": 3947775,
+          "component_lanes": 6995770,
+          "component_warp_active_lanes": 6995770,
+          "component_warps": 218907,
+          "in_domain_lanes": 4835135,
+          "launched_lanes": 5660672,
+          "p1_component_ideal_sector_units": 6995770,
+          "p1_component_sector_units": 13991540.0,
+          "shot": 4,
+          "tiles": 22112,
+          "vx_active_lanes": 3490577,
+          "vy_active_lanes": 3505193,
+          "warps": 176896
+        },
+        {
+          "active_lanes": 3647319,
+          "component_lanes": 6477346,
+          "component_warp_active_lanes": 6477346,
+          "component_warps": 202698,
+          "in_domain_lanes": 4454039,
+          "launched_lanes": 5224448,
+          "p1_component_ideal_sector_units": 6477346,
+          "p1_component_sector_units": 12954692.0,
+          "shot": 5,
+          "tiles": 20408,
+          "vx_active_lanes": 3238673,
+          "vy_active_lanes": 3238673,
+          "warps": 163264
+        }
+      ],
+      "static_warp_shape": {
+        "avg_z_segments_per_warp": 2.0,
+        "max_z_segments_per_warp": 2,
+        "warps_per_block": 8
+      },
+      "tile_block_zxy": [
+        16,
+        8,
+        2
+      ],
+      "totals": {
+        "active_lanes": 22421334,
+        "component_lanes": 39791447,
+        "component_warp_active_lanes": 39791447,
+        "component_warps": 1244857,
+        "in_domain_lanes": 27340294,
+        "launched_lanes": 31528960,
+        "p1_component_ideal_sector_units": 39791447.0,
+        "p1_component_sector_units": 79582894.0,
+        "tiles": 123160,
+        "vx_active_lanes": 19880803,
+        "vy_active_lanes": 19910644,
+        "warps": 985280
+      },
+      "vs_current": {
+        "active_lane_ratio": 1.0,
+        "component_lane_ratio": 1.0,
+        "component_work_speedup_ceiling": 1.0,
+        "lane_speedup_ceiling": 0.9648587203637544,
+        "launched_lane_ratio": 1.036421166015888,
+        "optimistic_sampled_main_speedup_ceiling": 1.0,
+        "optimistic_v_kernel_speedup_ceiling": 1.0,
+        "p1_sector_excess_delta": 1.0,
+        "p1_sector_ratio": 2.0,
+        "p1_sector_speedup_ceiling": 0.5
+      }
+    },
+    "z32_x2_y4": {
+      "derived": {
+        "active_lane_efficiency": 0.738377081822857,
+        "avg_active_lanes_per_component_warp": 31.828625203770983,
+        "component_lane_efficiency": 1.3104078694590107,
+        "p1_sector_excess_over_active_contiguous": 0.0,
+        "p1_sector_unit_note": "sector units are component_lanes weighted by warp z-segment split factor"
+      },
+      "shots": [
+        {
+          "active_lanes": 3622320,
+          "component_lanes": 6434208,
+          "component_warp_active_lanes": 6434208,
+          "component_warps": 202108,
+          "in_domain_lanes": 4294400,
+          "launched_lanes": 4812800,
+          "p1_component_ideal_sector_units": 6434208,
+          "p1_component_sector_units": 6434208.0,
+          "shot": 0,
+          "tiles": 18800,
+          "vx_active_lanes": 3217104,
+          "vy_active_lanes": 3217104,
+          "warps": 150400
+        },
+        {
+          "active_lanes": 3934320,
+          "component_lanes": 6972633,
+          "component_warp_active_lanes": 6972633,
+          "component_warps": 218996,
+          "in_domain_lanes": 4701200,
+          "launched_lanes": 5304320,
+          "p1_component_ideal_sector_units": 6972633,
+          "p1_component_sector_units": 6972633.0,
+          "shot": 1,
+          "tiles": 20720,
+          "vx_active_lanes": 3478704,
+          "vy_active_lanes": 3493929,
+          "warps": 165760
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 202784,
+          "in_domain_lanes": 4322960,
+          "launched_lanes": 4874240,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 6455745.0,
+          "shot": 2,
+          "tiles": 19040,
+          "vx_active_lanes": 3227568,
+          "vy_active_lanes": 3228177,
+          "warps": 152320
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 202886,
+          "in_domain_lanes": 4322960,
+          "launched_lanes": 4935680,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 6455745.0,
+          "shot": 3,
+          "tiles": 19280,
+          "vx_active_lanes": 3228177,
+          "vy_active_lanes": 3227568,
+          "warps": 154240
+        },
+        {
+          "active_lanes": 3947775,
+          "component_lanes": 6995770,
+          "component_warp_active_lanes": 6995770,
+          "component_warps": 219838,
+          "in_domain_lanes": 4732735,
+          "launched_lanes": 5440512,
+          "p1_component_ideal_sector_units": 6995770,
+          "p1_component_sector_units": 6995770.0,
+          "shot": 4,
+          "tiles": 21252,
+          "vx_active_lanes": 3490577,
+          "vy_active_lanes": 3505193,
+          "warps": 170016
+        },
+        {
+          "active_lanes": 3647319,
+          "component_lanes": 6477346,
+          "component_warp_active_lanes": 6477346,
+          "component_warps": 203566,
+          "in_domain_lanes": 4351639,
+          "launched_lanes": 4998144,
+          "p1_component_ideal_sector_units": 6477346,
+          "p1_component_sector_units": 6477346.0,
+          "shot": 5,
+          "tiles": 19524,
+          "vx_active_lanes": 3238673,
+          "vy_active_lanes": 3238673,
+          "warps": 156192
+        }
+      ],
+      "static_warp_shape": {
+        "avg_z_segments_per_warp": 1.0,
+        "max_z_segments_per_warp": 1,
+        "warps_per_block": 8
+      },
+      "tile_block_zxy": [
+        32,
+        2,
+        4
+      ],
+      "totals": {
+        "active_lanes": 22421334,
+        "component_lanes": 39791447,
+        "component_warp_active_lanes": 39791447,
+        "component_warps": 1250178,
+        "in_domain_lanes": 26725894,
+        "launched_lanes": 30365696,
+        "p1_component_ideal_sector_units": 39791447.0,
+        "p1_component_sector_units": 39791447.0,
+        "tiles": 118616,
+        "vx_active_lanes": 19880803,
+        "vy_active_lanes": 19910644,
+        "warps": 948928
+      },
+      "vs_current": {
+        "active_lane_ratio": 1.0,
+        "component_lane_ratio": 1.0,
+        "component_work_speedup_ceiling": 1.0,
+        "lane_speedup_ceiling": 1.0018210022256693,
+        "launched_lane_ratio": 0.9981823077958799,
+        "optimistic_sampled_main_speedup_ceiling": 1.0003991553217086,
+        "optimistic_v_kernel_speedup_ceiling": 1.0018210022256693,
+        "p1_sector_excess_delta": 0.0,
+        "p1_sector_ratio": 1.0,
+        "p1_sector_speedup_ceiling": 1.0
+      }
+    },
+    "z32_x8_y1": {
+      "derived": {
+        "active_lane_efficiency": 0.715959584218916,
+        "avg_active_lanes_per_component_warp": 31.777838738324323,
+        "component_lane_efficiency": 1.2706232309633778,
+        "p1_sector_excess_over_active_contiguous": 0.0,
+        "p1_sector_unit_note": "sector units are component_lanes weighted by warp z-segment split factor"
+      },
+      "shots": [
+        {
+          "active_lanes": 3622320,
+          "component_lanes": 6434208,
+          "component_warp_active_lanes": 6434208,
+          "component_warps": 202212,
+          "in_domain_lanes": 4384512,
+          "launched_lanes": 4902912,
+          "p1_component_ideal_sector_units": 6434208,
+          "p1_component_sector_units": 6434208.0,
+          "shot": 0,
+          "tiles": 19152,
+          "vx_active_lanes": 3217104,
+          "vy_active_lanes": 3217104,
+          "warps": 153216
+        },
+        {
+          "active_lanes": 3934320,
+          "component_lanes": 6972633,
+          "component_warp_active_lanes": 6972633,
+          "component_warps": 219520,
+          "in_domain_lanes": 4789776,
+          "launched_lanes": 5577216,
+          "p1_component_ideal_sector_units": 6972633,
+          "p1_component_sector_units": 6972633.0,
+          "shot": 1,
+          "tiles": 21786,
+          "vx_active_lanes": 3478704,
+          "vy_active_lanes": 3493929,
+          "warps": 174288
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 203314,
+          "in_domain_lanes": 4413072,
+          "launched_lanes": 5148672,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 6455745.0,
+          "shot": 2,
+          "tiles": 20112,
+          "vx_active_lanes": 3227568,
+          "vy_active_lanes": 3228177,
+          "warps": 160896
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 202888,
+          "in_domain_lanes": 4400784,
+          "launched_lanes": 4921344,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 6455745.0,
+          "shot": 3,
+          "tiles": 19224,
+          "vx_active_lanes": 3228177,
+          "vy_active_lanes": 3227568,
+          "warps": 153792
+        },
+        {
+          "active_lanes": 3947775,
+          "component_lanes": 6995770,
+          "component_warp_active_lanes": 6995770,
+          "component_warps": 220248,
+          "in_domain_lanes": 4807487,
+          "launched_lanes": 5598208,
+          "p1_component_ideal_sector_units": 6995770,
+          "p1_component_sector_units": 6995770.0,
+          "shot": 4,
+          "tiles": 21868,
+          "vx_active_lanes": 3490577,
+          "vy_active_lanes": 3505193,
+          "warps": 174944
+        },
+        {
+          "active_lanes": 3647319,
+          "component_lanes": 6477346,
+          "component_warp_active_lanes": 6477346,
+          "component_warps": 203994,
+          "in_domain_lanes": 4429463,
+          "launched_lanes": 5168128,
+          "p1_component_ideal_sector_units": 6477346,
+          "p1_component_sector_units": 6477346.0,
+          "shot": 5,
+          "tiles": 20188,
+          "vx_active_lanes": 3238673,
+          "vy_active_lanes": 3238673,
+          "warps": 161504
+        }
+      ],
+      "static_warp_shape": {
+        "avg_z_segments_per_warp": 1.0,
+        "max_z_segments_per_warp": 1,
+        "warps_per_block": 8
+      },
+      "tile_block_zxy": [
+        32,
+        8,
+        1
+      ],
+      "totals": {
+        "active_lanes": 22421334,
+        "component_lanes": 39791447,
+        "component_warp_active_lanes": 39791447,
+        "component_warps": 1252176,
+        "in_domain_lanes": 27225094,
+        "launched_lanes": 31316480,
+        "p1_component_ideal_sector_units": 39791447.0,
+        "p1_component_sector_units": 39791447.0,
+        "tiles": 122330,
+        "vx_active_lanes": 19880803,
+        "vy_active_lanes": 19910644,
+        "warps": 978640
+      },
+      "vs_current": {
+        "active_lane_ratio": 1.0,
+        "component_lane_ratio": 1.0,
+        "component_work_speedup_ceiling": 1.0,
+        "lane_speedup_ceiling": 0.9714052154009646,
+        "launched_lane_ratio": 1.0294365154167229,
+        "optimistic_sampled_main_speedup_ceiling": 1.0,
+        "optimistic_v_kernel_speedup_ceiling": 1.0,
+        "p1_sector_excess_delta": 0.0,
+        "p1_sector_ratio": 1.0,
+        "p1_sector_speedup_ceiling": 1.0
+      }
+    },
+    "z64_x2_y2": {
+      "derived": {
+        "active_lane_efficiency": 0.48585071081667297,
+        "avg_active_lanes_per_component_warp": 31.810686531034477,
+        "component_lane_efficiency": 0.8622458774921229,
+        "p1_sector_excess_over_active_contiguous": 0.0,
+        "p1_sector_unit_note": "sector units are component_lanes weighted by warp z-segment split factor"
+      },
+      "shots": [
+        {
+          "active_lanes": 3622320,
+          "component_lanes": 6434208,
+          "component_warp_active_lanes": 6434208,
+          "component_warps": 202159,
+          "in_domain_lanes": 6854400,
+          "launched_lanes": 7372800,
+          "p1_component_ideal_sector_units": 6434208,
+          "p1_component_sector_units": 6434208.0,
+          "shot": 0,
+          "tiles": 28800,
+          "vx_active_lanes": 3217104,
+          "vy_active_lanes": 3217104,
+          "warps": 230400
+        },
+        {
+          "active_lanes": 3934320,
+          "component_lanes": 6972633,
+          "component_warp_active_lanes": 6972633,
+          "component_warps": 219148,
+          "in_domain_lanes": 7568400,
+          "launched_lanes": 8171520,
+          "p1_component_ideal_sector_units": 6972633,
+          "p1_component_sector_units": 6972633.0,
+          "shot": 1,
+          "tiles": 31920,
+          "vx_active_lanes": 3478704,
+          "vy_active_lanes": 3493929,
+          "warps": 255360
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 202936,
+          "in_domain_lanes": 6882960,
+          "launched_lanes": 7434240,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 6455745.0,
+          "shot": 2,
+          "tiles": 29040,
+          "vx_active_lanes": 3227568,
+          "vy_active_lanes": 3228177,
+          "warps": 232320
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 202936,
+          "in_domain_lanes": 6882960,
+          "launched_lanes": 7434240,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 6455745.0,
+          "shot": 3,
+          "tiles": 29040,
+          "vx_active_lanes": 3228177,
+          "vy_active_lanes": 3227568,
+          "warps": 232320
+        },
+        {
+          "active_lanes": 3947775,
+          "component_lanes": 6995770,
+          "component_warp_active_lanes": 6995770,
+          "component_warps": 219988,
+          "in_domain_lanes": 7599935,
+          "launched_lanes": 8239616,
+          "p1_component_ideal_sector_units": 6995770,
+          "p1_component_sector_units": 6995770.0,
+          "shot": 4,
+          "tiles": 32186,
+          "vx_active_lanes": 3490577,
+          "vy_active_lanes": 3505193,
+          "warps": 257488
+        },
+        {
+          "active_lanes": 3647319,
+          "component_lanes": 6477346,
+          "component_warp_active_lanes": 6477346,
+          "component_warps": 203716,
+          "in_domain_lanes": 6911639,
+          "launched_lanes": 7496192,
+          "p1_component_ideal_sector_units": 6477346,
+          "p1_component_sector_units": 6477346.0,
+          "shot": 5,
+          "tiles": 29282,
+          "vx_active_lanes": 3238673,
+          "vy_active_lanes": 3238673,
+          "warps": 234256
+        }
+      ],
+      "static_warp_shape": {
+        "avg_z_segments_per_warp": 1.0,
+        "max_z_segments_per_warp": 1,
+        "warps_per_block": 8
+      },
+      "tile_block_zxy": [
+        64,
+        2,
+        2
+      ],
+      "totals": {
+        "active_lanes": 22421334,
+        "component_lanes": 39791447,
+        "component_warp_active_lanes": 39791447,
+        "component_warps": 1250883,
+        "in_domain_lanes": 42700294,
+        "launched_lanes": 46148608,
+        "p1_component_ideal_sector_units": 39791447.0,
+        "p1_component_sector_units": 39791447.0,
+        "tiles": 180268,
+        "vx_active_lanes": 19880803,
+        "vy_active_lanes": 19910644,
+        "warps": 1442144
+      },
+      "vs_current": {
+        "active_lane_ratio": 1.0,
+        "component_lane_ratio": 1.0,
+        "component_work_speedup_ceiling": 1.0,
+        "lane_speedup_ceiling": 0.6591963077196175,
+        "launched_lane_ratio": 1.5169987882051972,
+        "optimistic_sampled_main_speedup_ceiling": 1.0,
+        "optimistic_v_kernel_speedup_ceiling": 1.0,
+        "p1_sector_excess_delta": 0.0,
+        "p1_sector_ratio": 1.0,
+        "p1_sector_speedup_ceiling": 1.0
+      }
+    },
+    "z8_x16_y2": {
+      "derived": {
+        "active_lane_efficiency": 0.7924659422502714,
+        "avg_active_lanes_per_component_warp": 31.843525852017418,
+        "component_lane_efficiency": 1.4064001071638617,
+        "p1_sector_excess_over_active_contiguous": 3.0,
+        "p1_sector_unit_note": "sector units are component_lanes weighted by warp z-segment split factor"
+      },
+      "shots": [
+        {
+          "active_lanes": 3622320,
+          "component_lanes": 6434208,
+          "component_warp_active_lanes": 6434208,
+          "component_warps": 201692,
+          "in_domain_lanes": 4320000,
+          "launched_lanes": 4377600,
+          "p1_component_ideal_sector_units": 6434208,
+          "p1_component_sector_units": 25736832.0,
+          "shot": 0,
+          "tiles": 17100,
+          "vx_active_lanes": 3217104,
+          "vy_active_lanes": 3217104,
+          "warps": 136800
+        },
+        {
+          "active_lanes": 3934320,
+          "component_lanes": 6972633,
+          "component_warp_active_lanes": 6972633,
+          "component_warps": 218543,
+          "in_domain_lanes": 4573200,
+          "launched_lanes": 4838400,
+          "p1_component_ideal_sector_units": 6972633,
+          "p1_component_sector_units": 27890532.0,
+          "shot": 1,
+          "tiles": 18900,
+          "vx_active_lanes": 3478704,
+          "vy_active_lanes": 3493929,
+          "warps": 151200
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 203491,
+          "in_domain_lanes": 4348560,
+          "launched_lanes": 4838400,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 25822980.0,
+          "shot": 2,
+          "tiles": 18900,
+          "vx_active_lanes": 3227568,
+          "vy_active_lanes": 3228177,
+          "warps": 151200
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 202380,
+          "in_domain_lanes": 4348560,
+          "launched_lanes": 4435200,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 25822980.0,
+          "shot": 3,
+          "tiles": 17325,
+          "vx_active_lanes": 3228177,
+          "vy_active_lanes": 3227568,
+          "warps": 138600
+        },
+        {
+          "active_lanes": 3947775,
+          "component_lanes": 6995770,
+          "component_warp_active_lanes": 6995770,
+          "component_warps": 219294,
+          "in_domain_lanes": 4604735,
+          "launched_lanes": 4903680,
+          "p1_component_ideal_sector_units": 6995770,
+          "p1_component_sector_units": 27983080.0,
+          "shot": 4,
+          "tiles": 19155,
+          "vx_active_lanes": 3490577,
+          "vy_active_lanes": 3505193,
+          "warps": 153240
+        },
+        {
+          "active_lanes": 3647319,
+          "component_lanes": 6477346,
+          "component_warp_active_lanes": 6477346,
+          "component_warps": 204193,
+          "in_domain_lanes": 4377239,
+          "launched_lanes": 4899840,
+          "p1_component_ideal_sector_units": 6477346,
+          "p1_component_sector_units": 25909384.0,
+          "shot": 5,
+          "tiles": 19140,
+          "vx_active_lanes": 3238673,
+          "vy_active_lanes": 3238673,
+          "warps": 153120
+        }
+      ],
+      "static_warp_shape": {
+        "avg_z_segments_per_warp": 4.0,
+        "max_z_segments_per_warp": 4,
+        "warps_per_block": 8
+      },
+      "tile_block_zxy": [
+        8,
+        16,
+        2
+      ],
+      "totals": {
+        "active_lanes": 22421334,
+        "component_lanes": 39791447,
+        "component_warp_active_lanes": 39791447,
+        "component_warps": 1249593,
+        "in_domain_lanes": 26572294,
+        "launched_lanes": 28293120,
+        "p1_component_ideal_sector_units": 39791447.0,
+        "p1_component_sector_units": 159165788.0,
+        "tiles": 110520,
+        "vx_active_lanes": 19880803,
+        "vy_active_lanes": 19910644,
+        "warps": 884160
+      },
+      "vs_current": {
+        "active_lane_ratio": 1.0,
+        "component_lane_ratio": 1.0,
+        "component_work_speedup_ceiling": 1.0,
+        "lane_speedup_ceiling": 1.0752081071299313,
+        "launched_lane_ratio": 0.930052511108119,
+        "optimistic_sampled_main_speedup_ceiling": 1.0155933796252525,
+        "optimistic_v_kernel_speedup_ceiling": 1.0752081071299313,
+        "p1_sector_excess_delta": 3.0,
+        "p1_sector_ratio": 4.0,
+        "p1_sector_speedup_ceiling": 0.25
+      }
+    },
+    "z8_x8_y4": {
+      "derived": {
+        "active_lane_efficiency": 0.834723239814153,
+        "avg_active_lanes_per_component_warp": 31.979572876457574,
+        "component_lane_efficiency": 1.4813947090183464,
+        "p1_sector_excess_over_active_contiguous": 3.0,
+        "p1_sector_unit_note": "sector units are component_lanes weighted by warp z-segment split factor"
+      },
+      "shots": [
+        {
+          "active_lanes": 3622320,
+          "component_lanes": 6434208,
+          "component_warp_active_lanes": 6434208,
+          "component_warps": 201132,
+          "in_domain_lanes": 4089600,
+          "launched_lanes": 4147200,
+          "p1_component_ideal_sector_units": 6434208,
+          "p1_component_sector_units": 25736832.0,
+          "shot": 0,
+          "tiles": 16200,
+          "vx_active_lanes": 3217104,
+          "vy_active_lanes": 3217104,
+          "warps": 129600
+        },
+        {
+          "active_lanes": 3934320,
+          "component_lanes": 6972633,
+          "component_warp_active_lanes": 6972633,
+          "component_warps": 218015,
+          "in_domain_lanes": 4458000,
+          "launched_lanes": 4723200,
+          "p1_component_ideal_sector_units": 6972633,
+          "p1_component_sector_units": 27890532.0,
+          "shot": 1,
+          "tiles": 18450,
+          "vx_active_lanes": 3478704,
+          "vy_active_lanes": 3493929,
+          "warps": 147600
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 201860,
+          "in_domain_lanes": 4118160,
+          "launched_lanes": 4377600,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 25822980.0,
+          "shot": 2,
+          "tiles": 17100,
+          "vx_active_lanes": 3227568,
+          "vy_active_lanes": 3228177,
+          "warps": 136800
+        },
+        {
+          "active_lanes": 3634800,
+          "component_lanes": 6455745,
+          "component_warp_active_lanes": 6455745,
+          "component_warps": 201859,
+          "in_domain_lanes": 4118160,
+          "launched_lanes": 4262400,
+          "p1_component_ideal_sector_units": 6455745,
+          "p1_component_sector_units": 25822980.0,
+          "shot": 3,
+          "tiles": 16650,
+          "vx_active_lanes": 3228177,
+          "vy_active_lanes": 3227568,
+          "warps": 133200
+        },
+        {
+          "active_lanes": 3947775,
+          "component_lanes": 6995770,
+          "component_warp_active_lanes": 6995770,
+          "component_warps": 218810,
+          "in_domain_lanes": 4489535,
+          "launched_lanes": 4853760,
+          "p1_component_ideal_sector_units": 6995770,
+          "p1_component_sector_units": 27983080.0,
+          "shot": 4,
+          "tiles": 18960,
+          "vx_active_lanes": 3490577,
+          "vy_active_lanes": 3505193,
+          "warps": 151680
+        },
+        {
+          "active_lanes": 3647319,
+          "component_lanes": 6477346,
+          "component_warp_active_lanes": 6477346,
+          "component_warps": 202601,
+          "in_domain_lanes": 4146839,
+          "launched_lanes": 4496640,
+          "p1_component_ideal_sector_units": 6477346,
+          "p1_component_sector_units": 25909384.0,
+          "shot": 5,
+          "tiles": 17565,
+          "vx_active_lanes": 3238673,
+          "vy_active_lanes": 3238673,
+          "warps": 140520
+        }
+      ],
+      "static_warp_shape": {
+        "avg_z_segments_per_warp": 4.0,
+        "max_z_segments_per_warp": 4,
+        "warps_per_block": 8
+      },
+      "tile_block_zxy": [
+        8,
+        8,
+        4
+      ],
+      "totals": {
+        "active_lanes": 22421334,
+        "component_lanes": 39791447,
+        "component_warp_active_lanes": 39791447,
+        "component_warps": 1244277,
+        "in_domain_lanes": 25420294,
+        "launched_lanes": 26860800,
+        "p1_component_ideal_sector_units": 39791447.0,
+        "p1_component_sector_units": 159165788.0,
+        "tiles": 104925,
+        "vx_active_lanes": 19880803,
+        "vy_active_lanes": 19910644,
+        "warps": 839400
+      },
+      "vs_current": {
+        "active_lane_ratio": 1.0,
+        "component_lane_ratio": 1.0,
+        "component_work_speedup_ceiling": 1.0,
+        "lane_speedup_ceiling": 1.1325422921134143,
+        "launched_lane_ratio": 0.8829692338763969,
+        "optimistic_sampled_main_speedup_ceiling": 1.026366393815676,
+        "optimistic_v_kernel_speedup_ceiling": 1.1325422921134143,
+        "p1_sector_excess_delta": 3.0,
+        "p1_sector_ratio": 4.0,
+        "p1_sector_speedup_ceiling": 0.25
+      }
+    }
+  },
+  "v_source_anchor": {
+    "metrics": {
+      "active_warps_per_scheduler": 10.17,
+      "avg_active_threads_per_warp": 23.7,
+      "avg_divergent_branches": 143.48,
+      "avg_not_predicated_off_threads_per_warp": 21.67,
+      "branch_efficiency_pct": 86.97,
+      "branch_instructions": 2079334.0,
+      "eligible_warps_per_scheduler": 1.629,
+      "issued_warp_per_scheduler": 0.549,
+      "no_eligible_pct": 44.891000000000005,
+      "one_or_more_eligible_pct": 55.108999999999995,
+      "warp_cycles_per_issued_instruction": 18.456
+    },
+    "profile_label": "directfill_v_pml",
+    "rules": [
+      {
+        "description": "Every scheduler is capable of issuing one instruction per cycle, but for this workload each scheduler only issues an instruction every 1.8 cycles. This might leave hardware resources underutilized and may lead to less optimal performance. Out of the maximum of 12 warps per scheduler, this workload allocates an average of 10.32 active warps per scheduler, but only an average of 1.67 warps were eligible per cycle. Eligible warps are the subset of active warps that are ready to issue their next instruction. Every cycle with no eligible warp results in no instruction being issued and the issue slot remains unused. To increase the number of eligible warps, avoid possible load imbalances due to highly different execution durations per warp. Reducing stalls indicated on the Warp State Statistics and Source Counters sections can help, too.",
+        "estimated_speedup": "44.17",
+        "estimated_speedup_type": "local",
+        "rule": "IssueSlotUtilization",
+        "section": "SchedulerStats",
+        "type": "OPT"
+      },
+      {
+        "description": "On average, each warp of this workload spends 11.8 cycles being stalled waiting for a scoreboard dependency on a L1TEX (local, global, surface, texture) operation. Find the instruction producing the data being waited upon to identify the culprit. To reduce the number of cycles waiting on L1TEX data accesses verify the memory access patterns are optimal for the target architecture, attempt to increase cache hit rates by increasing data locality (coalescing), or by changing the cache configuration. Consider moving frequently used data to shared memory. This stall type represents about 63.7% of the total average of 18.5 cycles between issuing two instructions.",
+        "estimated_speedup": "44.17",
+        "estimated_speedup_type": "global",
+        "rule": "CPIStall",
+        "section": "WarpStateStats",
+        "type": "OPT"
+      },
+      {
+        "description": "Check the Warp Stall Sampling (All Samples) table for the top stall locations in your source based on sampling data. The Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#metrics-reference) provides more details on each stall reason.",
+        "estimated_speedup": "",
+        "estimated_speedup_type": "",
+        "rule": "CPIStall",
+        "section": "WarpStateStats",
+        "type": "INF"
+      },
+      {
+        "description": "Instructions are executed in warps, which are groups of 32 threads. Optimal instruction throughput is achieved if all 32 threads of a warp execute the same instruction. The chosen launch configuration, early thread completion, and divergent flow control can significantly lower the number of active threads in a warp per cycle. This workload achieves an average of 23.7 threads being active per cycle. This is further reduced to 21.7 threads per warp due to predication. The compiler may use predication to avoid an actual branch. Instead, all instructions are scheduled, but a per-thread condition code or predicate controls which threads execute the instructions. Try to avoid different execution paths within a warp when possible.",
+        "estimated_speedup": "32.3",
+        "estimated_speedup_type": "local",
+        "rule": "ThreadDivergence",
+        "section": "WarpStateStats",
+        "type": "OPT"
+      }
+    ]
+  }
+}

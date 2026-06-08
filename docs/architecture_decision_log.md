@@ -1234,3 +1234,67 @@ Report:
 docs/day_20260608/len16_halfwarp_source_profile.md
 reports/day_20260608/len16_source_profile_20260608_1646/source_hotlines.md
 ```
+
+## 2026-06-08 - Reject V-PML Tile/Layout Prototype
+
+Decision:
+
+```text
+Reject v-PML-only tile-layout CUDA prototype and do not run another random
+PmlTileBlockSize sweep.
+```
+
+Evidence:
+
+```text
+accepted len16 sampled main                         297.248us
+cuda_fd3d_v_pml_tile_ns                              65.248us
+v-PML sampled-main share                              21.95%
+v-kernel speedup required for 5% sampled-main gain     1.2770x
+
+best reasoned shape: z8_x8_y4
+launched lanes ratio vs current                        0.8830
+warp z segments per warp                               4
+optimistic v-kernel ceiling                             1.1325x
+optimistic sampled-main ceiling                         1.0264x
+```
+
+Reason:
+
+```text
+The current 32x4x2 v-PML mapping uses threadIdx.x as z and gives each warp one
+contiguous z-line at fixed x/y.  That is already the favorable coalescing shape
+for p1, mem_dx, and mem_dy.
+
+The only reasoned shape that reduces launched lanes enough to look interesting
+is z8_x8_y4, but it splits each warp into four discontiguous x/y rows and still
+only reaches a 2.64% optimistic sampled-main ceiling before separate velocity
+tile-list plumbing, control overhead, and pressure-path compatibility costs.
+```
+
+Boundary:
+
+```text
+Do not implement v-only tile-layout CUDA prototypes below the 5% gate.
+Do not repeat random PmlTileBlockSize sweeps.
+Do not reopen current-geometry vx/vy component split.
+
+V-PML layout may reopen only if a new model shows >=5% perf_1gpu_6shots repeat
+speedup ceiling after tile-list/control overhead.
+```
+
+Next allowed routes:
+
+```text
+1. Broader memory-ownership design that reduces vx/vy global round trip without
+   doubling component work.
+2. Pressure-PML ownership/writeback design that targets final p0/cw2 traffic or
+   CPML z-state dependency with a proven >=5% ceiling.
+```
+
+Report:
+
+```text
+docs/day_20260608/v_pml_coalescing_layout_budget.md
+reports/day_20260608/v_pml_coalescing_layout_budget.json
+```
