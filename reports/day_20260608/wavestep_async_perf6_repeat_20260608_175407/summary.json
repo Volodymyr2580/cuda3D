@@ -1,0 +1,43 @@
+{
+  "rows": [
+    {
+      "round": 1,
+      "base_run": "benchmarks/runs/perf_1gpu_6shots_async_base2_r1_20260608_175414",
+      "candidate_run": "benchmarks/runs/perf_1gpu_6shots_async_candidate2_r1_20260608_175425",
+      "base_wp": 2.046013,
+      "candidate_wp": 2.037689,
+      "wp_speedup": 1.004085019843558,
+      "base_gradient": 2.163786,
+      "candidate_gradient": 2.158926,
+      "gradient_speedup": 1.002251119306544,
+      "compare_pass": true
+    },
+    {
+      "round": 2,
+      "base_run": "benchmarks/runs/perf_1gpu_6shots_async_base2_r2_20260608_175437",
+      "candidate_run": "benchmarks/runs/perf_1gpu_6shots_async_candidate2_r2_20260608_175449",
+      "base_wp": 2.033079,
+      "candidate_wp": 2.02103,
+      "wp_speedup": 1.0059618115515354,
+      "base_gradient": 2.15649,
+      "candidate_gradient": 2.150619,
+      "gradient_speedup": 1.0027299117137902,
+      "compare_pass": true
+    },
+    {
+      "round": 3,
+      "base_run": "benchmarks/runs/perf_1gpu_6shots_async_base2_r3_20260608_175501",
+      "candidate_run": "benchmarks/runs/perf_1gpu_6shots_async_candidate2_r3_20260608_175511",
+      "base_wp": 2.032439,
+      "candidate_wp": 2.021318,
+      "wp_speedup": 1.0055018557198818,
+      "base_gradient": 2.156099,
+      "candidate_gradient": 2.148397,
+      "gradient_speedup": 1.0035849984895715,
+      "compare_pass": true
+    }
+  ],
+  "mean_wp_speedup": 1.0051828957049918,
+  "mean_gradient_speedup": 1.0028553431699685,
+  "all_compare_pass": true
+}

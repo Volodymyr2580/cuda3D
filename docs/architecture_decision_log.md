@@ -1298,3 +1298,72 @@ Report:
 docs/day_20260608/v_pml_coalescing_layout_budget.md
 reports/day_20260608/v_pml_coalescing_layout_budget.json
 ```
+
+## 2026-06-08 - Reject Two-Stream Wave-Step Overlap
+
+Decision:
+
+```text
+Reject CUDA3D_WAVESTEP_ASYNC_STREAMS after smoke, correctness, and
+perf_1gpu_6shots repeat.  Do not keep the prototype source in mainline.
+```
+
+Why it was opened:
+
+```text
+accepted len16 sampled main                      297.248us
+p_core                                             93.547us
+v_pml                                              65.248us
+pressure residual                                  72.683us
+pressure len16                                     65.771us
+
+overlap p_core with serial PML path ceiling         1.4592x
+required realized overlap for 1.05x sampled-main   15.13%
+```
+
+Tested prototype:
+
+```text
+stream_core: p_core
+stream_pml:  v_pml -> p_pml_len16 -> p_pml_residual
+default:     wait core+pml -> source injection/extraction
+```
+
+Evidence:
+
+```text
+smoke_1gpu pass
+correctness pass, 6 outputs, max rel L2 0
+perf_1gpu_6shots repeat compare pass in all 3 rounds
+
+mean WP speedup        1.005183x
+mean Gradient speedup  1.002855x
+```
+
+Reason:
+
+```text
+The dependency model was valid as an upper bound, but RTX 5090 resource
+contention left almost no useful overlap between p_core and the PML path.
+The measured gain is noise-level and far below the >=5% meaningful prototype
+gate.
+```
+
+Boundary:
+
+```text
+Do not repeat the same two-stream p_core-vs-PML overlap prototype.
+Do not use this result to justify CUDA Graph / launch aggregation in the
+current single-GPU case.
+Do not open three-stream pressure residual/len16 fanout unless Nsight Systems
+shows real concurrent execution headroom and a new contention-aware model shows
+>=5% perf_1gpu_6shots repeat speedup ceiling.
+```
+
+Report:
+
+```text
+docs/day_20260608/wavestep_stream_overlap_model.md
+docs/day_20260608/wavestep_async_streams_prototype.md
+reports/day_20260608/wavestep_async_perf6_repeat_20260608_175407/summary.md
+```

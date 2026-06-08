@@ -4123,3 +4123,97 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 原因：最佳 reasoned shape 的 optimistic sampled-main ceiling 只有 `2.64%`，低于 `>=5%` gate，而且还没计入 separate velocity tile-list plumbing、control overhead 和 pressure-path compatibility 成本。
   - 远端根目录当前不干净，不适合直接同步覆盖；后续若要服务器复现，应使用干净 worktree 或先整理远端未提交状态。
   - 下一步应转向更大粒度 memory ownership / wave-step scheduling 设计，重点是减少 `vx/vy` global round trip，或减少 pressure final writeback / CPML state dependency。
+
+## 2026-06-08 18:00:29 +08:00 - Wave-step async streams prototype tested and rejected
+
+- 操作目标：
+  - 从更大粒度 wave-step scheduling 入手，评估 `p_core` 与 PML path 是否可以通过 CUDA streams 并行获得有意义提速。
+  - 若模型放行，则实现宏默认关闭 prototype，进行 smoke、correctness、`perf_1gpu_6shots` repeat 验收。
+- 修改文件：
+  - 新增工具：`tools/wavestep_stream_overlap_model.py`。
+  - 新增模型报告：`docs/day_20260608/wavestep_stream_overlap_model.md`。
+  - 新增模型 JSON：`reports/day_20260608/wavestep_stream_overlap_model.json`。
+  - 新增 prototype 报告：`docs/day_20260608/wavestep_async_streams_prototype.md`。
+  - 新增远端取回 perf repeat summary：
+    - `reports/day_20260608/wavestep_async_perf6_repeat_20260608_175407/summary.md`
+    - `reports/day_20260608/wavestep_async_perf6_repeat_20260608_175407/summary.json`
+    - `reports/day_20260608/wavestep_async_perf6_repeat_20260608_175407/base_r1.sha256`
+    - `reports/day_20260608/wavestep_async_perf6_repeat_20260608_175407/async_r1.sha256`
+  - 新增远端取回 correctness compare：
+    - `reports/day_20260608/wavestep_async_correctness_compare_20260608_175029/comparison.md`
+    - `reports/day_20260608/wavestep_async_correctness_compare_20260608_175029/comparison.json`
+    - `reports/day_20260608/wavestep_async_correct_base.sha256`
+    - `reports/day_20260608/wavestep_async_candidate.sha256`
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 源码处理：
+  - 临时在 `src/rem_fd.cu` 实现过 `CUDA3D_WAVESTEP_ASYNC_STREAMS`：
+    - `p_core` 走 non-blocking core stream。
+    - `v_pml -> p_pml_len16 -> p_pml_residual` 走 non-blocking PML stream。
+    - default stream 在 source injection/extraction 前等待 core/PML stream。
+  - prototype 通过 correctness 但未达到性能 gate，已从本地源码移除；最终待提交 diff 不包含 `src/rem_fd.cu`。
+- 执行命令摘要：
+  - 本地：
+    - `python -m py_compile tools/wavestep_stream_overlap_model.py`
+    - `python tools/wavestep_stream_overlap_model.py --json-out reports/day_20260608/wavestep_stream_overlap_model.json --md-out docs/day_20260608/wavestep_stream_overlap_model.md`
+  - 远端：
+    - 只读检查 `/work/wenzhe/cuda3D`，发现主目录 dirty 且在旧分支，不直接覆盖。
+    - 创建干净 worktree：
+      - `/work/wenzhe/cuda3D/.codex_worktrees/async_streams_20260608_1738`
+    - 上传临时 `src/rem_fd.cu` 与模型报告文件到该 worktree。
+    - 构建 async candidate：
+      - `make -B -f makefile.rtx5090 test NVFLAGS="... -DCUDA3D_WAVESTEP_ASYNC_STREAMS"`
+    - smoke：
+      - `python3 tools/run_benchmark.py --case smoke_1gpu --tag async_streams_smoke_datafixed_flags`
+    - correctness A/B：
+      - base：`python3 tools/run_benchmark.py --case correctness --tag len16_base_for_async`
+      - candidate：`python3 tools/run_benchmark.py --case correctness --tag async_streams_candidate`
+      - compare：`tools/compare_outputs.py`
+    - perf repeat 3 轮：
+      - 每轮重建 base binary。
+      - 每轮运行 `perf_1gpu_6shots` base。
+      - 每轮重建 async binary。
+      - 每轮运行 `perf_1gpu_6shots` async candidate。
+      - 每轮输出 compare。
+- 环境/流程问题记录：
+  - 第一次远端 build 使用 `export NVFLAGS=...`，但 `makefile.rtx5090` 内部定义 `NVFLAGS = ...`，环境变量不会覆盖 makefile 变量；修正为 command-line override：`make ... NVFLAGS="..."`。
+  - 新建 worktree 初始缺少 `bench_smoke/d_obs` 输出目录，旧程序写输出时会崩溃；补齐目录后 smoke 正常。
+  - 新建 worktree 初始缺少 `perf_1gpu_6shots` velocity symlink；补 `vel_perf_1gpu_6shots_ny384_nx384_nz95.dir` symlink 后 perf case 正常。
+  - 以上均为隔离 worktree 的测试数据布置问题，未修改远端主目录。
+- 测试结果：
+  - 模型 gate：
+    - accepted len16 sampled main：`297.248us`。
+    - `p_core`：`93.547us`。
+    - `v_pml + pressure-PML serial path`：`203.701us`。
+    - conservative two-stream ceiling：`1.4592x`。
+    - 达到 `1.05x` sampled-main 只需 `15.13%` realized overlap，因此允许 prototype。
+  - async build 通过：
+    - binary SHA256：`78ea9c9ee37328ff913e9a403b8abe3ec3e3c2f232790ccb104e3dcdcd2e0f86`。
+  - smoke 通过：
+    - run：`benchmarks/runs/smoke_1gpu_async_streams_smoke_datafixed_flags_20260608_174937`
+    - returncode `0`，outputs `3`，包含 `ALL DONE`。
+  - correctness 通过：
+    - base：`benchmarks/runs/correctness_len16_base_for_async_20260608_175017`
+    - candidate：`benchmarks/runs/correctness_async_streams_candidate_20260608_175026`
+    - compare：`reports/day_20260608/wavestep_async_correctness_compare_20260608_175029`
+    - 6 个输出 rel L2 全部 `0`。
+  - `perf_1gpu_6shots` repeat 通过数值 compare，但性能未达 gate：
+    - round 1：WP `1.004085x`，Gradient `1.002251x`
+    - round 2：WP `1.005962x`，Gradient `1.002730x`
+    - round 3：WP `1.005502x`，Gradient `1.003585x`
+    - mean WP speedup：`1.005183x`
+    - mean Gradient speedup：`1.002855x`
+    - all compare pass：`True`
+- 输出/哈希/误差摘要：
+  - correctness max rel L2：`0`。
+  - perf repeat compare：3 轮全部 pass。
+  - perf summary：`reports/day_20260608/wavestep_async_perf6_repeat_20260608_175407/summary.md`。
+  - async correctness candidate SHA：见 `reports/day_20260608/wavestep_async_candidate.sha256`。
+- 风险与下一步：
+  - 决策：拒绝 `CUDA3D_WAVESTEP_ASYNC_STREAMS` prototype，不进入主线。
+  - 原因：模型上界成立，但实际硬件资源 contention 几乎吃掉 overlap，repeat WP 只有约 `0.5%`，低于 `>=5%` meaningful prototype gate。
+  - 禁止重复 two-stream `p_core` vs PML overlap。
+  - 禁止基于本结果写 single-GPU CUDA Graph / launch aggregation。
+  - 三 stream pressure residual/len16 fanout 只有在 Nsight Systems 证明有真实 concurrent execution headroom 且新模型证明扣除 contention 后仍有 `>=5%` repeat speedup ceiling 时才允许重开。
+  - 下一步回到实际减少 global memory work 的 ownership 设计，重点关注 pressure-PML final `p0/cw2` writeback 与 CPML z-state dependency。

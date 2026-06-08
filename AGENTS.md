@@ -513,6 +513,40 @@ Phase 4.13 v-PML coalescing/layout gate 已完成并拒绝 CUDA prototype：
 - 当前下一步：
   - 从更大粒度的 memory ownership / wave-step scheduling 入手，重点是减少 `vx/vy` global round trip 或 pressure final writeback/CPML state dependency。
 
+Phase 4.14 wave-step async streams prototype 已完成并拒绝：
+
+- 工具：`tools/wavestep_stream_overlap_model.py`。
+- 模型报告：`docs/day_20260608/wavestep_stream_overlap_model.md`。
+- prototype 报告：`docs/day_20260608/wavestep_async_streams_prototype.md`。
+- perf repeat：
+  - `reports/day_20260608/wavestep_async_perf6_repeat_20260608_175407/summary.md`
+  - `reports/day_20260608/wavestep_async_perf6_repeat_20260608_175407/summary.json`
+- 模型结论：
+  - accepted len16 sampled main：`297.248us`。
+  - `p_core`：`93.547us`。
+  - `v_pml + pressure-PML serial path`：`203.701us`。
+  - two-stream conservative schedule 的 sampled-main ceiling：`1.4592x`。
+  - 只需约 `15.13%` realized overlap 即可达到 `1.05x` sampled-main，因此允许 prototype。
+- prototype：
+  - 临时宏：`CUDA3D_WAVESTEP_ASYNC_STREAMS`。
+  - 调度：`p_core` 独立 stream，`v_pml -> p_pml_len16 -> p_pml_residual` 独立 PML stream，default stream 在 source injection/extraction 前等待二者。
+  - 只改 host launch scheduling，不改 CUDA math kernel。
+- 测试：
+  - smoke pass：`smoke_1gpu_async_streams_smoke_datafixed_flags_20260608_174937`。
+  - correctness pass：`wavestep_async_correctness_compare_20260608_175029`，6 个输出 rel L2 全部 `0`。
+  - `perf_1gpu_6shots` repeat 3 轮输出对比全部 pass。
+- 性能：
+  - mean WP speedup：`1.005183x`。
+  - mean Gradient speedup：`1.002855x`。
+- 决策：
+  - 拒绝 `CUDA3D_WAVESTEP_ASYNC_STREAMS` prototype，不进入主线。
+  - 本地源码已移除临时代码，只保留模型、报告和测试摘要。
+  - 不要重复 two-stream `p_core` vs PML overlap。
+  - 不要基于本结果写 single-GPU CUDA Graph / launch aggregation。
+  - 三 stream pressure residual/len16 fanout 只有在 Nsight Systems 证明有真实 concurrent execution headroom 且新模型证明扣除 contention 后仍有 `>=5%` repeat speedup ceiling 时才允许重开。
+- 当前下一步：
+  - 回到实际减少 global memory work 的 ownership 设计，重点关注 pressure-PML final `p0/cw2` writeback 与 CPML z-state dependency。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

@@ -1,0 +1,72 @@
+{
+  "candidates": {
+    "overlap_core_with_parallel_pressure_pml": {
+      "critical_path_us": 137.9306666666667,
+      "description": "Also run residual and len16 pressure-PML kernels in separate streams after v_pml.",
+      "overlap_window_us": 93.54666666666667,
+      "required_overlap_efficiency_for_target": 0.15131128848346656,
+      "requires": [
+        "three non-blocking streams",
+        "v_pml done event fanout to residual and len16 pressure streams",
+        "proof residual and len16 tile lists write disjoint p0/mem_dzz/mem_dz_next regions"
+      ],
+      "sampled_main_speedup_ceiling": 2.1550537468099913
+    },
+    "overlap_core_with_serial_pml_path": {
+      "critical_path_us": 203.70133333333337,
+      "description": "Run p_core concurrently with the whole v_pml -> pressure-PML path.",
+      "overlap_window_us": 93.54666666666667,
+      "required_overlap_efficiency_for_target": 0.15131128848346656,
+      "requires": [
+        "p_core stream independent from PML stream",
+        "default stream waits for both streams before injection/extract",
+        "next iteration streams wait for post-injection event"
+      ],
+      "sampled_main_speedup_ceiling": 1.4592344347279678
+    },
+    "overlap_core_with_v_only": {
+      "critical_path_us": 232.0,
+      "description": "Run p_core concurrently with v_pml only; pressure kernels remain after both.",
+      "overlap_window_us": 65.248,
+      "required_overlap_efficiency_for_target": 0.21693640673532805,
+      "requires": [
+        "two non-blocking streams",
+        "event before pressure PML",
+        "default stream waits before injection/extract"
+      ],
+      "sampled_main_speedup_ceiling": 1.281241379310345
+    }
+  },
+  "gate": {
+    "best_candidate": "overlap_core_with_parallel_pressure_pml",
+    "best_sampled_main_speedup_ceiling": 2.1550537468099913,
+    "decision": "allow_cuda_prototype",
+    "prototype_boundaries": [
+      "macro default off",
+      "do not change CUDA math kernels",
+      "do not overlap next time step before injection/extract completes",
+      "first prototype uses two streams only; pressure residual/len16 parallel fanout requires a later gate"
+    ],
+    "prototype_macro": "CUDA3D_WAVESTEP_ASYNC_STREAMS",
+    "reason": "The conservative two-stream schedule only needs about 15.13% realized overlap to reach 1.0500x sampled-main speedup, while preserving kernel math and ownership.",
+    "recommended_first_prototype": "overlap_core_with_serial_pml_path"
+  },
+  "inputs": {
+    "notes": [
+      "p_core reads p1/cw2 and writes p0 only in the core region.",
+      "v_pml reads p1 and writes vx/vy plus CPML velocity state.",
+      "pressure PML reads vx/vy and writes p0 only in PML regions.",
+      "source injection/extraction must wait for both core and PML streams before pointer swap reuse."
+    ],
+    "target_speedup": 1.05,
+    "timings": {
+      "p_core_us": 93.54666666666667,
+      "p_pml_len16_us": 65.77066666666667,
+      "p_pml_residual_us": 72.68266666666668,
+      "p_pml_total_us": 138.45333333333335,
+      "profile_label": "len16",
+      "sequential_sampled_main_us": 297.24800000000005,
+      "v_pml_us": 65.248
+    }
+  }
+}
