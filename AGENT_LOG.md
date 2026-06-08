@@ -5384,3 +5384,49 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 不写 direct cooperative-grid K=2 temporal prototype。
   - 不写没有 cluster-local ownership model 的 cluster temporal / producer-consumer fusion kernel。
   - 下一步若继续该方向，只允许先做 cluster-local ownership byte/synchronization model，必须覆盖 `p_mid` / velocity / CPML ownership、source injection、receiver extraction、shell/PML reconciliation 和 cross-cluster boundary。
+
+## 2026-06-09 01:58:16 +08:00
+
+- 操作目标：
+  - 在已确认 cluster primitive 可用后，建立 cluster-local K=2 temporal ownership byte/synchronization model。
+  - 判断是否可以写 cluster-local temporal / producer-consumer fusion CUDA prototype。
+- 修改文件：
+  - 新增 `tools/cluster_local_ownership_model.py`。
+  - 新增 `docs/day_20260609/cluster_local_ownership_model.md`。
+  - 新增 `reports/day_20260609/cluster_local_ownership_model.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - `python -m py_compile tools\cluster_local_ownership_model.py`
+  - `python tools\cluster_local_ownership_model.py --json-out reports\day_20260609\cluster_local_ownership_model.json --md-out docs\day_20260609\cluster_local_ownership_model.md`
+- 测试结果：
+  - Python 编译检查通过。
+  - cluster-local ownership model 生成 Markdown/JSON 成功。
+  - 本轮不修改主 CUDA 程序，不需要远端 build/correctness/perf repeat。
+- 输出/哈希/误差摘要：
+  - current-best anchor：
+    - WP speedup vs zmem：`1.222023x`。
+    - sampled main：`284.010us`。
+    - p_core：`93.730us`，share `33.00%`。
+  - cooperative / cluster capacity：
+    - cooperative grid ceiling：`2040` blocks。
+    - previous K=2 required blocks：`70688` blocks。
+    - over-capacity factor：`34.6510x`。
+    - max passing cluster size：`8`。
+  - optimistic DSM tile gate：
+    - required p_core pair reduction for `>=5%` sampled-main：`14.43%`。
+    - required local pair byte ratio：`<=0.8557`。
+    - ideal no-dup sampled-main speedup：`1.1317x`。
+    - best DSM tile：cluster size `8`，output z/x/y `40/44/48`，p_mid bytes `776736`。
+    - best local pair byte ratio：`1.1602x`。
+    - estimated sampled-main speedup：`0.9498x`。
+- 风险与下一步：
+  - 决策：`reject_cluster_local_temporal_cuda_prototype`。
+  - 不写 direct cooperative-grid K=2 temporal prototype。
+  - 不写 cluster-local K=2 temporal CUDA prototype with DSM `p_mid` tile。
+  - 不写没有新 ownership byte model 的 cluster producer-consumer fusion。
+  - 后续 CUDA-core 方向只剩：
+    - 用户明确放宽 tolerance 后做 precision-relaxation。
+    - 转向 application-level multi-shot scheduling / batching。
+    - 或提出完全不同的 ownership representation，并先通过 byte/synchronization model。

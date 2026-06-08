@@ -2964,3 +2964,94 @@ Next allowed work:
   CPML ownership, source injection, receiver extraction, shell/PML
   reconciliation, and cross-cluster boundary handling.
 ```
+
+## 2026-06-09 01:58:16 +08:00 - Cluster-local ownership model
+
+Decision:
+
+```text
+Reject cluster-local K=2 temporal CUDA prototype.
+Reject cluster producer-consumer fusion without a new ownership model that
+beats the DSM byte gate.
+```
+
+Evidence:
+
+```text
+tool:
+  tools/cluster_local_ownership_model.py
+
+report:
+  docs/day_20260609/cluster_local_ownership_model.md
+  reports/day_20260609/cluster_local_ownership_model.json
+
+inputs:
+  reports/day_20260608/temporal_pipeline_model.json
+  reports/day_20260609/cluster_cooperative_frontier_gate.json
+  reports/day_20260608/post_vlen16_pressure_next_gate.json
+```
+
+Current-best anchor:
+
+```text
+formal WP speedup vs zmem       1.222023x
+sampled main                    284.010us
+p_core                          93.730us
+p_core share                    33.00%
+```
+
+Capacity and byte gate:
+
+```text
+cooperative grid ceiling        2040 blocks
+previous K=2 required blocks    70688 blocks
+over-capacity factor            34.6510x
+max passing cluster size        8
+
+baseline pair bytes/output      256.875
+required p_core reduction       14.43%
+required local pair byte ratio  <= 0.8557
+ideal no-dup sampled speedup    1.1317x
+```
+
+Optimistic DSM tile search:
+
+```text
+assumption:
+  all per-block shared memory in a cluster can be used as one DSM tile
+  DSM remote latency and implementation overhead are ignored
+
+best tile:
+  cluster size                  8
+  output z/x/y                  40 / 44 / 48
+  p_mid z/x/y                   54 / 58 / 62
+  p_mid bytes                   776736
+  p_mid elements/output         2.2986
+  local pair byte ratio         1.1602x
+  sampled-main estimate         0.9498x
+```
+
+Reason:
+
+```text
+The optimistic DSM upper bound is already slower than the current two-pass
+p_core byte model.  To reach a 5% sampled-main win, local pair byte ratio would
+need to be <=0.8557, but the best 8-block cluster tile is 1.1602.  A real
+implementation would also pay DSM latency and control overhead, so this route
+does not deserve CUDA code.
+```
+
+Boundary:
+
+```text
+Do not write:
+  direct cooperative-grid K=2 temporal prototype
+  cluster-local K=2 temporal CUDA prototype with DSM p_mid tile
+  cluster producer-consumer fusion without a new ownership model that beats the
+  DSM byte gate
+
+Allowed next:
+  precision-relaxation only after explicit tolerance policy change
+  application-level multi-shot scheduling / batching
+  a fundamentally different ownership representation with a new byte model
+```

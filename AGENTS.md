@@ -1261,6 +1261,44 @@ Phase 4.35 cluster / cooperative primitive probe 已完成：
   - 不写没有 cluster-local ownership model 的 cluster temporal / producer-consumer fusion kernel。
   - ordinary exact-CUDA micro-prototype frontier 继续关闭。
 
+Phase 4.36 cluster-local ownership model 已完成并拒绝 CUDA prototype：
+
+- 工具：`tools/cluster_local_ownership_model.py`。
+- 报告：`docs/day_20260609/cluster_local_ownership_model.md`。
+- JSON：`reports/day_20260609/cluster_local_ownership_model.json`。
+- 输入证据：
+  - `reports/day_20260608/temporal_pipeline_model.json`。
+  - `reports/day_20260609/cluster_cooperative_frontier_gate.json`。
+  - `reports/day_20260608/post_vlen16_pressure_next_gate.json`。
+- current-best anchor：
+  - formal WP speedup vs zmem：`1.222023x`。
+  - sampled main：`284.010us`。
+  - p_core：`93.730us`，share `33.00%`。
+- cooperative / cluster capacity：
+  - cooperative grid ceiling：`2040` blocks。
+  - previous K=2 required blocks：`70688` blocks。
+  - over-capacity：`34.6510x`。
+  - max passing cluster size：`8`。
+- optimistic DSM tile search：
+  - 假设 cluster 可将所有 per-block shared memory 当作一个 DSM tile。
+  - 忽略 DSM remote latency 与实现复杂度，因此是 upper-bound filter。
+  - required local pair byte ratio for `>=5%` sampled-main：`<=0.8557`。
+  - ideal no-dup sampled-main speedup：`1.1317x`。
+  - best DSM tile：cluster size `8`，output z/x/y `40/44/48`，p_mid bytes `776736`。
+  - best local pair byte ratio：`1.1602x`。
+  - estimated sampled-main speedup：`0.9498x`。
+- 决策：
+  - `reject_cluster_local_temporal_cuda_prototype`。
+  - ordinary CUDA prototype allowed：`false`。
+  - cluster CUDA prototype allowed：`false`。
+- 解释：
+  - 即使在乐观 DSM 上界下，cluster-local K=2 temporal 的 p_mid halo 成本仍高于当前 two-pass p_core byte model。
+  - 因此不写 cluster-local K=2 temporal / producer-consumer fusion CUDA prototype。
+- 下一步允许：
+  - 用户明确放宽 tolerance 后做 precision-relaxation study。
+  - 转向 application-level multi-shot scheduling / batching。
+  - 或提出完全不同的 ownership representation，必须先证明能绕过 DSM halo blow-up。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：
