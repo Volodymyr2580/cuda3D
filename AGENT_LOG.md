@@ -3565,3 +3565,66 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 决策：拒绝 `CUDA3D_INJECT_EXTRACT_BS512`。
   - inject/extract 小 kernel 确实存在 launch/small-grid 信号，但 block-size-only 调整没有收益。
   - 后续若重开此方向，必须改成 CUDA Graph、launch aggregation 或 wave-step scheduling 设计，并以 `perf_1gpu_6shots repeat` 证明至少 `>=2%` speedup。
+
+## 2026-06-08 14:15:00 +08:00 - V-PML SourceCounters gate and component split rejection
+
+- 操作目标：
+  - 在当前 direct-fill best 上补采 `cuda_fd3d_v_pml_tile_ns` 的 SourceCounters / SchedulerStats / WarpStateStats。
+  - 判断是否值得进入 `v_pml` 的 vx/vy component-owner split CUDA prototype。
+- 修改文件：
+  - 新增报告：
+    - `reports/day_20260608/directfill_v_pml_source_ncu.csv`
+    - `reports/day_20260608/directfill_v_pml_source_summary.md`
+    - `reports/day_20260608/directfill_v_pml_source_summary.json`
+    - `docs/day_20260608/v_pml_source_profile_gate.md`
+  - 更新 `tools/ncu_csv_summary.py`：
+    - 增加 SourceCounters 指标解析与 markdown 输出：branch efficiency、branch instructions、avg divergent branches。
+    - 增加 Scheduler/WarpState 的更多输出行：issued/active warps、warp cycles、active threads。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 远端 `/work/wenzhe/cuda3D_codex_day_20260608_68de1a7` 重新编译 direct-fill best + `-lineinfo`。
+  - 运行 Nsight Compute：
+    - `--section SourceCounters`
+    - `--section SchedulerStats`
+    - `--section WarpStateStats`
+    - `--launch-skip 10`
+    - `--launch-count 10`
+    - `--kernel-name regex:.*cuda_fd3d_v_pml_tile.*`
+    - case：`perf_1gpu_6shots`
+  - 导出 NCU `details` CSV，并用 `tools/ncu_csv_summary.py` 生成 summary。
+  - 远端导出 source page 与 `cuda,sass` source page；原始文本约 `3.36MB` / `8.65MB`，只保留在远端，不提交入 Git。
+  - 本地运行 `python -m py_compile tools/ncu_csv_summary.py`。
+  - 本地静态预算 vx/vy component-owner split 的 tile/thread overlap。
+  - 远端最终重新编译 direct-fill best，移除 `-lineinfo` profile binary 影响。
+- 测试结果：
+  - NCU profile 成功。
+  - `tools/ncu_csv_summary.py` py_compile 通过。
+  - 远端 direct-fill best restore build 通过。
+  - 未写 CUDA candidate；component split 在静态 gate 被拒绝。
+  - 输出/哈希/误差摘要：
+  - 远端 restore 后 binary SHA256：`bf719d04f0fa1136af3f1afac54a936ee0d052a18ffd9a9d07863aa7f9dfca28`。
+  - `cuda_fd3d_v_pml_tile_ns` SourceCounters：
+    - No Eligible：`44.891%`。
+    - eligible warps/scheduler：`1.629`。
+    - active warps/scheduler：`10.170`。
+    - warp cycles/issued inst：`18.456`。
+    - avg active threads/warp：`23.700`。
+    - avg not-predicated threads/warp：`21.670`。
+    - branch efficiency：`86.970%`。
+    - branch instructions：`2,079,334`。
+    - avg divergent branches：`143.480`。
+    - L1TEX scoreboard stall：约 `11.8 cycles/warp`。
+    - uncoalesced excessive sectors：约 `22%`。
+  - vx/vy split static budget：
+    - current combined vx/vy tiles：`41,100`。
+    - vx-only tiles：`40,848`。
+    - vy-only tiles：`40,762`。
+    - split tile sum / combined：`1.985645x`。
+    - split active work sum / combined active：`1.963726x`。
+    - overlap tiles：`40,510`。
+- 风险与下一步：
+  - 决策：拒绝当前 `32x4x2` tile geometry 下的 `v_pml` vx/vy component-owner split，不进入 CUDA implementation。
+  - `v_pml` 剩余信号是真实的 memory-latency/coalescing 问题，而不是简单 branch 或表达式级问题。
+  - 下一步如果继续 `v_pml`，必须先提出改变 memory layout/coalescing 的设计；不能做 tile block shape sweep，也不能重开 `CUDA3D_PML_ZMEM_V_TILE_PRUNE`。

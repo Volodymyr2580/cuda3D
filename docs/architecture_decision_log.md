@@ -861,3 +861,51 @@ Do not retry inject/extract block-size-only changes.  Future scheduling work
 must be framed as CUDA Graph / launch aggregation / wave-step orchestration
 and must show a >=2% repeat gain before entering the main line.
 ```
+
+## 2026-06-08 - Reject V-PML VX/VY Component Split Gate
+
+Decision:
+
+```text
+Reject implementing separate vx and vy velocity-PML component kernels under
+the current 32x4x2 PML tile geometry.
+```
+
+Evidence:
+
+```text
+v_pml SourceCounters:
+  No Eligible                              44.891%
+  Eligible warps/scheduler                 1.629
+  Warp cycles/issued instruction           18.456
+  Avg active threads/warp                  23.700
+  Avg not-predicated threads/warp          21.670
+  Branch efficiency                        86.970%
+  L1TEX scoreboard stall                   about 11.8 cycles/warp
+  Uncoalesced excessive sectors            about 22%
+
+component split static budget:
+  current combined vx/vy tiles             41,100
+  vx-only tiles                            40,848
+  vy-only tiles                            40,762
+  split tile sum / combined tiles          1.985645x
+  split active work sum / combined active  1.963726x
+  overlap tiles                            40,510
+```
+
+Reason:
+
+```text
+The profiler shows real memory-latency and coalescing pressure in v_pml_tile,
+but vx/vy ownership overlaps too heavily in the current tile geometry.  A
+component-owner split would nearly double launches and active component work,
+so it is rejected before writing CUDA code.
+```
+
+Rejected boundary:
+
+```text
+Do not implement vx/vy split kernels with the current 32x4x2 PML tile shape.
+Future v_pml work must first change the memory layout/coalescing strategy or
+show a new budget that avoids the near-2x component overlap.
+```

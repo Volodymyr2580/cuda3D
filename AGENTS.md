@@ -53,6 +53,7 @@ NVFLAGS="-O3 -arch=sm_120 --use_fast_math \
 - `p_core` simple block shape sweep
 - `-maxrregcount` / register cap sweep
 - inject/extract small-kernel block-size reduction (`CUDA3D_INJECT_EXTRACT_BS512`)
+- velocity-PML vx/vy component-owner split under current `32x4x2` tile geometry
 
 Profiler gate：
 
@@ -341,7 +342,14 @@ Phase 4.8 direct-fill SourceCounters profile 已完成：
   - `perf_1gpu_6shots` repeat mean WP speedup vs direct-fill：`0.999684x`。
   - mean Gradient speedup vs direct-fill：`0.998963x`。
   - 结论：把 inject/extract block size 从 `1024` 改到 `512` 不能解决 launch/small-grid 开销，不满足 `>=2%` gate。
-- 下一步不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load、z-safe shared `p1` direct second derivative、ptxas `dlcm` cache-policy sweep、p_core 显式 `__ldg` 或 inject/extract block-size 微调，应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构，或单独设计 CUDA Graph / wave-step scheduling 级优化。
+- `v_pml` SourceCounters gate 已完成：
+  - 报告：`docs/day_20260608/v_pml_source_profile_gate.md`。
+  - `cuda_fd3d_v_pml_tile_ns`：No Eligible `44.891%`，eligible warps/scheduler `1.629`，warp cycles/issued inst `18.456`。
+  - active threads/warp `23.700`，not-predicated threads/warp `21.670`，branch efficiency `86.970%`。
+  - NCU rule 显示 L1TEX scoreboard stall 约 `11.8 cycles/warp`，uncoalesced excessive sectors 约 `22%`。
+  - 静态预算拒绝 vx/vy component-owner split：tile 总量会变成当前 combined kernel 的 `1.985645x`，active component work 约 `1.963726x`。
+  - 结论：当前 `32x4x2` tile 下不要写 vx/vy split kernel；后续 v_pml 必须从 memory layout / coalescing 设计入手。
+- 下一步不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load、z-safe shared `p1` direct second derivative、ptxas `dlcm` cache-policy sweep、p_core 显式 `__ldg`、inject/extract block-size 微调或当前 tile 下的 vx/vy split，应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构，或单独设计 CUDA Graph / wave-step scheduling 级优化。
 
 ## 速度阈值存档规则
 

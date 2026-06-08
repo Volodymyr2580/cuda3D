@@ -1,0 +1,60 @@
+{
+  "profiles": [
+    {
+      "label": "directfill_v_pml",
+      "path": "benchmarks/profiles/day_20260608/directfill_v_pml_source_ncu.csv",
+      "kernels": {
+        "cuda_fd3d_v_pml_tile_ns": {
+          "launches": 10,
+          "metrics": {
+            "active_warps_per_scheduler": 10.17,
+            "avg_active_threads_per_warp": 23.7,
+            "avg_divergent_branches": 143.48,
+            "avg_not_predicated_off_threads_per_warp": 21.67,
+            "branch_efficiency_pct": 86.97,
+            "branch_instructions": 2079334.0,
+            "eligible_warps_per_scheduler": 1.629,
+            "issued_warp_per_scheduler": 0.549,
+            "no_eligible_pct": 44.891000000000005,
+            "one_or_more_eligible_pct": 55.108999999999995,
+            "warp_cycles_per_issued_instruction": 18.456
+          },
+          "rules": [
+            {
+              "section": "SchedulerStats",
+              "rule": "IssueSlotUtilization",
+              "type": "OPT",
+              "estimated_speedup_type": "local",
+              "estimated_speedup": "44.17",
+              "description": "Every scheduler is capable of issuing one instruction per cycle, but for this workload each scheduler only issues an instruction every 1.8 cycles. This might leave hardware resources underutilized and may lead to less optimal performance. Out of the maximum of 12 warps per scheduler, this workload allocates an average of 10.32 active warps per scheduler, but only an average of 1.67 warps were eligible per cycle. Eligible warps are the subset of active warps that are ready to issue their next instruction. Every cycle with no eligible warp results in no instruction being issued and the issue slot remains unused. To increase the number of eligible warps, avoid possible load imbalances due to highly different execution durations per warp. Reducing stalls indicated on the Warp State Statistics and Source Counters sections can help, too."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "OPT",
+              "estimated_speedup_type": "global",
+              "estimated_speedup": "44.17",
+              "description": "On average, each warp of this workload spends 11.8 cycles being stalled waiting for a scoreboard dependency on a L1TEX (local, global, surface, texture) operation. Find the instruction producing the data being waited upon to identify the culprit. To reduce the number of cycles waiting on L1TEX data accesses verify the memory access patterns are optimal for the target architecture, attempt to increase cache hit rates by increasing data locality (coalescing), or by changing the cache configuration. Consider moving frequently used data to shared memory. This stall type represents about 63.7% of the total average of 18.5 cycles between issuing two instructions."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "INF",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "Check the Warp Stall Sampling (All Samples) table for the top stall locations in your source based on sampling data. The Profiling Guide (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#metrics-reference) provides more details on each stall reason."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "ThreadDivergence",
+              "type": "OPT",
+              "estimated_speedup_type": "local",
+              "estimated_speedup": "32.3",
+              "description": "Instructions are executed in warps, which are groups of 32 threads. Optimal instruction throughput is achieved if all 32 threads of a warp execute the same instruction. The chosen launch configuration, early thread completion, and divergent flow control can significantly lower the number of active threads in a warp per cycle. This workload achieves an average of 23.7 threads being active per cycle. This is further reduced to 21.7 threads per warp due to predication. The compiler may use predication to avoid an actual branch. Instead, all instructions are scheduled, but a per-thread condition code or predicate controls which threads execute the instructions. Try to avoid different execution paths within a warp when possible."
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
