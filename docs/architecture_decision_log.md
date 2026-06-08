@@ -2257,3 +2257,79 @@ Report:
 reports/day_20260608/cal_loop_timer_probe_20260608_212019/summary.md
 reports/day_20260608/cal_loop_timer_probe_20260608_212019/summary.json
 ```
+
+## 2026-06-08 - Reject Pressure-PML Len32 Full-Warp Branch-Only Split
+
+Decision:
+
+```text
+Do not implement CUDA3D_PML_PRESSURE_LEN32_FULL_WARP_SPECIALIZE as a
+branch/control-only residual pressure-PML split after the accepted len16
+half-warp packing.
+```
+
+Evidence:
+
+```text
+model:
+  tools/pml_len32_fullwarp_specialization_budget.py
+
+inputs:
+  reports/day_20260608/pml_compact_descriptor_budget.json
+  reports/day_20260608/len16_vs_directfill_ncu_20260608_1600/summary.json
+
+timing anchor:
+  sampled main                   297.248us
+  residual pressure-PML           72.683us
+  packed len16 pressure-PML       65.771us
+
+residual shape after len16:
+  length-23 lines                 87,776
+  length-32 lines                263,328
+  length-32 line share            75.00%
+  length-32 active-lane share     80.67%
+
+required for >=1.05x sampled-main:
+  full32 local speedup            1.3182x to 1.3507x
+  full32 local time reduction     24.14% to 25.97%
+
+scenario ceilings:
+  control proxy on full32         1.0080x sampled-main
+  control proxy on residual       1.0107x sampled-main
+  perfect branch on full32        1.0340x sampled-main
+  perfect branch on residual      1.0425x sampled-main
+  20% full32 local speedup        1.0411x sampled-main
+```
+
+Reason:
+
+```text
+Length-32 residual work has no inactive-lane saving after len16 packing.  A
+new full-warp kernel would still perform the same pressure update, vx/vy loads,
+z-cache math, and CPML state work, while adding another tile list and launch.
+The measurable branch/control opportunity is too small for the >=5% prototype
+gate.
+```
+
+Boundary:
+
+```text
+Do not write branch/control-only length-32 residual pressure-PML kernels.
+Do not treat full-active length-32 lines as another lane-compaction opportunity.
+This does not reject future length-32 work that removes real memory traffic or
+proves a different ownership model with source-level profiler evidence.
+```
+
+Next:
+
+```text
+Continue only with designs that remove real memory traffic / state ownership
+costs in fd_3d_f, or defer to true multi-GPU batching on a multi-GPU platform.
+```
+
+Report:
+
+```text
+docs/day_20260608/pml_len32_fullwarp_specialization_budget.md
+reports/day_20260608/pml_len32_fullwarp_specialization_budget.json
+```

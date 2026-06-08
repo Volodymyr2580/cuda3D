@@ -937,6 +937,35 @@ Phase 4.25 cal-loop internal timer probe 已完成：
   - 停止 host/pre-FD loop 小修。
   - 计算核心提速只能继续从 `fd_3d_f` 内部 kernel/dataflow 入手，或等待 true multi-GPU batching 平台。
 
+Phase 4.26 pressure-PML len32 full-warp specialization budget 已完成并拒绝 CUDA prototype：
+
+- 工具：`tools/pml_len32_fullwarp_specialization_budget.py`。
+- 报告：`docs/day_20260608/pml_len32_fullwarp_specialization_budget.md`。
+- JSON：`reports/day_20260608/pml_len32_fullwarp_specialization_budget.json`。
+- 背景：
+  - Phase 4.9 已接受 len16 half-warp packing。
+  - len23 exact/descriptor compaction 已在 Phase 4.11 拒绝。
+  - 本 gate 检查 residual pressure-PML 中 length-32 full-active z-line 是否值得单独 full-warp specialization。
+- 结果：
+  - sampled main：`297.248us`。
+  - residual pressure-PML：`72.683us`。
+  - length-32 line share：`75.00%`。
+  - length-32 active-lane share：`80.67%`。
+  - 要让 sampled-main 达到 `>=1.05x`，length-32 本地需要约 `1.3182x` 到 `1.3507x` speedup。
+  - 对应本地时间减少约 `24.14%` 到 `25.97%`。
+- 上界场景：
+  - direct-fill source-visible address/control proxy 作用在 length-32：sampled-main `1.0080x`。
+  - address/control proxy 作用在整个 residual kernel：sampled-main `1.0107x`。
+  - perfect branch-efficiency 作用在 length-32：sampled-main `1.0340x`。
+  - perfect branch-efficiency 作用在整个 residual kernel：sampled-main `1.0425x`。
+  - 20% length-32 local speedup：sampled-main `1.0411x`。
+- 决策：
+  - 不写 `CUDA3D_PML_PRESSURE_LEN32_FULL_WARP_SPECIALIZE`。
+  - 不写 branch/control-only length-32 residual split。
+  - 原因：length-32 residual 没有 inactive-lane saving；单独 kernel 必须产生约 `1.32x-1.35x` 本地收益，而现有 branch/control 与 NCU proxy 都低于 `>=5%` sampled-main gate。
+- 重开条件：
+  - 只有 source-level profile 能单独分离 length-32 residual，并证明扣除额外 launch/tile-list/control overhead 后仍有 `>=5%` repeat speedup ceiling，才允许重开。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

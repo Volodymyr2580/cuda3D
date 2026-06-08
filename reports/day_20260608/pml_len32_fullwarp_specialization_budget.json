@@ -1,0 +1,80 @@
+{
+  "inputs": {
+    "active_budget_json": "E:\\cuda3D\\reports\\day_20260608\\pml_compact_descriptor_budget.json",
+    "profile_json": "E:\\cuda3D\\reports\\day_20260608\\len16_vs_directfill_ncu_20260608_1600\\summary.json",
+    "target_sampled_main_speedup": 1.05,
+    "control_proxy_fraction": 0.0431
+  },
+  "profile": {
+    "p_core_us": 93.54666666666667,
+    "v_pml_us": 65.248,
+    "p_pml_residual_us": 72.68266666666668,
+    "p_pml_packed_us": 65.77066666666667,
+    "p_pml_total_us": 138.45333333333335,
+    "sampled_main_us": 297.24800000000005,
+    "residual_branch_efficiency_pct": 83.32,
+    "residual_avg_active_threads_per_warp": 22.95,
+    "residual_avg_not_predicated_threads_per_warp": 21.65,
+    "residual_no_eligible_pct": 63.49666666666666,
+    "residual_eligible_warps_per_scheduler": 0.7333333333333333
+  },
+  "residual_shape": {
+    "length23_lines": 87776,
+    "length32_lines": 263328,
+    "length23_active_lanes": 2018848,
+    "length32_active_lanes": 8426496,
+    "length23_launched_lanes": 2808832,
+    "length32_launched_lanes": 8426496,
+    "full32_line_share": 0.75,
+    "full32_active_lane_share": 0.8067226890756303,
+    "full32_launched_lane_share": 0.75
+  },
+  "target": {
+    "sampled_main_us": 297.24800000000005,
+    "target_saved_us": 14.154666666666685,
+    "estimated_full32_time_us_line_share": 54.51200000000001,
+    "estimated_full32_time_us_active_share": 58.63475630252102,
+    "required_full32_speedup_line_share": 1.3507334478657333,
+    "required_full32_speedup_active_share": 1.3182247783794245,
+    "required_full32_time_reduction_line_share": 0.2596614812640645,
+    "required_full32_time_reduction_active_share": 0.2414040333626849
+  },
+  "scenarios": {
+    "control_proxy_on_full32_line_time": {
+      "saved_us": 2.3494672000000003,
+      "description": "Apply direct-fill source-visible address/control proxy only to estimated length-32 time.",
+      "sampled_main_speedup": 1.0079670359078843,
+      "meets_gate": false
+    },
+    "control_proxy_on_entire_residual": {
+      "saved_us": 3.1326229333333337,
+      "description": "Apply direct-fill source-visible address/control proxy to the entire residual kernel.",
+      "sampled_main_speedup": 1.0106510001774687,
+      "meets_gate": false
+    },
+    "perfect_branch_efficiency_on_full32_active_time": {
+      "saved_us": 9.78027735126051,
+      "description": "Generously treat residual branch inefficiency as removable time on length-32 work.",
+      "sampled_main_speedup": 1.0340221756416499,
+      "meets_gate": false
+    },
+    "perfect_branch_efficiency_on_entire_residual": {
+      "saved_us": 12.123468800000007,
+      "description": "Utopian: eliminate the full residual branch-efficiency gap.",
+      "sampled_main_speedup": 1.0425199078766605,
+      "meets_gate": false
+    },
+    "twenty_percent_full32_speedup": {
+      "saved_us": 11.726951260504205,
+      "description": "Generous full-line specialization estimate without lane or state-traffic reduction.",
+      "sampled_main_speedup": 1.0410721076861962,
+      "meets_gate": false
+    }
+  },
+  "gate": {
+    "decision": "reject_cuda_prototype",
+    "candidate": "CUDA3D_PML_PRESSURE_LEN32_FULL_WARP_SPECIALIZE",
+    "reason": "Length-32 residual work has no inactive-lane saving after len16 packing.  A separate full-warp kernel would need about 1.32x-1.35x local speedup to move sampled-main by 5%, while existing branch/control proxies and even a generous perfect-branch-efficiency scenario remain below the gate.",
+    "reopen_condition": "Only reopen if a source-level profile separates length-32 residual work and proves that removable branch/control or memory-ownership overhead is at least the required local reduction after extra launch and tile-list overhead."
+  }
+}

@@ -4872,3 +4872,37 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 不写 `vc/vc_pad` preparation optimization、output write / cleanup / copy-reduce micro prototype。
   - 最大非-FD cal-loop 项 `wavefield_prep=0.049816s`，即使理想消除也只有约 `2.4%` Gradient speedup ceiling，低于 `>=5%` prototype gate。
   - 后续 exact compute 优化应聚焦 `fd_3d_f` kernel/dataflow，或等待 true multi-GPU batching 平台。
+
+## 2026-06-08 21:44:13 +08:00
+
+- 操作目标：
+  - 继续 Phase 4.25 后的 CUDA-core route，检查 accepted len16 half-warp packing 后，residual pressure-PML 中 length-32 full-active z-line 是否值得单独 full-warp specialization。
+  - 在写 CUDA prototype 前建立 `>=5%` sampled-main gate，避免重复 branch/control-only 微调。
+- 修改文件：
+  - 新增 `tools/pml_len32_fullwarp_specialization_budget.py`。
+  - 新增 `docs/day_20260608/pml_len32_fullwarp_specialization_budget.md`。
+  - 新增 `reports/day_20260608/pml_len32_fullwarp_specialization_budget.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - `python tools\pml_len32_fullwarp_specialization_budget.py --json-out reports\day_20260608\pml_len32_fullwarp_specialization_budget.json --md-out docs\day_20260608\pml_len32_fullwarp_specialization_budget.md`
+  - `Get-Content -Encoding UTF8 docs\day_20260608\pml_len32_fullwarp_specialization_budget.md`
+- 测试结果：
+  - 模型工具运行成功。
+  - 本轮不改 CUDA 执行路径，不需要远端 correctness/perf run。
+- 输出/哈希/误差摘要：
+  - sampled main：`297.248us`。
+  - residual pressure-PML：`72.683us`。
+  - packed len16 pressure-PML：`65.771us`。
+  - length-32 line share：`75.00%`。
+  - length-32 active-lane share：`80.67%`。
+  - length-32 要让 sampled-main 达到 `>=1.05x`，本地需要约 `1.3182x` 到 `1.3507x` speedup。
+  - 最乐观 branch/control 场景：
+    - perfect branch-efficiency on entire residual：sampled-main `1.0425x`。
+    - 20% full32 local speedup：sampled-main `1.0411x`。
+- 风险与下一步：
+  - 决策：拒绝 `CUDA3D_PML_PRESSURE_LEN32_FULL_WARP_SPECIALIZE` branch/control-only CUDA prototype。
+  - 不把 full-active length-32 lines 当作新的 lane-compaction opportunity。
+  - 只有 future source-level profile 能单独分离 length-32 residual，并证明扣除额外 launch/tile-list/control overhead 后仍有 `>=5%` repeat speedup ceiling，才允许重开。
+  - 下一步继续寻找能真实减少 memory traffic / state ownership cost 的 `fd_3d_f` 结构路线，或等待 true multi-GPU 平台。
