@@ -2891,3 +2891,76 @@ Next allowed work:
   4. Study application-level batching / multi-shot scheduling outside the
      exact CUDA-core route.
 ```
+
+## 2026-06-09 01:41:01 +08:00 - Cluster / cooperative primitive gate
+
+Decision:
+
+```text
+Reject direct cooperative-grid K=2 temporal reopen.
+Do not write a cluster CUDA prototype until a cluster-local ownership model
+passes the byte/synchronization gate.
+```
+
+Evidence:
+
+```text
+probe source:
+  tools/cuda_cluster_capability_probe.cu
+
+gate:
+  tools/cluster_cooperative_frontier_gate.py
+
+report:
+  docs/day_20260609/cluster_cooperative_frontier_gate.md
+  reports/day_20260609/cluster_cooperative_frontier_gate.json
+
+raw stdout:
+  reports/day_20260609/cluster_probe_stdout_20260609_0132.txt
+
+remote worktree:
+  /work/wenzhe/cuda3D/.codex_worktrees/cluster_probe_20260609_0132
+```
+
+Probe results:
+
+```text
+device                         NVIDIA GeForce RTX 5090
+compute capability             12.0
+SM count                       170
+cooperative launch             supported
+cluster launch                 supported
+128-thread active blocks / SM  12
+cooperative grid ceiling       2040 blocks
+previous K=2 required blocks   70688 blocks
+over-capacity factor           34.6510x
+
+cluster size 1                 pass, active clusters 340
+cluster size 2                 pass, active clusters 170
+cluster size 4                 pass, active clusters 85
+cluster size 8                 pass, active clusters 41
+cluster size 16                cluster misconfiguration
+```
+
+Reason:
+
+```text
+The platform has the relevant CUDA primitives, but they do not provide the
+missing semantics for the previous full-core temporal route.  Cooperative grid
+sync still requires all blocks to be simultaneously resident and remains
+34.6510x over the measured resident capacity.  Thread-block clusters can
+synchronize only blocks inside one cluster; they are not a grid-wide barrier.
+```
+
+Boundary:
+
+```text
+Do not revive the old cooperative-grid full-core K=2 temporal prototype.
+Do not write cluster temporal or producer-consumer fusion CUDA code without a
+cluster-local ownership model.
+
+Next allowed work:
+  cluster-local ownership byte/synchronization model, including p_mid/velocity/
+  CPML ownership, source injection, receiver extraction, shell/PML
+  reconciliation, and cross-cluster boundary handling.
+```

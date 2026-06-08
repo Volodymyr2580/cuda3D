@@ -1,0 +1,26 @@
+device_count=1
+name=NVIDIA GeForce RTX 5090
+compute_capability=12.0
+multi_processor_count=170
+cooperative_launch=1
+cluster_launch=1
+max_blocks_per_sm_attr=24
+max_threads_per_sm=1536
+max_shared_mem_per_sm=102400
+max_registers_per_sm=65536
+plain_kernel_block_size=128
+plain_kernel_active_blocks_per_sm=12
+cooperative_grid_block_ceiling=2040
+cooperative_launch_blocks_170=pass observed_blocks=170
+cooperative_launch_blocks_2040=pass observed_blocks=2040
+cooperative_launch_blocks_2041=too many blocks in cooperative launch
+cluster_size_1_active_clusters_status=no error active_clusters=340
+cluster_size_1_launch=pass observed_cluster_block_sum=2
+cluster_size_2_active_clusters_status=no error active_clusters=170
+cluster_size_2_launch=pass observed_cluster_block_sum=4
+cluster_size_4_active_clusters_status=no error active_clusters=85
+cluster_size_4_launch=pass observed_cluster_block_sum=8
+cluster_size_8_active_clusters_status=no error active_clusters=41
+cluster_size_8_launch=pass observed_cluster_block_sum=16
+cluster_size_16_active_clusters_status=a kernel launch error has occurred due to cluster misconfiguration active_clusters=-1
+cluster_size_16_launch=a kernel launch error has occurred due to cluster misconfiguration

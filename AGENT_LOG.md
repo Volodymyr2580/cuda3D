@@ -5333,3 +5333,54 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
     - 用户明确放宽 tolerance 后研究 precision-relaxation。
     - 转向 application-level multi-shot scheduling。
     - 或停止 CUDA-core sprint 并打包当前成果。
+
+## 2026-06-09 01:41:01 +08:00
+
+- 操作目标：
+  - 验证 RTX 5090 / CUDA 13 上 cooperative launch 与 thread-block cluster primitive 是否真实可用。
+  - 判断这些 primitive 是否足以重开之前被 global synchronization / cross-CTA ownership 卡住的 K=2 temporal route。
+- 修改文件：
+  - 新增 `tools/cuda_cluster_capability_probe.cu`。
+  - 新增 `tools/cluster_cooperative_frontier_gate.py`。
+  - 新增 `docs/day_20260609/cluster_cooperative_frontier_gate.md`。
+  - 新增 `reports/day_20260609/cluster_cooperative_frontier_gate.json`。
+  - 新增 `reports/day_20260609/cluster_probe_stdout_20260609_0132.txt`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 远端创建隔离 worktree：
+    - `git worktree add .codex_worktrees/cluster_probe_20260609_0132 FETCH_HEAD`
+  - 上传 probe：
+    - `tools/cuda_cluster_capability_probe.cu -> /work/wenzhe/cuda3D/.codex_worktrees/cluster_probe_20260609_0132/tools/cuda_cluster_capability_probe.cu`
+  - 远端编译运行：
+    - `/usr/local/cuda-13.0/bin/nvcc -std=c++17 -O2 -arch=sm_120 -lineinfo tools/cuda_cluster_capability_probe.cu -o tools/cuda_cluster_capability_probe`
+    - `./tools/cuda_cluster_capability_probe | tee reports_cluster_probe_stdout.txt`
+  - 拉回 stdout：
+    - `/work/wenzhe/cuda3D/.codex_worktrees/cluster_probe_20260609_0132/reports_cluster_probe_stdout.txt -> reports/day_20260609/cluster_probe_stdout_20260609_0132.txt`
+  - 本地生成 gate：
+    - `python -m py_compile tools\cluster_cooperative_frontier_gate.py`
+    - `python tools\cluster_cooperative_frontier_gate.py --json-out reports\day_20260609\cluster_cooperative_frontier_gate.json --md-out docs\day_20260609\cluster_cooperative_frontier_gate.md`
+- 测试结果：
+  - CUDA probe 在远端 RTX 5090 上编译通过。
+  - CUDA probe 运行通过。
+  - Python gate 编译和生成通过。
+  - 本轮不修改主 CUDA 程序，不需要 correctness/perf repeat。
+- 输出/哈希/误差摘要：
+  - device：`NVIDIA GeForce RTX 5090`。
+  - compute capability：`12.0`。
+  - SM count：`170`。
+  - cooperative launch：`1`。
+  - cluster launch：`1`。
+  - 128-thread block active blocks / SM：`12`。
+  - cooperative grid block ceiling：`2040`。
+  - previous K=2 required blocks：`70688`。
+  - cooperative over-capacity factor：`34.6510x`。
+  - cooperative launch `2040` blocks pass；`2041` blocks 返回 `too many blocks in cooperative launch`。
+  - cluster size `1/2/4/8` launch pass；cluster size `16` 返回 cluster misconfiguration。
+- 风险与下一步：
+  - 决策：`reject_direct_cooperative_grid_k2_temporal_reopen`。
+  - 决策：`design_only_until_cluster_local_ownership_model_passes`。
+  - 不写 direct cooperative-grid K=2 temporal prototype。
+  - 不写没有 cluster-local ownership model 的 cluster temporal / producer-consumer fusion kernel。
+  - 下一步若继续该方向，只允许先做 cluster-local ownership byte/synchronization model，必须覆盖 `p_mid` / velocity / CPML ownership、source injection、receiver extraction、shell/PML reconciliation 和 cross-cluster boundary。

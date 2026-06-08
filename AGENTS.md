@@ -1228,6 +1228,39 @@ Phase 4.34 current-best handoff report 已完成：
   - K=2 ordinary CUDA temporal/wavefront prototype。
   - single-GPU CUDA Graph / host launch aggregation。
 
+Phase 4.35 cluster / cooperative primitive probe 已完成：
+
+- probe source：`tools/cuda_cluster_capability_probe.cu`。
+- gate 工具：`tools/cluster_cooperative_frontier_gate.py`。
+- 报告：`docs/day_20260609/cluster_cooperative_frontier_gate.md`。
+- JSON：`reports/day_20260609/cluster_cooperative_frontier_gate.json`。
+- raw stdout：`reports/day_20260609/cluster_probe_stdout_20260609_0132.txt`。
+- remote worktree：`/work/wenzhe/cuda3D/.codex_worktrees/cluster_probe_20260609_0132`。
+- RTX 5090 / CUDA 13 probe 结果：
+  - compute capability：`12.0`。
+  - SM count：`170`。
+  - cooperative launch：supported。
+  - cluster launch：supported。
+  - 128-thread block 下 active blocks / SM：`12`。
+  - cooperative grid block ceiling：`2040`。
+  - previous K=2 temporal required blocks：`70688`。
+  - cooperative over-capacity factor：`34.6510x`。
+  - cluster launch pass：cluster size `1/2/4/8`。
+  - cluster size `16`：cluster misconfiguration。
+- 决策：
+  - `reject_direct_cooperative_grid_k2_temporal_reopen`。
+  - `design_only_until_cluster_local_ownership_model_passes`。
+  - ordinary CUDA prototype allowed：`false`。
+  - cluster CUDA prototype allowed：`false`。
+- 解释：
+  - cooperative grid 仍无法覆盖 previous K=2 full-core geometry；不能作为全局 barrier 复活旧 temporal prototype。
+  - thread-block cluster 确认可用，但 cluster sync 只覆盖 cluster 内 CTA，不是 grid-wide barrier。
+  - 只有先建立 cluster-local ownership byte/synchronization model，并证明 source/receiver/shell/PML/cross-cluster boundary 全部安全且 repeat-speedup ceiling `>=5%`，才允许写 cluster CUDA prototype。
+- 继续禁止：
+  - 不写 direct cooperative-grid K=2 temporal prototype。
+  - 不写没有 cluster-local ownership model 的 cluster temporal / producer-consumer fusion kernel。
+  - ordinary exact-CUDA micro-prototype frontier 继续关闭。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：
