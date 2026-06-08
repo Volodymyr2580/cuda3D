@@ -3687,3 +3687,63 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 原因：CPU launch API 累计时间很高，但大部分与 GPU kernel 执行重叠；WP timer 与 GPU kernel total 只差约 `6.37ms`。
   - 只有当未来 Nsight Systems 或多 rank wall-clock profile 显示 `>2%` visible scheduling gap / GPU idle 时，才允许重开调度层 CUDA Graph 路线。
   - 下一步应转向更可能有收益的 pressure-PML divergence / CPML memory traffic / memory coalescing ownership 结构，而不是继续调度层小修。
+
+## 2026-06-08 15:10:00 +08:00 - Pressure-PML active segment compaction model
+
+- 操作目标：
+  - 在 CUDA Graph 被拒绝后，转向 pressure-PML lane utilization / active segment ownership 方向。
+  - 量化普通 active-line list、exact active-point list、length-16 half-warp packing 三种候选的理论上界。
+- 修改文件：
+  - 新增工具：`tools/pml_active_segment_compaction_model.py`。
+  - 新增报告：`docs/day_20260608/pml_active_segment_compaction_model.md`。
+  - 新增 JSON：`reports/day_20260608/pml_active_segment_compaction_model.json`。
+  - 生成辅助 direct-fill dataflow JSON/Markdown：
+    - `reports/day_20260608/pml_pressure_dataflow_directfill_for_line_model.json`
+    - `reports/day_20260608/pml_pressure_dataflow_directfill_for_line_model.md`
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地创建远端隔离 worktree：
+    - `/work/wenzhe/cuda3D/.codex_worktrees/sprint_0648`
+    - branch：`codex/remote-sprint-20260608-0648`
+    - HEAD：`f5f4037`
+  - 本地运行：
+    - `python tools/pml_pressure_dataflow_audit.py --case benchmarks/cases/perf_1gpu_6shots --ncu-summary-json reports/day_20260608/directfill_combo_ncu_20260608_120449_summary.json --json-out reports/day_20260608/pml_pressure_dataflow_directfill_for_line_model.json --md-out reports/day_20260608/pml_pressure_dataflow_directfill_for_line_model.md`
+    - `python -m py_compile tools/pml_active_segment_compaction_model.py`
+    - `python tools/pml_active_segment_compaction_model.py --case benchmarks/cases/perf_1gpu_6shots --ncu-summary-json reports/day_20260608/directfill_combo_ncu_20260608_120449_summary.json --json-out reports/day_20260608/pml_active_segment_compaction_model.json --md-out docs/day_20260608/pml_active_segment_compaction_model.md`
+- 测试结果：
+  - 远端隔离 worktree 创建成功，远端主目录未 reset/未覆盖。
+  - `tools/pml_active_segment_compaction_model.py` py_compile 通过。
+  - 模型报告生成成功。
+- 输出/哈希/误差摘要：
+  - pressure-PML current launched lanes：`29,143,040`。
+  - active lanes after core return：`19,118,944`。
+  - current lane efficiency：`65.60%`。
+  - active line slots：`893,204`。
+  - active z-line length histogram：
+    - length `16`：`542,100` line slots，`8,673,600` active lanes。
+    - length `23`：`87,776` line slots，`2,018,848` active lanes。
+    - length `32`：`263,328` line slots，`8,426,496` active lanes。
+  - whole length-16 tiles：`67,392`，对应当前 lanes `17,252,352`，约占当前 pressure-PML launched lanes `59.20%`。
+  - simple active-line list：
+    - lane reduction：`1.92%`。
+    - p_pml lane speedup ceiling：`1.020x`。
+    - sampled-main ceiling：`1.011x`。
+    - gate：reject。
+  - exact active-point list：
+    - lane reduction：`34.40%`。
+    - p_pml lane speedup ceiling：`1.524x`。
+    - sampled-main ceiling：`1.228x`。
+    - descriptor traffic：约 `72.933 MiB/step aggregate-shots`。
+    - gate：design only。
+  - length-16 half-warp packing：
+    - lane reduction：`31.69%`。
+    - p_pml lane speedup ceiling：`1.464x`。
+    - sampled-main ceiling：`1.207x`。
+    - gate：design only。
+- 风险与下一步：
+  - 决策：拒绝普通 active-line list，不写该 CUDA prototype。
+  - length-16 half-warp packing 有足够模型上界，下一步允许进入设计/原型 gate。
+  - 该路线必须保持 direct-fill pressure z-cache 数值路径，不得变成已禁止的 z-face direct derivative、z-face fusion 或 shared-VP 变体。
+  - 原型必须 macro-default-off，先跑 debug dump step `0/1/2`、correctness、`perf_1gpu_6shots repeat`；若 repeat 没有 `>=5%` WP speedup，应立即停止。

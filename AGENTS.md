@@ -356,7 +356,19 @@ Phase 4.8 direct-fill SourceCounters profile 已完成：
   - WP 与 GPU kernel total 只差 `0.006370535s`，visible gap fraction `0.2846%`。
   - 即使完美消除该 gap，理想 WP speedup 也只有 `1.002854x`。
   - 结论：当前 single-GPU / single-MPI-rank `perf_1gpu_6shots` 不允许写 CUDA Graph / launch aggregation prototype，除非未来 Nsight Systems 或多 rank wall-clock 证据显示 `>2%` visible scheduling gap 或 GPU idle。
-- 下一步不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load、z-safe shared `p1` direct second derivative、ptxas `dlcm` cache-policy sweep、p_core 显式 `__ldg`、inject/extract block-size 微调、当前 tile 下的 vx/vy split，或当前 single-GPU launch aggregation/CUDA Graph；应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构，或重新设计能改变 memory coalescing/ownership 的路线。
+- PML active segment compaction model 已完成：
+  - 工具：`tools/pml_active_segment_compaction_model.py`。
+  - 报告：`docs/day_20260608/pml_active_segment_compaction_model.md`。
+  - 当前 pressure-PML launched lanes：`29,143,040`；active lanes：`19,118,944`；lane efficiency：`65.60%`。
+  - active z-line length histogram：
+    - len `16`：`542,100` lines，`8,673,600` active lanes。
+    - len `23`：`87,776` lines，`2,018,848` active lanes。
+    - len `32`：`263,328` lines，`8,426,496` active lanes。
+  - 普通 active-line list 只减少 `1.92%` launched lanes，sampled-main ceiling `1.011x`，拒绝。
+  - exact active-point list ceiling：p_pml lane speedup `1.524x`，sampled-main ceiling `1.228x`，但 descriptor traffic 约 `72.933 MiB/step aggregate-shots`，只能作为设计路线。
+  - len-16 half-warp packing ceiling：p_pml lane speedup `1.464x`，sampled-main ceiling `1.207x`，作为下一步设计门。
+  - 关键边界：该路线是 lane-utilization / active segment ownership，不是重开已失败的 z-face direct derivative、z-face fusion 或 shared-VP 路线；必须保留 direct-fill pressure z-cache 的数值路径。
+- 下一步不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load、z-safe shared `p1` direct second derivative、ptxas `dlcm` cache-policy sweep、p_core 显式 `__ldg`、inject/extract block-size 微调、当前 tile 下的 vx/vy split，或当前 single-GPU launch aggregation/CUDA Graph；应优先推进 `length-16 half-warp pressure-PML active segment packing` 的设计/原型 gate，或其他能改变 memory coalescing/ownership 的路线。
 
 ## 速度阈值存档规则
 

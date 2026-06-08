@@ -949,3 +949,48 @@ Do not implement CUDA Graph / launch aggregation for the current single-GPU
 loop unless future Nsight Systems or wall-clock multi-rank evidence shows
 >2% visible scheduling gap or GPU idle time.
 ```
+
+## 2026-06-08 - Gate PML Active Segment Compaction
+
+Decision:
+
+```text
+Reject simple active-line list compaction, but keep length-16 half-warp
+pressure-PML segment packing as the next design-only route.
+```
+
+Evidence:
+
+```text
+current pressure-PML launched lanes          29,143,040
+active lanes after core return              19,118,944
+current lane efficiency                     65.60%
+active line slots                           893,204
+
+active z-line length histogram:
+  length 16                                 542,100 lines
+  length 23                                  87,776 lines
+  length 32                                 263,328 lines
+
+simple active-line list sampled ceiling      1.011x
+exact active-point list sampled ceiling      1.228x
+length-16 half-warp sampled ceiling          1.207x
+```
+
+Reason:
+
+```text
+The ordinary line-list shape only removes empty lines, so it does not meet
+the >=2% small-candidate gate.  The real lane-utilization signal is the large
+length-16 z-face/margin population.  Packing two length-16 lines into one
+warp has a meaningful model ceiling while preserving z-contiguous work.
+```
+
+Boundary:
+
+```text
+This does not reopen the rejected z-face direct-derivative/fusion/shared-VP
+routes.  A CUDA prototype is allowed only if it preserves the accepted
+direct-fill pressure z-cache math path and targets lane utilization/ownership,
+not p1 x/y direct derivative substitution.
+```

@@ -1,0 +1,195 @@
+{
+  "case": {
+    "case_dir": "E:\\cuda3D\\benchmarks\\cases\\perf_1gpu_6shots",
+    "tile_block_zxy": [
+      32,
+      4,
+      2
+    ],
+    "npml": 12,
+    "core_pml_margin": 4
+  },
+  "ncu_link": {
+    "p_pml_duration_ns": 158438.4,
+    "p_core_duration_ns": 75942.4,
+    "v_pml_duration_ns": 58793.6,
+    "p_pml_sampled_main_share": 0.5404237204885557
+  },
+  "totals": {
+    "kept_tiles": 113840,
+    "current_lanes": 29143040,
+    "active_lanes": 19118944,
+    "active_line_slots": 893204
+  },
+  "length_hist": {
+    "16": 542100,
+    "23": 87776,
+    "32": 263328
+  },
+  "mask_line_slots": {
+    "shell": 38508,
+    "x": 63936,
+    "xy": 7252,
+    "y": 65856,
+    "z": 580608,
+    "zx": 63936,
+    "zxy": 7252,
+    "zy": 65856
+  },
+  "length_hist_by_mask": {
+    "shell": {
+      "32": 38508
+    },
+    "x": {
+      "32": 63936
+    },
+    "xy": {
+      "32": 7252
+    },
+    "y": {
+      "32": 65856
+    },
+    "z": {
+      "16": 542100,
+      "23": 19254,
+      "32": 19254
+    },
+    "zx": {
+      "23": 31968,
+      "32": 31968
+    },
+    "zxy": {
+      "23": 3626,
+      "32": 3626
+    },
+    "zy": {
+      "23": 32928,
+      "32": 32928
+    }
+  },
+  "candidates": {
+    "active_line_list_8warp": {
+      "lanes": 28582656,
+      "lane_efficiency": 0.6689001889817378,
+      "lane_reduction_vs_current": 0.01922874209416725,
+      "p_pml_lane_speedup_ceiling": 1.0196057357300876,
+      "sampled_main_speedup_ceiling": 1.0105007890600954
+    },
+    "exact_active_point_list": {
+      "lanes": 19119104,
+      "lane_efficiency": 0.9999916314069948,
+      "lane_reduction_vs_current": 0.3439564300773015,
+      "p_pml_lane_speedup_ceiling": 1.5242890043382786,
+      "sampled_main_speedup_ceiling": 1.2283234892296993
+    },
+    "pack_len16_halfwarp_plus_fullwarps": {
+      "lanes": 19908928,
+      "lane_efficiency": 0.9603201136696059,
+      "lane_reduction_vs_current": 0.3168547962052003,
+      "p_pml_lane_speedup_ceiling": 1.4638176400055292,
+      "sampled_main_speedup_ceiling": 1.2066158959330051
+    }
+  },
+  "descriptor_bytes": {
+    "uint32_point_index_per_active_point_mib_per_step_aggregate_shots": 72.9329833984375,
+    "uint64_line_descriptor_per_active_line_mib_per_step_aggregate_shots": 6.814605712890625
+  },
+  "gate": {
+    "active_line_list_8warp": "reject",
+    "pack_len16_halfwarp_plus_fullwarps": "design_only",
+    "exact_active_point_list": "design_only",
+    "reason": "Simple active-line compaction only removes empty lines and has about a 1.0196x p_pml lane ceiling. The meaningful ceiling comes from packing length-16 z-face/margin lines or exact active points, but those designs must preserve the accepted z-cache dataflow before CUDA implementation."
+  },
+  "shots": [
+    {
+      "shot": 0,
+      "domain_size_yx": [
+        216,
+        216
+      ],
+      "kept_tiles": 17984,
+      "active_line_slots": 143872,
+      "active_lanes": 3090432,
+      "length_hist": {
+        "16": 86528,
+        "23": 14336,
+        "32": 43008
+      }
+    },
+    {
+      "shot": 1,
+      "domain_size_yx": [
+        216,
+        241
+      ],
+      "kept_tiles": 20096,
+      "active_line_slots": 157472,
+      "active_lanes": 3352032,
+      "length_hist": {
+        "16": 96928,
+        "23": 15136,
+        "32": 45408
+      }
+    },
+    {
+      "shot": 2,
+      "domain_size_yx": [
+        216,
+        217
+      ],
+      "kept_tiles": 18464,
+      "active_line_slots": 144416,
+      "active_lanes": 3100896,
+      "length_hist": {
+        "16": 86944,
+        "23": 14368,
+        "32": 43104
+      }
+    },
+    {
+      "shot": 3,
+      "domain_size_yx": [
+        217,
+        216
+      ],
+      "kept_tiles": 18224,
+      "active_line_slots": 144416,
+      "active_lanes": 3100896,
+      "length_hist": {
+        "16": 86944,
+        "23": 14368,
+        "32": 43104
+      }
+    },
+    {
+      "shot": 4,
+      "domain_size_yx": [
+        217,
+        241
+      ],
+      "kept_tiles": 20364,
+      "active_line_slots": 158066,
+      "active_lanes": 3363296,
+      "length_hist": {
+        "16": 97394,
+        "23": 15168,
+        "32": 45504
+      }
+    },
+    {
+      "shot": 5,
+      "domain_size_yx": [
+        217,
+        217
+      ],
+      "kept_tiles": 18708,
+      "active_line_slots": 144962,
+      "active_lanes": 3111392,
+      "length_hist": {
+        "16": 87362,
+        "23": 14400,
+        "32": 43200
+      }
+    }
+  ]
+}
