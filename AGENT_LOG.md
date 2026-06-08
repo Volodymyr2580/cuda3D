@@ -3010,3 +3010,52 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - Source/receiver placement 不阻止 temporal blocking，但 `p(t+1)` ownership/synchronization 与 halo duplication 仍失败。
   - 当前停止 swept/wavefront temporal CUDA prototype。
   - 下一自主方向转向 dominant `cuda_fd3d_p_pml_tile_ns` 的 pressure PML dataflow 或 wave-step scheduling。
+
+## 2026-06-08 11:05:10 +08:00 - Day sprint Phase 4.3 pressure PML dataflow gate
+
+- 操作目标：
+  - 在 temporal K=2 路线 gate 失败后，转向当前 sampled-main 最大热点 `cuda_fd3d_p_pml_tile_ns`。
+  - 复现 pressure PML tile list 和 shot-local 子域，量化 shell 点、tile/thread 效率和 z 方向中间速度重算复用上限。
+- 修改文件：
+  - 新增 `tools/pml_pressure_dataflow_audit.py`。
+  - 新增 `docs/day_20260608/pml_pressure_dataflow_audit.md`。
+  - 新增 `docs/day_20260608/phase4_3_pressure_pml_dataflow_gate_decision.md`。
+  - 新增 `reports/day_20260608/pml_pressure_dataflow_audit.json`。
+  - 新增 `reports/day_20260608/pml_pressure_dataflow_audit.md`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地运行：`python -m py_compile tools/pml_pressure_dataflow_audit.py`。
+  - 本地运行：`python tools/pml_pressure_dataflow_audit.py --json-out reports/day_20260608/pml_pressure_dataflow_audit.json --md-out docs/day_20260608/pml_pressure_dataflow_audit.md`。
+  - 上传 `tools/pml_pressure_dataflow_audit.py` 到远端 `/work/wenzhe/cuda3D/tools/`。
+  - 远端运行同一 audit：
+    - `python3 -m py_compile tools/pml_pressure_dataflow_audit.py`
+    - `python3 tools/pml_pressure_dataflow_audit.py --json-out reports/day_20260608/pml_pressure_dataflow_audit.json --md-out reports/day_20260608/pml_pressure_dataflow_audit.md`
+- 测试结果：
+  - 本地 `py_compile` 通过。
+  - 本地 audit 运行通过。
+  - 远端 `py_compile` 通过。
+  - 远端 audit 运行通过。
+  - Gate 结果：`open_p_pml_z_recompute_line_cache_prototype`。
+- 输出/哈希/误差摘要：
+  - pressure PML tiles：`113840 / 181232`。
+  - active thread efficiency：`65.60%`。
+  - valid-domain thread efficiency：`87.32%`。
+  - returned-core threads in kept tiles：`6328998`。
+  - shell active points：`4143640`，占 active points `21.67%`。
+  - true-PML active points：`14975304`，占 active points `78.33%`。
+  - 当前 `recompute_vz_after_update` calls：`152951552`。
+  - shared z-line cache calls estimate：`29093740`。
+  - estimated z recompute call reduction：`80.98%`。
+  - current p1 loads inside z recompute：`4667.711 MiB/step aggregate-shots`。
+  - shared-cache p1 load estimate：`887.870 MiB/step aggregate-shots`。
+  - NCU-linked p_pml sampled-main share：`53.42%`。
+  - modeled p_pml speedup：`1.573x`。
+  - modeled sampled-main speedup：`1.242x`。
+  - 远端复现：gate `open_p_pml_z_recompute_line_cache_prototype`，model speedup `1.2417261903808379`，shell sum `4143640 == 4143640`。
+- 风险与下一步：
+  - 允许进入 `CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE` prototype，macro 默认关闭。
+  - 必须保持 `memory_dz_next` ownership：只有 tile-owned central z range 可以写 next z CPML memory。
+  - 不重开 `CUDA3D_PML_TILE_MASK_FASTPATH`、z-face specialize/fusion、`CUDA3D_PML_ZFACE_SHARED_VP_DEBUG` 或 `RECOMPUTE_X/Y/XYZ`。
+  - 下一步实现 pressure PML z-line cache 原型，先跑 debug dump step 0/1/2 和 correctness，再跑 `perf_1gpu_6shots repeat`。

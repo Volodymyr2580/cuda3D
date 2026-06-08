@@ -1,0 +1,782 @@
+{
+  "case": {
+    "manifest": {
+      "case": "perf_1gpu_6shots",
+      "ny": "384",
+      "nx": "384",
+      "nz": "95",
+      "nt": "1501",
+      "shots": "6",
+      "receivers_per_shot": "441",
+      "receiver_spacing": "0.25",
+      "trace_count": "2646",
+      "gpu_count": "1",
+      "xpad": "0.5",
+      "velocity": "vel_perf_1gpu_6shots_ny384_nx384_nz95.dir",
+      "nav": "nav_perf_1gpu_6shots_6shots_441rec.nav",
+      "input": "input_perf_1gpu_6shots.in"
+    },
+    "ny_nx_nz": [
+      384,
+      384,
+      95
+    ],
+    "shots": 6,
+    "receivers_per_shot": 441,
+    "spacing_dy_dx_dz": [
+      0.025,
+      0.025,
+      0.025
+    ],
+    "npml": 12,
+    "xpad": 0.5,
+    "xypad_grid_points": 20,
+    "case_dir": "E:\\cuda3D\\benchmarks\\cases\\perf_1gpu_6shots",
+    "core_pml_margin": 4,
+    "tile_block_zxy": [
+      32,
+      4,
+      2
+    ]
+  },
+  "totals": {
+    "tiles": {
+      "kept": 113840,
+      "full_grid": 181232,
+      "skipped_core": 67392,
+      "mask_counts": {
+        "zxy": 1000,
+        "xy": 1000,
+        "zy": 8400,
+        "y": 8400,
+        "zx": 8640,
+        "x": 8640,
+        "z": 72576,
+        "shell": 5184
+      },
+      "active_points_by_tile_mask": {
+        "zxy": 199430,
+        "xy": 232064,
+        "zy": 1811040,
+        "y": 2107392,
+        "zx": 1758240,
+        "x": 2045952,
+        "z": 9732570,
+        "shell": 1232256
+      },
+      "shell_points_by_tile_mask": {
+        "zxy": 62,
+        "xy": 128,
+        "zy": 20832,
+        "y": 43008,
+        "zx": 26784,
+        "x": 55296,
+        "z": 2765274,
+        "shell": 1232256
+      }
+    },
+    "threads": {
+      "launched": 29143040,
+      "valid_domain": 25447942,
+      "active_after_core_return": 19118944,
+      "returned_core": 6328998,
+      "boundary_padding": 3695098,
+      "active_thread_efficiency": 0.6560380797610682,
+      "valid_domain_efficiency": 0.8732082171249121
+    },
+    "point_categories": {
+      "active_total": 19118944,
+      "shell": 4143640,
+      "z_only": 7004208,
+      "x_only": 2961720,
+      "y_only": 3073440,
+      "xy_edge": 328320,
+      "xz_edge": 748224,
+      "yz_edge": 776448,
+      "xyz_corner": 82944,
+      "true_pml_total": 14975304
+    },
+    "z_recompute": {
+      "current_vz_recompute_calls": 152951552,
+      "shared_line_cache_vz_recompute_calls": 29093740,
+      "line_slots_with_active_work": 893204,
+      "current_vz_p1_loads_est": 1223612416,
+      "shared_line_cache_vz_p1_loads_est": 232749920,
+      "vz_recompute_call_reduction": 0.8097846042124502,
+      "vz_p1_load_reduction_est": 0.8097846042124502
+    }
+  },
+  "derived": {
+    "shell_active_point_share": 0.21672954322163399,
+    "true_pml_active_point_share": 0.783270456778366,
+    "shell_tile_share": 0.045537596626844694,
+    "p_pml_duration_ns": 189561.6,
+    "p_core_duration_ns": 93670.4,
+    "v_pml_duration_ns": 71609.6,
+    "p_pml_sampled_main_share": 0.5342147031238728,
+    "modeled_p_pml_speedup_if_shared_z_recompute": 1.5733241552667623,
+    "modeled_sampled_main_speedup_if_shared_z_recompute": 1.2417261903808379
+  },
+  "gate": {
+    "verdict": "open_p_pml_z_recompute_line_cache_prototype",
+    "reason": "Shared z-line recompute has a >=5% sampled-main model ceiling and is not the forbidden z-face/shared-VP route.",
+    "allowed_prototype": "CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE",
+    "forbidden_repeats": [
+      "CUDA3D_PML_TILE_MASK_FASTPATH",
+      "CUDA3D_PML_ZFACE_P_SPECIALIZE",
+      "CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY",
+      "CUDA3D_PML_ZFACE_SHARED_VP_DEBUG",
+      "RECOMPUTE_X/Y/XYZ"
+    ]
+  },
+  "shots_detail": [
+    {
+      "shot": 0,
+      "domain": {
+        "shot": 0,
+        "source_index_yxz": [
+          95,
+          95,
+          1
+        ],
+        "receiver_count": 441,
+        "receiver_min_yx": [
+          2,
+          2
+        ],
+        "receiver_max_yx": [
+          195,
+          195
+        ],
+        "domain_origin_yx": [
+          0,
+          0
+        ],
+        "domain_size_yx": [
+          216,
+          216
+        ],
+        "n3n2n1": [
+          240,
+          240,
+          119
+        ]
+      },
+      "grid_zxy": [
+        4,
+        60,
+        120
+      ],
+      "block_zxy": [
+        32,
+        4,
+        2
+      ],
+      "tiles": {
+        "kept": 17984,
+        "full_grid": 28800,
+        "skipped_core": 10816,
+        "mask_counts": {
+          "zxy": 144,
+          "xy": 144,
+          "zy": 1296,
+          "y": 1296,
+          "zx": 1296,
+          "x": 1296,
+          "z": 11664,
+          "shell": 848
+        },
+        "active_points_by_tile_mask": {
+          "zxy": 31680,
+          "xy": 36864,
+          "zy": 285120,
+          "y": 331776,
+          "zx": 285120,
+          "x": 331776,
+          "z": 1571008,
+          "shell": 217088
+        },
+        "shell_points_by_tile_mask": {
+          "zxy": 0,
+          "xy": 0,
+          "zy": 0,
+          "y": 0,
+          "zx": 0,
+          "x": 0,
+          "z": 451264,
+          "shell": 217088
+        }
+      },
+      "threads": {
+        "launched": 4603904,
+        "valid_domain": 4085504,
+        "active_after_core_return": 3090432,
+        "returned_core": 995072,
+        "boundary_padding": 518400,
+        "active_thread_efficiency": 0.6712633451957295,
+        "valid_domain_efficiency": 0.8873999110320284
+      },
+      "point_categories": {
+        "active_total": 3090432,
+        "shell": 668352,
+        "z_only": 1119744,
+        "x_only": 492480,
+        "y_only": 492480,
+        "xy_edge": 54720,
+        "xz_edge": 124416,
+        "yz_edge": 124416,
+        "xyz_corner": 13824,
+        "true_pml_total": 2422080
+      },
+      "z_recompute": {
+        "current_vz_recompute_calls": 24723456,
+        "shared_line_cache_vz_recompute_calls": 4689408,
+        "line_slots_with_active_work": 143872,
+        "current_vz_p1_loads_est": 197787648,
+        "shared_line_cache_vz_p1_loads_est": 37515264,
+        "vz_recompute_call_reduction": 0.8103255467196819,
+        "vz_p1_load_reduction_est": 0.8103255467196819
+      }
+    },
+    {
+      "shot": 1,
+      "domain": {
+        "shot": 1,
+        "source_index_yxz": [
+          95,
+          191,
+          1
+        ],
+        "receiver_count": 441,
+        "receiver_min_yx": [
+          2,
+          91
+        ],
+        "receiver_max_yx": [
+          195,
+          291
+        ],
+        "domain_origin_yx": [
+          0,
+          71
+        ],
+        "domain_size_yx": [
+          216,
+          241
+        ],
+        "n3n2n1": [
+          240,
+          265,
+          119
+        ]
+      },
+      "grid_zxy": [
+        4,
+        67,
+        120
+      ],
+      "block_zxy": [
+        32,
+        4,
+        2
+      ],
+      "tiles": {
+        "kept": 20096,
+        "full_grid": 32160,
+        "skipped_core": 12064,
+        "mask_counts": {
+          "zxy": 168,
+          "xy": 168,
+          "zy": 1440,
+          "y": 1440,
+          "zx": 1512,
+          "x": 1512,
+          "z": 12960,
+          "shell": 896
+        },
+        "active_points_by_tile_mask": {
+          "zxy": 33000,
+          "xy": 38400,
+          "zy": 316800,
+          "y": 368640,
+          "zx": 297000,
+          "x": 345600,
+          "z": 1736528,
+          "shell": 216064
+        },
+        "shell_points_by_tile_mask": {
+          "zxy": 0,
+          "xy": 0,
+          "zy": 0,
+          "y": 0,
+          "zx": 6696,
+          "x": 13824,
+          "z": 492368,
+          "shell": 216064
+        }
+      },
+      "threads": {
+        "launched": 5144576,
+        "valid_domain": 4480016,
+        "active_after_core_return": 3352032,
+        "returned_core": 1127984,
+        "boundary_padding": 664560,
+        "active_thread_efficiency": 0.6515662320859873,
+        "valid_domain_efficiency": 0.8708231737659236
+      },
+      "point_categories": {
+        "active_total": 3352032,
+        "shell": 728952,
+        "z_only": 1249344,
+        "x_only": 492480,
+        "y_only": 549480,
+        "xy_edge": 54720,
+        "xz_edge": 124416,
+        "yz_edge": 138816,
+        "xyz_corner": 13824,
+        "true_pml_total": 2623080
+      },
+      "z_recompute": {
+        "current_vz_recompute_calls": 26816256,
+        "shared_line_cache_vz_recompute_calls": 5123808,
+        "line_slots_with_active_work": 157472,
+        "current_vz_p1_loads_est": 214530048,
+        "shared_line_cache_vz_p1_loads_est": 40990464,
+        "vz_recompute_call_reduction": 0.8089290317037546,
+        "vz_p1_load_reduction_est": 0.8089290317037546
+      }
+    },
+    {
+      "shot": 2,
+      "domain": {
+        "shot": 2,
+        "source_index_yxz": [
+          95,
+          287,
+          1
+        ],
+        "receiver_count": 441,
+        "receiver_min_yx": [
+          2,
+          187
+        ],
+        "receiver_max_yx": [
+          195,
+          382
+        ],
+        "domain_origin_yx": [
+          0,
+          167
+        ],
+        "domain_size_yx": [
+          216,
+          217
+        ],
+        "n3n2n1": [
+          240,
+          241,
+          119
+        ]
+      },
+      "grid_zxy": [
+        4,
+        61,
+        120
+      ],
+      "block_zxy": [
+        32,
+        4,
+        2
+      ],
+      "tiles": {
+        "kept": 18464,
+        "full_grid": 29280,
+        "skipped_core": 10816,
+        "mask_counts": {
+          "zxy": 168,
+          "xy": 168,
+          "zy": 1296,
+          "y": 1296,
+          "zx": 1512,
+          "x": 1512,
+          "z": 11664,
+          "shell": 848
+        },
+        "active_points_by_tile_mask": {
+          "zxy": 33000,
+          "xy": 38400,
+          "zy": 285120,
+          "y": 331776,
+          "zx": 297000,
+          "x": 345600,
+          "z": 1566224,
+          "shell": 203776
+        },
+        "shell_points_by_tile_mask": {
+          "zxy": 0,
+          "xy": 0,
+          "zy": 0,
+          "y": 0,
+          "zx": 6696,
+          "x": 13824,
+          "z": 446480,
+          "shell": 203776
+        }
+      },
+      "threads": {
+        "launched": 4726784,
+        "valid_domain": 4114064,
+        "active_after_core_return": 3100896,
+        "returned_core": 1013168,
+        "boundary_padding": 612720,
+        "active_thread_efficiency": 0.656026592287695,
+        "valid_domain_efficiency": 0.8703727523830156
+      },
+      "point_categories": {
+        "active_total": 3100896,
+        "shell": 670776,
+        "z_only": 1124928,
+        "x_only": 492480,
+        "y_only": 494760,
+        "xy_edge": 54720,
+        "xz_edge": 124416,
+        "yz_edge": 124992,
+        "xyz_corner": 13824,
+        "true_pml_total": 2430120
+      },
+      "z_recompute": {
+        "current_vz_recompute_calls": 24807168,
+        "shared_line_cache_vz_recompute_calls": 4706784,
+        "line_slots_with_active_work": 144416,
+        "current_vz_p1_loads_est": 198457344,
+        "shared_line_cache_vz_p1_loads_est": 37654272,
+        "vz_recompute_call_reduction": 0.8102651620692858,
+        "vz_p1_load_reduction_est": 0.8102651620692858
+      }
+    },
+    {
+      "shot": 3,
+      "domain": {
+        "shot": 3,
+        "source_index_yxz": [
+          287,
+          95,
+          1
+        ],
+        "receiver_count": 441,
+        "receiver_min_yx": [
+          187,
+          2
+        ],
+        "receiver_max_yx": [
+          382,
+          195
+        ],
+        "domain_origin_yx": [
+          167,
+          0
+        ],
+        "domain_size_yx": [
+          217,
+          216
+        ],
+        "n3n2n1": [
+          241,
+          240,
+          119
+        ]
+      },
+      "grid_zxy": [
+        4,
+        60,
+        121
+      ],
+      "block_zxy": [
+        32,
+        4,
+        2
+      ],
+      "tiles": {
+        "kept": 18224,
+        "full_grid": 29040,
+        "skipped_core": 10816,
+        "mask_counts": {
+          "zxy": 156,
+          "xy": 156,
+          "zy": 1404,
+          "y": 1404,
+          "zx": 1296,
+          "x": 1296,
+          "z": 11664,
+          "shell": 848
+        },
+        "active_points_by_tile_mask": {
+          "zxy": 33000,
+          "xy": 38400,
+          "zy": 297000,
+          "y": 345600,
+          "zx": 285120,
+          "x": 331776,
+          "z": 1566224,
+          "shell": 203776
+        },
+        "shell_points_by_tile_mask": {
+          "zxy": 0,
+          "xy": 0,
+          "zy": 6696,
+          "y": 13824,
+          "zx": 0,
+          "x": 0,
+          "z": 446480,
+          "shell": 203776
+        }
+      },
+      "threads": {
+        "launched": 4665344,
+        "valid_domain": 4114064,
+        "active_after_core_return": 3100896,
+        "returned_core": 1013168,
+        "boundary_padding": 551280,
+        "active_thread_efficiency": 0.6646660996488147,
+        "valid_domain_efficiency": 0.8818350801141353
+      },
+      "point_categories": {
+        "active_total": 3100896,
+        "shell": 670776,
+        "z_only": 1124928,
+        "x_only": 494760,
+        "y_only": 492480,
+        "xy_edge": 54720,
+        "xz_edge": 124992,
+        "yz_edge": 124416,
+        "xyz_corner": 13824,
+        "true_pml_total": 2430120
+      },
+      "z_recompute": {
+        "current_vz_recompute_calls": 24807168,
+        "shared_line_cache_vz_recompute_calls": 4706784,
+        "line_slots_with_active_work": 144416,
+        "current_vz_p1_loads_est": 198457344,
+        "shared_line_cache_vz_p1_loads_est": 37654272,
+        "vz_recompute_call_reduction": 0.8102651620692858,
+        "vz_p1_load_reduction_est": 0.8102651620692858
+      }
+    },
+    {
+      "shot": 4,
+      "domain": {
+        "shot": 4,
+        "source_index_yxz": [
+          287,
+          191,
+          1
+        ],
+        "receiver_count": 441,
+        "receiver_min_yx": [
+          187,
+          91
+        ],
+        "receiver_max_yx": [
+          382,
+          291
+        ],
+        "domain_origin_yx": [
+          167,
+          71
+        ],
+        "domain_size_yx": [
+          217,
+          241
+        ],
+        "n3n2n1": [
+          241,
+          265,
+          119
+        ]
+      },
+      "grid_zxy": [
+        4,
+        67,
+        121
+      ],
+      "block_zxy": [
+        32,
+        4,
+        2
+      ],
+      "tiles": {
+        "kept": 20364,
+        "full_grid": 32428,
+        "skipped_core": 12064,
+        "mask_counts": {
+          "zxy": 182,
+          "xy": 182,
+          "zy": 1560,
+          "y": 1560,
+          "zx": 1512,
+          "x": 1512,
+          "z": 12960,
+          "shell": 896
+        },
+        "active_points_by_tile_mask": {
+          "zxy": 34375,
+          "xy": 40000,
+          "zy": 330000,
+          "y": 384000,
+          "zx": 297000,
+          "x": 345600,
+          "z": 1731169,
+          "shell": 201152
+        },
+        "shell_points_by_tile_mask": {
+          "zxy": 31,
+          "xy": 64,
+          "zy": 7440,
+          "y": 15360,
+          "zx": 6696,
+          "x": 13824,
+          "z": 487009,
+          "shell": 201152
+        }
+      },
+      "threads": {
+        "launched": 5213184,
+        "valid_domain": 4511551,
+        "active_after_core_return": 3363296,
+        "returned_core": 1148255,
+        "boundary_padding": 701633,
+        "active_thread_efficiency": 0.6451519838931448,
+        "valid_domain_efficiency": 0.865411809750049
+      },
+      "point_categories": {
+        "active_total": 3363296,
+        "shell": 731576,
+        "z_only": 1255128,
+        "x_only": 494760,
+        "y_only": 549480,
+        "xy_edge": 54720,
+        "xz_edge": 124992,
+        "yz_edge": 138816,
+        "xyz_corner": 13824,
+        "true_pml_total": 2631720
+      },
+      "z_recompute": {
+        "current_vz_recompute_calls": 26906368,
+        "shared_line_cache_vz_recompute_calls": 5142734,
+        "line_slots_with_active_work": 158066,
+        "current_vz_p1_loads_est": 215250944,
+        "shared_line_cache_vz_p1_loads_est": 41141872,
+        "vz_recompute_call_reduction": 0.8088655443945463,
+        "vz_p1_load_reduction_est": 0.8088655443945463
+      }
+    },
+    {
+      "shot": 5,
+      "domain": {
+        "shot": 5,
+        "source_index_yxz": [
+          287,
+          287,
+          1
+        ],
+        "receiver_count": 441,
+        "receiver_min_yx": [
+          187,
+          187
+        ],
+        "receiver_max_yx": [
+          382,
+          382
+        ],
+        "domain_origin_yx": [
+          167,
+          167
+        ],
+        "domain_size_yx": [
+          217,
+          217
+        ],
+        "n3n2n1": [
+          241,
+          241,
+          119
+        ]
+      },
+      "grid_zxy": [
+        4,
+        61,
+        121
+      ],
+      "block_zxy": [
+        32,
+        4,
+        2
+      ],
+      "tiles": {
+        "kept": 18708,
+        "full_grid": 29524,
+        "skipped_core": 10816,
+        "mask_counts": {
+          "zxy": 182,
+          "xy": 182,
+          "zy": 1404,
+          "y": 1404,
+          "zx": 1512,
+          "x": 1512,
+          "z": 11664,
+          "shell": 848
+        },
+        "active_points_by_tile_mask": {
+          "zxy": 34375,
+          "xy": 40000,
+          "zy": 297000,
+          "y": 345600,
+          "zx": 297000,
+          "x": 345600,
+          "z": 1561417,
+          "shell": 190400
+        },
+        "shell_points_by_tile_mask": {
+          "zxy": 31,
+          "xy": 64,
+          "zy": 6696,
+          "y": 13824,
+          "zx": 6696,
+          "x": 13824,
+          "z": 441673,
+          "shell": 190400
+        }
+      },
+      "threads": {
+        "launched": 4789248,
+        "valid_domain": 4142743,
+        "active_after_core_return": 3111392,
+        "returned_core": 1031351,
+        "boundary_padding": 646505,
+        "active_thread_efficiency": 0.6496619093435964,
+        "valid_domain_efficiency": 0.8650090786695531
+      },
+      "point_categories": {
+        "active_total": 3111392,
+        "shell": 673208,
+        "z_only": 1130136,
+        "x_only": 494760,
+        "y_only": 494760,
+        "xy_edge": 54720,
+        "xz_edge": 124992,
+        "yz_edge": 124992,
+        "xyz_corner": 13824,
+        "true_pml_total": 2438184
+      },
+      "z_recompute": {
+        "current_vz_recompute_calls": 24891136,
+        "shared_line_cache_vz_recompute_calls": 4724222,
+        "line_slots_with_active_work": 144962,
+        "current_vz_p1_loads_est": 199129088,
+        "shared_line_cache_vz_p1_loads_est": 37793776,
+        "vz_recompute_call_reduction": 0.8102046447377894,
+        "vz_p1_load_reduction_est": 0.8102046447377894
+      }
+    }
+  ]
+}

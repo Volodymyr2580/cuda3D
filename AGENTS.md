@@ -177,6 +177,30 @@ Phase 4.2 source-aware temporal gate 已完成：
   - 当前停止 swept/wavefront temporal CUDA prototype。
 - 后续自动推进应暂停 K=2 temporal 路线，转向 dominant `cuda_fd3d_p_pml_tile_ns` 的 pressure PML dataflow 或 wave-step scheduling。
 
+Phase 4.3 pressure PML dataflow gate 已完成：
+
+- 工具：`tools/pml_pressure_dataflow_audit.py`。
+- 报告：`docs/day_20260608/pml_pressure_dataflow_audit.md`。
+- gate：`docs/day_20260608/phase4_3_pressure_pml_dataflow_gate_decision.md`。
+- pressure PML tiles：`113840 / 181232`。
+- active thread efficiency：`65.60%`。
+- shell active points：`4143640`，占 active points `21.67%`。
+- `recompute_vz_after_update` 当前调用量：`152951552`。
+- shared z-line cache 估算调用量：`29093740`，估算减少 `80.98%`。
+- NCU-linked model：
+  - `cuda_fd3d_p_pml_tile_ns` sampled-main share：`53.42%`。
+  - modeled p_pml speedup：`1.573x`。
+  - modeled sampled-main speedup：`1.242x`。
+- 结论：允许打开一个 macro-default-off CUDA prototype：
+  - `CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE`
+- 此路线只允许复用 pressure PML 内部 z-line 的 `vz_after_update` 中间量；不得重开：
+  - `CUDA3D_PML_TILE_MASK_FASTPATH`
+  - `CUDA3D_PML_ZFACE_P_SPECIALIZE`
+  - `CUDA3D_PML_REGION_FUSED_VP_ZFACE_ONLY`
+  - `CUDA3D_PML_ZFACE_SHARED_VP_DEBUG`
+  - `RECOMPUTE_X/Y/XYZ`
+- prototype 必须先通过 debug dump step 0/1/2、correctness、`perf_1gpu_6shots repeat`；若 repeat 没有 `>=5%` meaningful WP speedup，立即停止。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

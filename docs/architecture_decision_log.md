@@ -415,3 +415,67 @@ Keep CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL as scaffold.
 Move attention to pressure PML dataflow or wave-step scheduling around
 cuda_fd3d_p_pml_tile_ns, currently the largest sampled kernel.
 ```
+
+## 2026-06-08 - Open Pressure PML Z-Recompute Shared-Line Prototype
+
+Decision:
+
+```text
+Open exactly one pressure PML CUDA prototype:
+CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE.
+```
+
+Evidence:
+
+```text
+Pressure PML dataflow audit:
+  kept pressure-PML tiles                         113840 / 181232
+  active thread efficiency                        65.60%
+  shell active points                             4143640
+  shell share of active points                    21.67%
+  true-PML share of active points                 78.33%
+
+Z recompute reuse budget:
+  current recompute_vz_after_update calls         152951552
+  shared z-line cache call estimate               29093740
+  estimated call reduction                        80.98%
+  current p1 loads inside z recompute             4667.711 MiB/step aggregate-shots
+  shared-cache p1 load estimate                   887.870 MiB/step aggregate-shots
+
+NCU-linked model:
+  p_pml sampled-main share                        53.42%
+  modeled p_pml speedup                           1.573x
+  modeled sampled-main speedup                    1.242x
+```
+
+Reason:
+
+```text
+The dominant pressure PML kernel repeatedly computes the same
+vz-after-update intermediate values along each CTA z-line.  A CTA-local
+z-line cache can compute each needed z intermediate once per x/y line, then
+let pressure threads consume cached neighbor values.
+
+This route attacks repeated arithmetic/load work inside p_pml.  It does not
+repeat the forbidden tile-mask fastpath, z-face specialization/fusion, or
+RECOMPUTE_X/Y/XYZ routes.
+```
+
+Prototype constraints:
+
+```text
+The macro must default off.  memory_dz_next ownership must remain identical:
+only tile-owned central z positions may write next z CPML memory.  x/y
+velocity paths stay global-vx/vy based.
+
+Before any performance claim, the candidate must pass debug dump step 0/1/2,
+correctness, and perf_1gpu_6shots repeat against zmem_reference.
+```
+
+Stop rule:
+
+```text
+Stop this prototype if debug/correctness fails or if perf_1gpu_6shots repeat
+does not show >=5% meaningful WP speedup.  Do not fall back to the forbidden
+z-face/shared-tile/tile-mask fastpath families.
+```
