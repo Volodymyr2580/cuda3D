@@ -1,0 +1,1 @@
+lrwxrwxrwx 1 zz descfly 95 Jun  8 19:33 benchmarks/cases/perf_1gpu_6shots/vel_perf_1gpu_6shots_ny384_nx384_nz95.dir -> /work/wenzhe/cuda3D/benchmarks/cases/perf_1gpu_6shots/vel_perf_1gpu_6shots_ny384_nx384_nz95.dir

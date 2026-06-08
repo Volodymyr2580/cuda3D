@@ -741,6 +741,32 @@ Phase 4.19 source-aware wavefront synchronization gate 已完成并拒绝 CUDA p
   - precision relaxation 只有用户明确放宽 tolerance policy 后才允许研究。
   - 未来只有在发现具体 hardware/runtime cross-CTA ownership primitive 后，才允许重开 no-duplicate wavefront temporal blocking。
 
+Phase 4.20 same-GPU multi-rank scheduling probe 已完成并拒绝：
+
+- 报告：`reports/day_20260608/multirank_samegpu_sched_20260608_193042/summary.md`。
+- JSON：`reports/day_20260608/multirank_samegpu_sched_20260608_193042/summary.json`。
+- 远端 worktree：`/work/wenzhe/cuda3D/.codex_worktrees/multirank_samegpu_20260608_193042`。
+- 测试目标：
+  - 使用当前 best binary。
+  - 同一张 RTX 5090 上设置 `CUDA_VISIBLE_DEVICES=0`。
+  - 对 `perf_1gpu_6shots` 分别运行 `np=1/2/3`，验证多 MPI rank 共享同一 GPU 分炮是否能提高 wall-clock throughput。
+- 判据：
+  - 多 rank 时程序打印的 `WP computing time` 是 root-rank local 口径，不能作为正式 wall-clock speedup。
+  - 调度层结论必须优先看 `/usr/bin/time` elapsed 与 `Gradient TIME all`。
+- 单轮结果：
+  - `np=1`：elapsed `2.990s`，Gradient `2.165543s`，输出 `6` 个文件。
+  - `np=2`：elapsed `3.370s`，Gradient `2.311468s`，elapsed speedup `0.8872x`，Gradient speedup `0.9369x`。
+  - `np=3`：elapsed `3.250s`，Gradient `2.328266s`，elapsed speedup `0.9200x`，Gradient speedup `0.9301x`。
+  - `np=2` vs `np=1` correctness pass，max rel L2 `0`。
+  - `np=3` vs `np=1` correctness pass，max rel L2 `0`。
+- 决策：
+  - 拒绝 same-GPU multi-rank oversubscription。
+  - 不进行 same-GPU `np=2/3` repeat benchmark。
+  - 不把 root-rank printed WP 作为 multi-rank 调度层 speedup 证据。
+- 当前下一步：
+  - 若继续 application-level scheduling，必须转向 true multi-GPU / multi-job batching，而不是同卡多 rank 抢占。
+  - true multi-GPU 调度必须比较 elapsed、`Gradient TIME all`、输出 correctness，并明确 GPU 数、rank 数、shot 分配方式。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

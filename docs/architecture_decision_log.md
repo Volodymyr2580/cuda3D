@@ -1801,3 +1801,76 @@ Report:
 docs/day_20260608/source_aware_wavefront_sync_model.md
 reports/day_20260608/source_aware_wavefront_sync_model.json
 ```
+
+## 2026-06-08 - Reject Same-GPU Multi-Rank Scheduling
+
+Decision:
+
+```text
+Reject same-GPU multi-rank oversubscription for the current RTX 5090
+perf_1gpu_6shots case.
+```
+
+Evidence:
+
+```text
+current binary      current-best len16 + direct-fill z-cache + CPML vmem flags
+GPU                 one RTX 5090
+CUDA_VISIBLE_DEVICES=0 for all runs
+case                perf_1gpu_6shots
+
+np=1:
+  elapsed                         2.990s
+  Gradient TIME all               2.165543s
+  outputs                         6
+
+np=2:
+  elapsed                         3.370s
+  Gradient TIME all               2.311468s
+  elapsed speedup vs np=1         0.8872x
+  Gradient speedup vs np=1        0.9369x
+  correctness vs np=1             pass, max rel L2 0
+
+np=3:
+  elapsed                         3.250s
+  Gradient TIME all               2.328266s
+  elapsed speedup vs np=1         0.9200x
+  Gradient speedup vs np=1        0.9301x
+  correctness vs np=1             pass, max rel L2 0
+```
+
+Reason:
+
+```text
+Multiple MPI ranks sharing one GPU correctly split shots, but they oversubscribe
+the same device and slow down elapsed / Gradient TIME by roughly 7-11% in the
+single-round probe.
+
+For multi-rank scheduling, the printed WP computing time is root-rank local and
+cannot be used as the formal wall-clock speed metric.  Use elapsed and Gradient
+TIME all instead.
+```
+
+Boundary:
+
+```text
+Do not pursue same-GPU np=2/3 oversubscription repeat benchmarks for this case.
+Do not claim multi-rank scheduling speedup from root-rank printed WP time.
+Do not archive same-GPU multi-rank runs as speed threshold versions.
+```
+
+Next:
+
+```text
+If application-level scheduling continues, move to true multi-GPU / multi-job
+batching where each rank or job owns a different GPU.  Any such result must
+report elapsed, Gradient TIME all, correctness, GPU count, rank count, and shot
+assignment.
+```
+
+Report:
+
+```text
+reports/day_20260608/multirank_samegpu_sched_20260608_193042/summary.md
+reports/day_20260608/multirank_samegpu_sched_20260608_193042/summary.json
+```

@@ -4478,3 +4478,78 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 今日 exact CUDA-core 结构性路线基本收口；后续建议转向 application-level multi-shot batching / scheduling。
   - precision relaxation 只有用户明确放宽 tolerance policy 后才允许研究。
   - no-duplicate wavefront temporal blocking 只有在发现具体 hardware/runtime cross-CTA ownership primitive 后才允许重开。
+
+## 2026-06-08 19:36:29 +08:00
+
+- 操作目标：
+  - 继续 heartbeat 自动推进，将 exact CUDA-core route 收口后转向 application-level scheduling。
+  - 在 RTX 5090 上做 same-GPU multi-rank probe，验证 `np=2/3` 共享同一张 GPU 分炮是否值得进入 repeat benchmark。
+- 修改文件：
+  - 新增 `reports/day_20260608/multirank_samegpu_sched_20260608_193042/summary.md`。
+  - 新增 `reports/day_20260608/multirank_samegpu_sched_20260608_193042/summary.json`。
+  - 新增 `reports/day_20260608/multirank_samegpu_sched_20260608_193042/binary.sha256`。
+  - 新增 `reports/day_20260608/multirank_samegpu_sched_20260608_193042/velocity_link.txt`。
+  - 新增 `reports/day_20260608/multirank_samegpu_sched_20260608_193042/compare_np2_vs_np1/comparison.md`。
+  - 新增 `reports/day_20260608/multirank_samegpu_sched_20260608_193042/compare_np2_vs_np1/comparison.json`。
+  - 新增 `reports/day_20260608/multirank_samegpu_sched_20260608_193042/compare_np3_vs_np1/comparison.md`。
+  - 新增 `reports/day_20260608/multirank_samegpu_sched_20260608_193042/compare_np3_vs_np1/comparison.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 远端检查：
+    - `cd /work/wenzhe/cuda3D`
+    - `git status --short --branch`
+    - `git log --oneline -3`
+    - `nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu --format=csv,noheader`
+  - 远端创建隔离 worktree：
+    - `git -c http.proxy= -c https.proxy= fetch origin exp/day-20260608-cpml-compact-temporal`
+    - `git worktree add --detach /work/wenzhe/cuda3D/.codex_worktrees/multirank_samegpu_20260608_193042 FETCH_HEAD`
+  - 远端构建：
+    - `source ./env_5090.sh`
+    - `make -B -f makefile.rtx5090 test NVFLAGS="<current-best flags>"`
+  - 远端 case 修复：
+    - `mkdir -p benchmarks/cases/perf_1gpu_6shots/d_obs`
+    - `ln -s /work/wenzhe/cuda3D/benchmarks/cases/perf_1gpu_6shots/vel_perf_1gpu_6shots_ny384_nx384_nz95.dir benchmarks/cases/perf_1gpu_6shots/vel_perf_1gpu_6shots_ny384_nx384_nz95.dir`
+  - 远端 benchmark：
+    - `python3 tools/run_benchmark.py --case perf_1gpu_6shots --tag sched_samegpu_np1_rerun --np 1 --gpus 0 --timeout 2400`
+    - `python3 tools/run_benchmark.py --case perf_1gpu_6shots --tag sched_samegpu_np2_rerun --np 2 --gpus 0 --timeout 2400`
+    - `python3 tools/run_benchmark.py --case perf_1gpu_6shots --tag sched_samegpu_np3_rerun --np 3 --gpus 0 --timeout 2400`
+    - `python3 tools/compare_outputs.py --baseline <np1>/outputs --candidate <np2>/outputs --out <report>/compare_np2_vs_np1`
+    - `python3 tools/compare_outputs.py --baseline <np1>/outputs --candidate <np3>/outputs --out <report>/compare_np3_vs_np1`
+  - 本地拉取：
+    - `tools/remote_get.py` 拉取 summary、comparison、binary sha 和 velocity symlink record。
+- 测试结果：
+  - 远端 GPU 运行前基本空闲：RTX 5090 memory used `481 MiB`，utilization `0%`。
+  - 当前 best binary 构建成功。
+  - 首次 `np=1` run 因新 worktree 缺少 large velocity file 失败；已用显式 symlink 指向主目录 velocity 后重跑成功。
+  - `set -u` 会导致 conda/oneAPI activation 访问未定义变量时报错；远端环境脚本应使用 `set -eo pipefail` 或在 source 前关闭 nounset。
+  - `np=1/2/3` rerun 均 returncode `0`，均输出 `6` 个文件。
+  - `np=2` vs `np=1` 输出对比 pass。
+  - `np=3` vs `np=1` 输出对比 pass。
+- 输出/哈希/误差摘要：
+  - binary sha256：`9b4cc826195df5b9b66c8b0281ca29dbf0301422ab7631e6878b2f0563569a3f`。
+  - `np=1`：
+    - elapsed：`2.990s`。
+    - `Gradient TIME all`：`2.165543s`。
+    - printed `WP computing time`：`2.048052s`。
+    - shots seen：`[0, 1, 2, 3, 4, 5]`。
+  - `np=2`：
+    - elapsed：`3.370s`。
+    - `Gradient TIME all`：`2.311468s`。
+    - printed `WP computing time`：`2.443532s`。
+    - elapsed speedup vs `np=1`：`0.8872x`。
+    - Gradient speedup vs `np=1`：`0.9369x`。
+    - correctness max rel L2：`0`。
+  - `np=3`：
+    - elapsed：`3.250s`。
+    - `Gradient TIME all`：`2.328266s`。
+    - printed `WP computing time`：`2.158150s`。
+    - elapsed speedup vs `np=1`：`0.9200x`。
+    - Gradient speedup vs `np=1`：`0.9301x`。
+    - correctness max rel L2：`0`。
+- 风险与下一步：
+  - 决策：拒绝 same-GPU multi-rank oversubscription，不进入 repeat benchmark。
+  - 多 rank scheduling 不能使用 root-rank printed `WP computing time` 作为正式 speedup 证据，必须看 elapsed 和 `Gradient TIME all`。
+  - 下一步若继续 application-level scheduling，应转向 true multi-GPU / multi-job batching，确保每个 rank/job 拥有不同 GPU。
+  - true multi-GPU 调度结果必须报告 elapsed、`Gradient TIME all`、correctness、GPU 数、rank 数和 shot 分配方式。

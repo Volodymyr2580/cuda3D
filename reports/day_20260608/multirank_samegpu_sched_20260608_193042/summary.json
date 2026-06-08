@@ -1,0 +1,94 @@
+{
+  "decision": "reject_same_gpu_multirank_probe",
+  "worktree": "/work/wenzhe/cuda3D/.codex_worktrees/multirank_samegpu_20260608_193042",
+  "report_dir": "reports/day_20260608/multirank_samegpu_sched_20260608_193042",
+  "binary_sha256": "9b4cc826195df5b9b66c8b0281ca29dbf0301422ab7631e6878b2f0563569a3f  bin/cuda_3D_FM",
+  "records": {
+    "np1": {
+      "run_dir": "benchmarks/runs/perf_1gpu_6shots_sched_samegpu_np1_rerun_20260608_193329",
+      "returncode": 0,
+      "outputs": 6,
+      "np": 1,
+      "gpus": "0",
+      "gradient_time_s": 2.165543,
+      "wp_printed_s": 2.048052,
+      "read_time_printed_s": 0.000112,
+      "elapsed_s": 2.99,
+      "shots_seen": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "elapsed_speedup_vs_np1": 1.0,
+      "gradient_speedup_vs_np1": 1.0,
+      "wp_printed_speedup_vs_np1": 1.0
+    },
+    "np2": {
+      "run_dir": "benchmarks/runs/perf_1gpu_6shots_sched_samegpu_np2_rerun_20260608_193332",
+      "returncode": 0,
+      "outputs": 6,
+      "np": 2,
+      "gpus": "0",
+      "gradient_time_s": 2.311468,
+      "wp_printed_s": 2.443532,
+      "read_time_printed_s": 0.000185,
+      "elapsed_s": 3.37,
+      "shots_seen": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "elapsed_speedup_vs_np1": 0.887240356083086,
+      "gradient_speedup_vs_np1": 0.9368691238641417,
+      "wp_printed_speedup_vs_np1": 0.8381523139455511
+    },
+    "np3": {
+      "run_dir": "benchmarks/runs/perf_1gpu_6shots_sched_samegpu_np3_rerun_20260608_193336",
+      "returncode": 0,
+      "outputs": 6,
+      "np": 3,
+      "gpus": "0",
+      "gradient_time_s": 2.328266,
+      "wp_printed_s": 2.15815,
+      "read_time_printed_s": 4.1e-05,
+      "elapsed_s": 3.25,
+      "shots_seen": [
+        0,
+        1,
+        2,
+        3,
+        5,
+        4
+      ],
+      "elapsed_speedup_vs_np1": 0.92,
+      "gradient_speedup_vs_np1": 0.9301097898607804,
+      "wp_printed_speedup_vs_np1": 0.9489850103097561
+    }
+  },
+  "comparisons": {
+    "np2_vs_np1": {
+      "pass": true,
+      "missing": [],
+      "extra": [],
+      "max_rel_l2": 0.0,
+      "max_abs": 0.0
+    },
+    "np3_vs_np1": {
+      "pass": true,
+      "missing": [],
+      "extra": [],
+      "max_rel_l2": 0.0,
+      "max_abs": 0.0
+    }
+  },
+  "best_candidate_by_elapsed": "np3",
+  "best_elapsed_speedup": 0.92,
+  "best_gradient_speedup": 0.9301097898607804,
+  "gate_note": "Use elapsed/Gradient TIME for multi-rank scheduling; printed WP is root-rank local and not a formal wall-clock speed metric when np>1."
+}
