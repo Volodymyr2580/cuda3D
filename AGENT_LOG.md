@@ -5062,3 +5062,45 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 继续禁止 random v-PML tile-shape sweep 与 current-geometry vx/vy component-owner split。
   - 远端经验记录：加载 oneAPI/conda 环境脚本时不要使用 `set -u`，否则环境脚本访问未定义变量会提前退出且可能无 build 输出；改用 `set -eo pipefail`。
   - isolated worktree 缺少 perf 大样例 velocity/source 数据文件时，使用指向 `/work/wenzhe/cuda3D/benchmarks/cases/perf_1gpu_6shots/` 的 symlink 补齐，不复制大文件、不删除文件。
+
+## 2026-06-08 23:23:50 +08:00
+
+- 操作目标：
+  - 对 `CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK` candidate 做 Nsight Compute 短 profile。
+  - 判断 v-PML len16 之后剩余瓶颈与下一步 CUDA-core 方向。
+- 修改文件：
+  - 新增 `docs/day_20260608/v_pml_len16_ncu_profile.md`。
+  - 新增 `reports/day_20260608/v_pml_len16_ncu_short_20260608_2315/` 文本 profile artifacts。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 远端检查 GPU 与 isolated worktree 状态。
+  - 给 isolated worktree 的 `benchmarks/cases/profile_1gpu` 补充指向根目录 profile 大样例 velocity/source 文件的 symlink。
+  - 首次 NCU 使用全量匹配 kernel profile，运行超过 8 分钟仍未结束，生成 `.ncu-rep` 但未产出 CSV；停止该 profile 进程族。
+  - 重新运行短 NCU：
+    - `ncu --launch-count 5 --kernel-name "regex:cuda_fd3d_(p_core_ns|p_pml_tile_ns|p_pml_len16_halfwarp_ns|v_pml_tile_ns|v_pml_len16_halfwarp_ns)" ...`
+    - 导出 CSV。
+    - `python3 tools/ncu_csv_summary.py --profile v_pml_len16_short <csv> --json-out <summary.json> --md-out <summary.md>`
+  - 本地删除明确路径的二进制 `.ncu-rep` 文件，只保留 CSV/JSON/Markdown/log 文本 artifacts。
+- 测试结果：
+  - 短 NCU profile 成功。
+  - 本轮不改 CUDA 源码，不需要重新 correctness/perf repeat。
+- 输出/哈希/误差摘要：
+  - captured kernel durations，CSV 原始单位为 `us`：
+    - `cuda_fd3d_v_pml_len16_halfwarp_ns`：`20.030us`。
+    - `cuda_fd3d_v_pml_tile_ns`：`32.130us`。
+    - `cuda_fd3d_p_core_ns`：`93.730us`。
+    - `cuda_fd3d_p_pml_len16_halfwarp_ns`：`66.180us`。
+    - `cuda_fd3d_p_pml_tile_ns`：`71.940us`。
+  - sampled main total：`284.010us`。
+  - p-core share：`33.00%`。
+  - pressure-PML total share：`48.63%`。
+  - velocity-PML total share：`18.37%`。
+  - packed v kernel avg active threads/warp：`32.000`。
+  - residual v kernel branch efficiency：`94.770%`。
+- 风险与下一步：
+  - 现有 `tools/ncu_csv_summary.py` 没有记录 `Metric Unit`，本轮文档明确 Duration 数字按 CSV 的 `us` 解释；未修改历史脚本。
+  - 全量 NCU profile 太慢，后续这类 heartbeat profiling 默认使用 `--launch-count` 或更窄 kernel filter。
+  - v-PML packed 后只剩 sampled-main `18.37%`，继续 v-PML descriptor / point-list 实验不应开启，除非 overhead model 仍证明 `>=5%` repeat-speedup ceiling。
+  - 下一步 CUDA-core 方向应回到 pressure-PML 或 materially new p-core design，但必须先通过 model gate。

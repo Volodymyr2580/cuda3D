@@ -2578,3 +2578,36 @@ reports/day_20260608/v_pml_active_segment_packing_model.json
 reports/day_20260608/v_pml_len16_prototype_20260608_2238/summary.md
 reports/day_20260608/v_pml_len16_prototype_20260608_2238/perf6_retry_summary.json
 ```
+
+Post-profile evidence:
+
+```text
+profile:
+  docs/day_20260608/v_pml_len16_ncu_profile.md
+
+short NCU sampled-main after v-len16:
+  p-core                            93.730us  33.00%
+  pressure-PML total               138.120us  48.63%
+  velocity-PML total                52.160us  18.37%
+
+v packed kernel:
+  cuda_fd3d_v_pml_len16_halfwarp_ns 20.030us
+  avg active threads/warp           32.000
+
+v residual kernel:
+  cuda_fd3d_v_pml_tile_ns           32.130us
+  branch efficiency                 94.770%
+```
+
+Post-profile boundary:
+
+```text
+After whole-tile v-len16 packing, velocity-PML is no longer a large enough
+standalone target for descriptor experiments.  Do not continue into v-PML
+line/point descriptors unless descriptor traffic, control overhead, launch
+overhead, and source-level memory behavior are modeled and still predict >=5%
+perf_1gpu_6shots repeat speedup.
+
+Next CUDA-core work should target pressure-PML or a materially new p-core
+design, not more v-PML micro packing.
+```
