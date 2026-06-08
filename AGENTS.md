@@ -1028,6 +1028,41 @@ Phase 4.28 p-core shared-plane calibrated gate 已完成并拒绝当前 shape fa
   - 不继续测试 `[32,8,1]`、`[16,8,2]`、`[64,2,2]` 等基于同一 shared-fill/control 形态的变体。
   - 只有 materially different warp/coalescing design，并且模型显式计入 shared fill、同步和控制开销后仍有 `>=5%` repeat speedup ceiling，才允许重开。
 
+Phase 4.29 v-PML len16 half-warp packing 已完成并作为 minor candidate 保留：
+
+- 工具：`tools/v_pml_active_segment_packing_model.py`。
+- gate 报告：`docs/day_20260608/v_pml_active_segment_packing_model.md`。
+- prototype 报告：`docs/day_20260608/v_pml_len16_halfwarp_prototype.md`。
+- perf repeat 报告：`reports/day_20260608/v_pml_len16_prototype_20260608_2238/summary.md`。
+- 实现宏默认关闭：`CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK`。
+- 数据流：
+  - host 将 velocity-PML tile 拆分为 residual tiles 与 whole length-16 z-face tiles。
+  - whole len16 velocity tiles 使用 `cuda_fd3d_v_pml_len16_halfwarp_ns`。
+  - 一个 warp 处理两条 active length-16 z-line。
+  - packed tile 只计算并写回 `vx/vy`，不更新 `mem_dx/mem_dy`，因为 split 条件保证 x/y 在 vx/vy safe interior。
+  - residual velocity-PML 仍使用原 `cuda_fd3d_v_pml_tile_ns`。
+- model gate：
+  - whole-tile len16 v lane speedup ceiling：`1.3560x`。
+  - sampled-main ceiling：`1.0612x`。
+  - 因此允许 whole-tile prototype，但不允许 line/point descriptor 版本直接开写。
+- validation：
+  - build pass。
+  - smoke pass，`len16_tiles=0`，只验证 wiring。
+  - correctness pass，`len16_tiles=0`，只验证 wiring。
+  - `perf_1gpu_6shots` repeat 3 轮输出对比全部通过，max rel L2 `0`。
+- performance vs same-worktree current-best baseline：
+  - mean base WP：`2.052228s`。
+  - mean candidate WP：`1.988482s`。
+  - WP speedup：`1.032058x`。
+  - mean base Gradient：`2.169915s`。
+  - mean candidate Gradient：`2.109314s`。
+  - Gradient speedup：`1.028730x`。
+- 决策：
+  - 严格 `>=5%` breakthrough gate 未达到，因此不继续扩展本路线。
+  - minor `>=2%` candidate gate 通过，因此保留 macro-default-off 代码作为 current-best flags 候选。
+  - 后续不得继续写 v-PML line descriptor / exact active-point descriptor prototype，除非 descriptor/control overhead model 证明扣除开销后仍有 `>=5%` repeat speedup ceiling。
+  - 继续禁止 random v-PML tile-shape sweep 与 current-geometry vx/vy component-owner split。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

@@ -1,0 +1,250 @@
+{
+  "candidates": {
+    "exact_active_point_list": {
+      "implementation_class": "point_descriptor",
+      "lane_reduction_vs_current": 0.32128551231991387,
+      "lanes": 20647168,
+      "sampled_main_speedup_ceiling": 1.075875473147366,
+      "v_lane_speedup_ceiling": 1.4733735880872378
+    },
+    "line_descriptor_len16_pack_remove_empty": {
+      "implementation_class": "line_descriptor",
+      "lane_reduction_vs_current": 0.29012913188366773,
+      "lanes": 21594976,
+      "sampled_main_speedup_ceiling": 1.068017049215802,
+      "v_lane_speedup_ceiling": 1.4087069140526018
+    },
+    "whole_len16_tile_halfwarp_pack": {
+      "implementation_class": "tile_list_only",
+      "lane_reduction_vs_current": 0.26255554059512587,
+      "lanes": 22433792,
+      "sampled_main_speedup_ceiling": 1.0611574363808,
+      "v_lane_speedup_ceiling": 1.3560343253605989
+    }
+  },
+  "case": {
+    "case_dir": "E:\\cuda3D\\benchmarks\\cases\\perf_1gpu_6shots",
+    "core_pml_margin": 4,
+    "npml": 12,
+    "tile_block_zxy": [
+      32,
+      4,
+      2
+    ]
+  },
+  "component_hist": {
+    "0": 7774,
+    "32": 541512,
+    "39": 17269,
+    "46": 88070,
+    "48": 17269,
+    "64": 264210
+  },
+  "descriptor_bytes": {
+    "line_descriptor_uint64_mib_per_step_aggregate_shots": 7.14190673828125,
+    "point_descriptor_uint32_mib_per_step_aggregate_shots": 78.76176834106445
+  },
+  "gate": {
+    "best_candidate": "exact_active_point_list",
+    "best_sampled_main_speedup_ceiling": 1.075875473147366,
+    "best_v_lane_speedup_ceiling": 1.4733735880872378,
+    "decision": "allow_whole_len16_v_pml_cuda_prototype",
+    "prohibited_if_rejected": [
+      "Do not write a v-PML whole-len16 half-warp CUDA prototype below the >=5% gate.",
+      "Do not re-open random v-PML tile-shape sweep or current-geometry vx/vy split.",
+      "Do not use line/point descriptors without a descriptor/control overhead model."
+    ],
+    "reason": "Whole-tile length-16 velocity lines clear the >=5% sampled-main gate without a line descriptor. Open a macro-default-off CUDA prototype that mirrors the pressure len16 split."
+  },
+  "length_hist": {
+    "0": 7774,
+    "16": 506974,
+    "23": 105339,
+    "32": 316017
+  },
+  "profile_anchor": {
+    "p_core_us": 93.54666666666667,
+    "p_pml_us": 138.45333333333335,
+    "profile_label": "len16",
+    "required_v_kernel_speedup_for_5pct_sampled_main": 1.2770354906054284,
+    "sampled_main_us": 297.248,
+    "v_pml_sampled_main_share": 0.21950694369684576,
+    "v_pml_us": 65.248
+  },
+  "shots": [
+    {
+      "active_any_lanes": 3339513,
+      "component_lanes": 6434208,
+      "current_lanes": 4812800,
+      "domain_size_yx": [
+        216,
+        216
+      ],
+      "empty_line_slots": 802,
+      "in_domain_lanes": 4294400,
+      "len16_line_slots": 80802,
+      "length_hist": {
+        "0": 802,
+        "16": 80802,
+        "23": 17199,
+        "32": 51597
+      },
+      "line_slots": 150400,
+      "shot": 0,
+      "tiles": 18800,
+      "vx_lanes": 3217104,
+      "vy_lanes": 3217104,
+      "whole_len16_current_lanes": 2560000,
+      "whole_len16_packed_lanes": 1280000,
+      "whole_len16_tiles": 10000
+    },
+    {
+      "active_any_lanes": 3616338,
+      "component_lanes": 6972633,
+      "current_lanes": 5365760,
+      "domain_size_yx": [
+        216,
+        241
+      ],
+      "empty_line_slots": 1252,
+      "in_domain_lanes": 4701200,
+      "len16_line_slots": 90852,
+      "length_hist": {
+        "0": 1252,
+        "16": 90852,
+        "23": 18174,
+        "32": 54522
+      },
+      "line_slots": 164800,
+      "shot": 1,
+      "tiles": 20960,
+      "vx_lanes": 3478704,
+      "vy_lanes": 3493929,
+      "whole_len16_current_lanes": 2867200,
+      "whole_len16_packed_lanes": 1433600,
+      "whole_len16_tiles": 11200
+    },
+    {
+      "active_any_lanes": 3350586,
+      "component_lanes": 6455745,
+      "current_lanes": 4935680,
+      "domain_size_yx": [
+        216,
+        217
+      ],
+      "empty_line_slots": 1204,
+      "in_domain_lanes": 4322960,
+      "len16_line_slots": 81204,
+      "length_hist": {
+        "0": 1204,
+        "16": 81204,
+        "23": 17238,
+        "32": 51714
+      },
+      "line_slots": 151360,
+      "shot": 2,
+      "tiles": 19280,
+      "vx_lanes": 3227568,
+      "vy_lanes": 3228177,
+      "whole_len16_current_lanes": 2560000,
+      "whole_len16_packed_lanes": 1280000,
+      "whole_len16_tiles": 10000
+    },
+    {
+      "active_any_lanes": 3350586,
+      "component_lanes": 6455745,
+      "current_lanes": 4874240,
+      "domain_size_yx": [
+        217,
+        216
+      ],
+      "empty_line_slots": 1204,
+      "in_domain_lanes": 4322960,
+      "len16_line_slots": 81204,
+      "length_hist": {
+        "0": 1204,
+        "16": 81204,
+        "23": 17238,
+        "32": 51714
+      },
+      "line_slots": 151360,
+      "shot": 3,
+      "tiles": 19040,
+      "vx_lanes": 3228177,
+      "vy_lanes": 3227568,
+      "whole_len16_current_lanes": 2560000,
+      "whole_len16_packed_lanes": 1280000,
+      "whole_len16_tiles": 10000
+    },
+    {
+      "active_any_lanes": 3628211,
+      "component_lanes": 6995770,
+      "current_lanes": 5434368,
+      "domain_size_yx": [
+        217,
+        241
+      ],
+      "empty_line_slots": 1704,
+      "in_domain_lanes": 4732735,
+      "len16_line_slots": 91304,
+      "length_hist": {
+        "0": 1704,
+        "16": 91304,
+        "23": 18213,
+        "32": 54639
+      },
+      "line_slots": 165860,
+      "shot": 4,
+      "tiles": 21228,
+      "vx_lanes": 3490577,
+      "vy_lanes": 3505193,
+      "whole_len16_current_lanes": 2867200,
+      "whole_len16_packed_lanes": 1433600,
+      "whole_len16_tiles": 11200
+    },
+    {
+      "active_any_lanes": 3361691,
+      "component_lanes": 6477346,
+      "current_lanes": 4998144,
+      "domain_size_yx": [
+        217,
+        217
+      ],
+      "empty_line_slots": 1608,
+      "in_domain_lanes": 4351639,
+      "len16_line_slots": 81608,
+      "length_hist": {
+        "0": 1608,
+        "16": 81608,
+        "23": 17277,
+        "32": 51831
+      },
+      "line_slots": 152324,
+      "shot": 5,
+      "tiles": 19524,
+      "vx_lanes": 3238673,
+      "vy_lanes": 3238673,
+      "whole_len16_current_lanes": 2560000,
+      "whole_len16_packed_lanes": 1280000,
+      "whole_len16_tiles": 10000
+    }
+  ],
+  "totals": {
+    "active_any_lanes": 20646925,
+    "component_lanes": 39791447,
+    "current_lanes": 30420992,
+    "empty_line_slots": 7774,
+    "in_domain_lanes": 26725894,
+    "len16_line_slots": 506974,
+    "line_slots": 936104,
+    "tiles": 118832,
+    "vx_lanes": 19880803,
+    "vy_lanes": 19910644,
+    "whole_len16_current_lanes": 15974400,
+    "whole_len16_packed_lanes": 7987200,
+    "whole_len16_tiles": 62400
+  },
+  "whole_len16_tile_mask_hist": {
+    "z": 62400
+  }
+}

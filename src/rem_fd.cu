@@ -434,6 +434,62 @@ static void split_pml_len16_tiles(PmlTile **p_tiles,
 }
 #endif
 
+#ifdef CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK
+static int v_pml_tile_whole_len16(const PmlTile *tile,
+				  int n3, int n2, int n1, int npml) {
+  const int core1_lo = npml + CorePmlMargin;
+  const int core2_lo = npml + CorePmlMargin;
+  const int core3_lo = npml + CorePmlMargin;
+  const int core1_hi = n1 - npml - CorePmlMargin;
+  const int core2_hi = n2 - npml - CorePmlMargin;
+  const int core3_hi = n3 - npml - CorePmlMargin;
+  const int z0 = tile->z0;
+  const int x0 = tile->x0;
+  const int y0 = tile->y0;
+  const int z1 = min_int_local(z0 + PmlTileBlockSize1, n1);
+  const int x1 = min_int_local(x0 + PmlTileBlockSize2, n2);
+  const int y1 = min_int_local(y0 + PmlTileBlockSize3, n3);
+  if (x1 - x0 != PmlTileBlockSize2 || y1 - y0 != PmlTileBlockSize3)
+    return 0;
+  if (!(x0 >= core2_lo + 3 && x1 <= core2_hi - 4 &&
+	y0 >= core3_lo + 3 && y1 <= core3_hi - 4))
+    return 0;
+  const int core_z_overlap = interval_len_local(max_int_local(z0, core1_lo),
+						min_int_local(z1, core1_hi));
+  const int active_z_len = (z1 - z0) - core_z_overlap;
+  return active_z_len == 16;
+}
+
+static void split_v_pml_len16_tiles(PmlTile **v_tiles,
+				    int *v_ntile,
+				    PmlTile **len16_tiles,
+				    int *len16_ntile,
+				    int n3, int n2, int n1, int npml) {
+  PmlTile *src = *v_tiles;
+  const int ntile = *v_ntile;
+  PmlTile *residual = (PmlTile*)malloc((size_t)ntile * sizeof(PmlTile));
+  PmlTile *packed = (PmlTile*)malloc((size_t)ntile * sizeof(PmlTile));
+  if (residual == NULL || packed == NULL) {
+    printf("ERROR allocating velocity PML len16 split lists\n");
+    exit(0);
+  }
+  int n_residual = 0;
+  int n_packed = 0;
+  for (int i = 0; i < ntile; ++i) {
+    if (v_pml_tile_whole_len16(&src[i], n3, n2, n1, npml)) {
+      packed[n_packed++] = src[i];
+    } else {
+      residual[n_residual++] = src[i];
+    }
+  }
+  free(src);
+  *v_tiles = residual;
+  *v_ntile = n_residual;
+  *len16_tiles = packed;
+  *len16_ntile = n_packed;
+}
+#endif
+
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
 static int build_pml_zface_tile_list(PmlTile **tiles_out,
 				      int n3, int n2, int n1,
@@ -539,6 +595,10 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   PmlTile *h_v_pml_tiles = NULL, *h_p_pml_tiles = NULL;
   PmlTile *d_v_pml_tiles = NULL, *d_p_pml_tiles = NULL;
   int n_v_pml_tiles = 0, n_p_pml_tiles = 0;
+#endif
+#if defined(CUDA3D_PML_TILE_LIST_V) && defined(CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK)
+  PmlTile *h_v_len16_tiles = NULL, *d_v_len16_tiles = NULL;
+  int n_v_len16_tiles = 0;
 #endif
 #if defined(CUDA3D_PML_TILE_LIST_P) && defined(CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK)
   PmlTile *h_p_len16_tiles = NULL, *d_p_len16_tiles = NULL;
@@ -692,6 +752,9 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   check_gpu_error_2("Error in Memset");
 
   dim3 dimg_v, dimb_v, dimg_p, dimb_p, dimg_pml, dimb_pml, dimg_pml_zface, dimb_pml_zface, dimg_pml_zface_shared, dimb_pml_zface_shared, dims, dimbs, dimr, dimbr;// dims(1,1), dimbs(2*nbell+1, 2*nbell+1);
+#if defined(CUDA3D_PML_TILE_LIST_V) && defined(CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK)
+  dim3 dimg_v_len16, dimb_v_len16;
+#endif
 #if defined(CUDA3D_PML_TILE_LIST_P) && defined(CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK)
   dim3 dimg_pml_len16, dimb_pml_len16;
 #endif
@@ -767,8 +830,22 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 #if defined(CUDA3D_PML_TILE_LIST_V) || defined(CUDA3D_PML_TILE_LIST_P)
 #ifdef CUDA3D_PML_TILE_LIST_V
   n_v_pml_tiles = build_pml_tile_list(&h_v_pml_tiles, nby, nbx, nbz, nbd, 1);
+#ifdef CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK
+  split_v_pml_len16_tiles(&h_v_pml_tiles, &n_v_pml_tiles,
+			  &h_v_len16_tiles, &n_v_len16_tiles,
+			  nby, nbx, nbz, nbd);
+  if (n_v_len16_tiles > 0) {
+    cudaMalloc((void**)&d_v_len16_tiles, (size_t)n_v_len16_tiles * sizeof(PmlTile));
+    cudaMemcpy(d_v_len16_tiles, h_v_len16_tiles, (size_t)n_v_len16_tiles * sizeof(PmlTile), cudaMemcpyHostToDevice);
+  }
+  if (n_v_pml_tiles > 0) {
+    cudaMalloc((void**)&d_v_pml_tiles, (size_t)n_v_pml_tiles * sizeof(PmlTile));
+    cudaMemcpy(d_v_pml_tiles, h_v_pml_tiles, (size_t)n_v_pml_tiles * sizeof(PmlTile), cudaMemcpyHostToDevice);
+  }
+#else
   cudaMalloc((void**)&d_v_pml_tiles, (size_t)n_v_pml_tiles * sizeof(PmlTile));
   cudaMemcpy(d_v_pml_tiles, h_v_pml_tiles, (size_t)n_v_pml_tiles * sizeof(PmlTile), cudaMemcpyHostToDevice);
+#endif
 #endif
 #ifdef CUDA3D_PML_TILE_LIST_P
   n_p_pml_tiles = build_pml_tile_list(&h_p_pml_tiles, nby, nbx, nbz, nbd, 0);
@@ -806,6 +883,14 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   dimg_v.x=n_v_pml_tiles;
   dimg_v.y=1;
   dimg_v.z=1;
+#ifdef CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK
+  dimb_v_len16.x=32;
+  dimb_v_len16.y=4;
+  dimb_v_len16.z=1;
+  dimg_v_len16.x=n_v_len16_tiles;
+  dimg_v_len16.y=1;
+  dimg_v_len16.z=1;
+#endif
 #endif
 #ifdef CUDA3D_PML_TILE_LIST_P
   dimb_pml.x=PmlTileBlockSize1;
@@ -835,6 +920,11 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
     printf("PML tile-list enabled: v_tiles=%d, p_tiles=%d, block=%dx%dx%d\n",
 	   n_v_pml_tiles, n_p_pml_tiles,
 	   PmlTileBlockSize1, PmlTileBlockSize2, PmlTileBlockSize3);
+#if defined(CUDA3D_PML_TILE_LIST_V) && defined(CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK)
+  if(mytid==0)
+    printf("PML velocity len16 halfwarp enabled: len16_tiles=%d residual_v_tiles=%d block=32x4x1\n",
+	   n_v_len16_tiles, n_v_pml_tiles);
+#endif
 #if defined(CUDA3D_PML_TILE_LIST_P) && defined(CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK)
   if(mytid==0)
     printf("PML pressure len16 halfwarp enabled: len16_tiles=%d residual_p_tiles=%d block=32x4x1\n",
@@ -866,6 +956,9 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   cudaFuncSetCacheConfig(cuda_fd3d_p_pml_ns, cudaFuncCachePreferL1);
 #ifdef CUDA3D_PML_TILE_LIST_V
   cudaFuncSetCacheConfig(cuda_fd3d_v_pml_tile_ns, cudaFuncCachePreferL1);
+#ifdef CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK
+  cudaFuncSetCacheConfig(cuda_fd3d_v_pml_len16_halfwarp_ns, cudaFuncCachePreferL1);
+#endif
 #endif
 #ifdef CUDA3D_PML_TILE_LIST_P
   cudaFuncSetCacheConfig(cuda_fd3d_p_pml_tile_ns, cudaFuncCachePreferL1);
@@ -921,7 +1014,22 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
     check_gpu_error_loop("fill CPML VMEM next");
 #endif
 #ifdef CUDA3D_PML_TILE_LIST_V
-    cuda_fd3d_v_pml_tile_ns<<<dimg_v, dimb_v>>>(d_p1, d_vy, d_vx, d_vz,
+#ifdef CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK
+    if (n_v_len16_tiles > 0) {
+      cuda_fd3d_v_pml_len16_halfwarp_ns<<<dimg_v_len16, dimb_v_len16>>>(d_p1, d_vy, d_vx, d_vz,
+				    tdy, tdx, tdz,
+				    nby, nbx, nbz, nbd, dt,
+				    d_ay_h, d_by_h, d_ax_h, d_bx_h, d_az_h, d_bz_h,
+				    d_memory_dy, d_memory_dx, d_memory_dz,
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+				    d_memory_dy_next, d_memory_dx_next, d_memory_dz_next,
+#endif
+				    d_v_len16_tiles, n_v_len16_tiles);
+      check_gpu_error_loop("compute V pml len16 halfwarp");
+    }
+    if (n_v_pml_tiles > 0) {
+#endif
+      cuda_fd3d_v_pml_tile_ns<<<dimg_v, dimb_v>>>(d_p1, d_vy, d_vx, d_vz,
 				    tdy, tdx, tdz,
 				    nby, nbx, nbz, nbd, dt,
 				    d_ay_h, d_by_h, d_ax_h, d_bx_h, d_az_h, d_bz_h,
@@ -930,6 +1038,9 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 				    d_memory_dy_next, d_memory_dx_next, d_memory_dz_next,
 #endif
 				    d_v_pml_tiles, n_v_pml_tiles);
+#ifdef CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK
+    }
+#endif
 #else
     cuda_fd3d_v_pml_ns<<<dimg_v, dimb_v>>>(d_p1, d_vy, d_vx, d_vz,
 				    tdy, tdx, tdz,
@@ -1136,6 +1247,10 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   if (d_p_pml_tiles) cudaFree(d_p_pml_tiles);
   if (h_v_pml_tiles) free(h_v_pml_tiles);
   if (h_p_pml_tiles) free(h_p_pml_tiles);
+#endif
+#if defined(CUDA3D_PML_TILE_LIST_V) && defined(CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK)
+  if (d_v_len16_tiles) cudaFree(d_v_len16_tiles);
+  if (h_v_len16_tiles) free(h_v_len16_tiles);
 #endif
 #if defined(CUDA3D_PML_TILE_LIST_P) && defined(CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK)
   if (d_p_len16_tiles) cudaFree(d_p_len16_tiles);

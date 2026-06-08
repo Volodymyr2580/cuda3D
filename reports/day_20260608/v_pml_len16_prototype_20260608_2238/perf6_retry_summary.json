@@ -1,0 +1,86 @@
+{
+  "base": [
+    {
+      "run": "benchmarks/runs/perf_1gpu_6shots_v_pml_len16_base_retry_r1_20260608_225642",
+      "wp": 2.046905,
+      "gradient": 2.164826,
+      "velocity_len16_tiles": 0,
+      "velocity_residual_tiles": null,
+      "all_done": true
+    },
+    {
+      "run": "benchmarks/runs/perf_1gpu_6shots_v_pml_len16_base_retry_r2_20260608_225645",
+      "wp": 2.051847,
+      "gradient": 2.171378,
+      "velocity_len16_tiles": 0,
+      "velocity_residual_tiles": null,
+      "all_done": true
+    },
+    {
+      "run": "benchmarks/runs/perf_1gpu_6shots_v_pml_len16_base_retry_r3_20260608_225649",
+      "wp": 2.057931,
+      "gradient": 2.17354,
+      "velocity_len16_tiles": 0,
+      "velocity_residual_tiles": null,
+      "all_done": true
+    }
+  ],
+  "candidate": [
+    {
+      "run": "benchmarks/runs/perf_1gpu_6shots_v_pml_len16_candidate_retry_r1_20260608_225658",
+      "wp": 1.98837,
+      "gradient": 2.109258,
+      "velocity_len16_tiles": 10000,
+      "velocity_residual_tiles": 9524,
+      "all_done": true
+    },
+    {
+      "run": "benchmarks/runs/perf_1gpu_6shots_v_pml_len16_candidate_retry_r2_20260608_225702",
+      "wp": 1.987397,
+      "gradient": 2.109197,
+      "velocity_len16_tiles": 10000,
+      "velocity_residual_tiles": 9524,
+      "all_done": true
+    },
+    {
+      "run": "benchmarks/runs/perf_1gpu_6shots_v_pml_len16_candidate_retry_r3_20260608_225706",
+      "wp": 1.989678,
+      "gradient": 2.109487,
+      "velocity_len16_tiles": 10000,
+      "velocity_residual_tiles": 9524,
+      "all_done": true
+    }
+  ],
+  "compare": [
+    {
+      "round": 1,
+      "pass": true,
+      "max_rel_l2": 0.0,
+      "max_abs": 0.0,
+      "path": "reports/day_20260608/v_pml_len16_prototype_20260608_2238/compare_perf_retry_r1/comparison.json"
+    },
+    {
+      "round": 2,
+      "pass": true,
+      "max_rel_l2": 0.0,
+      "max_abs": 0.0,
+      "path": "reports/day_20260608/v_pml_len16_prototype_20260608_2238/compare_perf_retry_r2/comparison.json"
+    },
+    {
+      "round": 3,
+      "pass": true,
+      "max_rel_l2": 0.0,
+      "max_abs": 0.0,
+      "path": "reports/day_20260608/v_pml_len16_prototype_20260608_2238/compare_perf_retry_r3/comparison.json"
+    }
+  ],
+  "mean_base_wp": 2.0522276666666666,
+  "mean_candidate_wp": 1.988481666666667,
+  "mean_base_gradient": 2.1699146666666667,
+  "mean_candidate_gradient": 2.109314,
+  "wp_speedup": 1.0320576252065017,
+  "gradient_speedup": 1.028730035768343,
+  "strict_5pct_breakthrough_gate": "not_reached",
+  "minor_2pct_candidate_gate": "accept",
+  "decision": "keep_macro_default_off_as_minor_current_best_candidate_stop_expansion"
+}

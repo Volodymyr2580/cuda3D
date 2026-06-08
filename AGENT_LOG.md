@@ -4999,3 +4999,66 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 决策：拒绝当前 p-core shared-plane shape family。
   - 不继续测试 `[32,8,1]`、`[16,8,2]`、`[64,2,2]` 等同类变体。
   - 只有 materially different warp/coalescing design，并且模型显式计入 shared fill、同步和控制开销后仍有 `>=5%` repeat speedup ceiling，才允许重开。
+
+## 2026-06-08 23:03:18 +08:00
+
+- 操作目标：
+  - 检查 accepted pressure len16 half-warp packing 后，`v_pml` 是否存在类似 active z-segment packing 机会。
+  - 对通过 gate 的 whole-tile length-16 velocity-PML half-warp prototype 进行远端 build、smoke、correctness、`perf_1gpu_6shots` repeat 验证。
+- 修改文件：
+  - 新增 `tools/v_pml_active_segment_packing_model.py`。
+  - 新增 `docs/day_20260608/v_pml_active_segment_packing_model.md`。
+  - 新增 `docs/day_20260608/v_pml_len16_halfwarp_prototype.md`。
+  - 新增 `reports/day_20260608/v_pml_active_segment_packing_model.json`。
+  - 新增 `reports/day_20260608/v_pml_len16_prototype_20260608_2238/` 远端测试报告。
+  - 修改 `include/inc3D/single_solver.h`。
+  - 修改 `src/single_solver.cu`。
+  - 修改 `src/rem_fd.cu`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地：
+    - `python tools\v_pml_active_segment_packing_model.py --json-out reports\day_20260608\v_pml_active_segment_packing_model.json --md-out docs\day_20260608\v_pml_active_segment_packing_model.md`
+    - `python -m py_compile tools\v_pml_active_segment_packing_model.py`
+    - `git diff --check`
+  - 远端：
+    - `git worktree add --detach /work/wenzhe/cuda3D/.codex_worktrees/v_pml_len16_20260608_2238 FETCH_HEAD`
+    - 上传 `include/inc3D/single_solver.h`、`src/rem_fd.cu`、`src/single_solver.cu` 到该 isolated worktree。
+    - `make -B -f makefile.rtx5090 test NVFLAGS="<current-best flags> -DCUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK"`
+    - `python3 tools/run_benchmark.py --case smoke_1gpu --tag v_pml_len16_smoke --np 1 --gpus 0 --timeout 300`
+    - 同 worktree 重建 current-best baseline 与 candidate，分别运行 `correctness`。
+    - 同 worktree 重建 current-best baseline 与 candidate，分别运行 3 轮 `perf_1gpu_6shots`。
+    - candidate 每轮输出用 `tools/compare_outputs.py` 对 baseline perf 第 1 轮输出比较。
+- 测试结果：
+  - model gate：允许 whole-tile len16 velocity-PML prototype。
+  - build：通过。
+  - smoke：通过，`outputs=3`；smoke 中 `len16_tiles=0`，只验证 wiring。
+  - correctness：通过，candidate vs baseline 输出比较通过；correctness 中 `len16_tiles=0`，只验证 wiring。
+  - `perf_1gpu_6shots` repeat：三轮输出对比全部通过，max rel L2 `0`。
+- 输出/哈希/误差摘要：
+  - model：
+    - current launched lanes：`30,420,992`。
+    - true vx/vy active-any lanes：`20,646,925`。
+    - length-16 z-line slots：`506,974`。
+    - whole length-16 tiles：`62,400`。
+    - whole-tile len16 v lane ceiling：`1.3560x`。
+    - sampled-main ceiling：`1.0612x`。
+  - candidate perf repeat：
+    - mean base WP：`2.052228s`。
+    - mean candidate WP：`1.988482s`。
+    - WP speedup：`1.032058x`。
+    - mean base Gradient：`2.169915s`。
+    - mean candidate Gradient：`2.109314s`。
+    - Gradient speedup：`1.028730x`。
+    - compare max rel L2：`0`。
+  - binary hashes：
+    - base perf retry：`bd21a45ced78362eb8f87b97651dd3e0e73fe3305f58487ae9e8f2f69f26c0c6`。
+    - candidate perf retry：`6d06c99b7daa3fb13a26b8999a7212ee53efb18dda1ad3ff3e04b5fa1b1bfa86`。
+- 风险与下一步：
+  - 严格 `>=5%` breakthrough gate 未达到，因此不继续扩展本路线。
+  - minor `>=2%` candidate gate 通过，保留 `CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK` 为 macro-default-off current-best flags 候选。
+  - 不继续做 v-PML line descriptor / exact active-point descriptor prototype，除非有新的 descriptor/control overhead model 且仍证明 `>=5%` repeat speedup ceiling。
+  - 继续禁止 random v-PML tile-shape sweep 与 current-geometry vx/vy component-owner split。
+  - 远端经验记录：加载 oneAPI/conda 环境脚本时不要使用 `set -u`，否则环境脚本访问未定义变量会提前退出且可能无 build 输出；改用 `set -eo pipefail`。
+  - isolated worktree 缺少 perf 大样例 velocity/source 数据文件时，使用指向 `/work/wenzhe/cuda3D/benchmarks/cases/perf_1gpu_6shots/` 的 symlink 补齐，不复制大文件、不删除文件。

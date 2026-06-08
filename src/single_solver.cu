@@ -1020,6 +1020,77 @@ __global__ void cuda_fd3d_v_pml_ns(const float *__restrict__ p1, float *vy, floa
   }
 }
 
+#ifdef CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK
+#if !defined(CUDA3D_PML_ZMEM_IN_P)
+#error CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK requires CUDA3D_PML_ZMEM_IN_P
+#endif
+#if PmlTileBlockSize1 != 32 || PmlTileBlockSize2 != 4 || PmlTileBlockSize3 != 2
+#error CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK currently requires PmlTileBlockSize=32x4x2
+#endif
+__global__ void cuda_fd3d_v_pml_len16_halfwarp_ns(const float *__restrict__ p1, float *vy, float *vx, float *vz,
+				   float _dy2, float _dx2, float _dz2,
+				   int n3, int n2, int n1, int npml, float dt,
+				   float *ay_h, float *by_h, float *ax_h, float *bx_h, float *az_h, float *bz_h,
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+				   const float *__restrict__ mem_dy, const float *__restrict__ mem_dx, const float *__restrict__ mem_dz,
+				   float *mem_dy_next, float *mem_dx_next, float *mem_dz_next,
+#else
+				   float *mem_dy, float *mem_dx, float *mem_dz,
+#endif
+				   const PmlTile *__restrict__ tiles, int ntile){
+  if (blockIdx.x >= ntile) return;
+  const PmlTile tile = tiles[blockIdx.x];
+  const int lane = threadIdx.x;
+  const int pair = threadIdx.y;
+  const int local_line = pair * 2 + (lane >> 4);
+  const int local_z = lane & 15;
+  const int local_x = local_line & (PmlTileBlockSize2 - 1);
+  const int local_y = local_line >> 2;
+  const int gtid2 = tile.x0 + local_x;
+  const int gtid3 = tile.y0 + local_y;
+  const int core1_lo = npml + CorePmlMargin;
+  const int core1_hi = n1 - npml - CorePmlMargin;
+  const int active_z0 = (tile.z0 < core1_lo) ? tile.z0 : core1_hi;
+  const int gtid1 = active_z0 + local_z;
+  if (gtid1 < 0 || gtid1 >= n1 || gtid2 >= n2 || gtid3 >= n3)
+    return;
+
+  (void)vz;
+  (void)dt;
+  (void)ay_h; (void)by_h; (void)ax_h; (void)bx_h; (void)az_h; (void)bz_h;
+  (void)mem_dy; (void)mem_dx; (void)mem_dz;
+#ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+  (void)mem_dy_next; (void)mem_dx_next; (void)mem_dz_next;
+#endif
+
+  const int stride2 = n1 + 2 * radius;
+  const int stride3 = stride2 * (n2 + 2 * radius);
+  const size_t ts3 = (size_t)(gtid3 + radius) * stride3;
+  const size_t ts2 = (size_t)(gtid2 + radius) * stride2;
+  const size_t base = ts3 + ts2 + gtid1 + radius;
+
+  float c2=stencil[1]*(__ldg(p1+ts3+(gtid2+radius+1)*stride2+gtid1+radius)-__ldg(p1+ts3+(gtid2+radius  )*stride2+gtid1+radius))
+    +stencil[2]*(__ldg(p1+ts3+(gtid2+radius+2)*stride2+gtid1+radius)-__ldg(p1+ts3+(gtid2+radius-1)*stride2+gtid1+radius))
+    +stencil[3]*(__ldg(p1+ts3+(gtid2+radius+3)*stride2+gtid1+radius)-__ldg(p1+ts3+(gtid2+radius-2)*stride2+gtid1+radius))
+    +stencil[4]*(__ldg(p1+ts3+(gtid2+radius+4)*stride2+gtid1+radius)-__ldg(p1+ts3+(gtid2+radius-3)*stride2+gtid1+radius));
+
+  float c3=stencil[1]*(__ldg(p1+(gtid3+radius+1)*stride3+ts2+gtid1+radius)-__ldg(p1+(gtid3+radius  )*stride3+ts2+gtid1+radius))
+    +stencil[2]*(__ldg(p1+(gtid3+radius+2)*stride3+ts2+gtid1+radius)-__ldg(p1+(gtid3+radius-1)*stride3+ts2+gtid1+radius))
+    +stencil[3]*(__ldg(p1+(gtid3+radius+3)*stride3+ts2+gtid1+radius)-__ldg(p1+(gtid3+radius-2)*stride3+ts2+gtid1+radius))
+    +stencil[4]*(__ldg(p1+(gtid3+radius+4)*stride3+ts2+gtid1+radius)-__ldg(p1+(gtid3+radius-3)*stride3+ts2+gtid1+radius));
+
+  c2*=_dx2;
+  c3*=_dy2;
+
+#ifndef CUDA3D_PML_RECOMPUTE_X
+  vx[base]=c2;
+#endif
+#ifndef CUDA3D_PML_RECOMPUTE_Y
+  vy[base]=c3;
+#endif
+}
+#endif
+
 __global__ void cuda_fd3d_v_pml_tile_ns(const float *__restrict__ p1, float *vy, float *vx, float *vz,
 				   float _dy2, float _dx2, float _dz2,
 				   int n3, int n2, int n1, int npml, float dt,

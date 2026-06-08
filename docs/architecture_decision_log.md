@@ -2486,3 +2486,95 @@ Report:
 docs/day_20260608/p_core_shared_plane_calibrated_gate.md
 reports/day_20260608/p_core_shared_plane_calibrated_gate.json
 ```
+
+## 2026-06-08 - Keep V-PML Len16 Half-Warp Minor Candidate
+
+Decision:
+
+```text
+Keep CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK as a macro-default-off minor
+candidate, but do not expand the v-PML active-segment descriptor family.
+```
+
+Model evidence:
+
+```text
+tool:
+  tools/v_pml_active_segment_packing_model.py
+
+current v-PML:
+  sampled-main share                 21.95%
+  speedup required for 5% sampled    1.2770x local v-kernel
+  current launched lanes             30,420,992
+  true vx/vy active-any lanes        20,646,925
+  length-16 z-line slots             506,974
+  whole length-16 tiles              62,400
+
+whole-tile len16 candidate:
+  lane reduction                     26.26%
+  v lane speedup ceiling             1.3560x
+  sampled-main ceiling               1.0612x
+  gate                               allow_cuda_prototype
+```
+
+Prototype evidence:
+
+```text
+macro:
+  CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK
+
+worktree:
+  /work/wenzhe/cuda3D/.codex_worktrees/v_pml_len16_20260608_2238
+
+build:
+  pass
+
+smoke:
+  pass, outputs=3
+  len16_tiles=0, wiring-only coverage
+
+correctness:
+  pass
+  len16_tiles=0, wiring-only coverage
+
+perf_1gpu_6shots repeat:
+  all three output compares pass
+  max rel L2                         0
+  mean base WP                       2.052228s
+  mean candidate WP                  1.988482s
+  WP speedup                         1.032058x
+  mean base Gradient                 2.169915s
+  mean candidate Gradient            2.109314s
+  Gradient speedup                   1.028730x
+```
+
+Reason:
+
+```text
+The route is numerically exact and repeat-stable, and it clears the >=2% minor
+candidate line.  It does not clear the strict >=5% breakthrough gate, so it is
+not a new structural phase breakthrough and should not be expanded into
+descriptor variants without a fresh overhead model.
+```
+
+Boundary:
+
+```text
+Do not continue from this result into v-PML line-descriptor len16 packing,
+exact active-point descriptors, random velocity tile-shape sweeps, or
+current-geometry vx/vy component-owner split.
+
+Reopen descriptor packing only if descriptor traffic, control overhead, launch
+overhead, and source-level memory behavior are modeled and still predict >=5%
+perf_1gpu_6shots repeat speedup after overhead.
+```
+
+Report:
+
+```text
+docs/day_20260608/v_pml_active_segment_packing_model.md
+docs/day_20260608/v_pml_len16_halfwarp_prototype.md
+reports/day_20260608/v_pml_active_segment_packing_model.json
+reports/day_20260608/v_pml_len16_prototype_20260608_2238/summary.md
+reports/day_20260608/v_pml_len16_prototype_20260608_2238/perf6_retry_summary.json
+```
