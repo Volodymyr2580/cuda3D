@@ -609,6 +609,51 @@ Phase 4.16 formal same-session speed table 已完成：
 - 当前下一步：
   - 若继续 CUDA 核心结构重写，应从 math-level pressure state representation / PML ownership 设计 gate 开始，而不是继续微调已拒绝路线。
 
+Phase 4.17 pressure state representation gate 已完成并拒绝 CUDA prototype：
+
+- 工具：`tools/pressure_state_representation_model.py`。
+- 报告：`docs/day_20260608/pressure_state_representation_model.md`。
+- JSON：`reports/day_20260608/pressure_state_representation_model.json`。
+- NCU/formal anchor：
+  - sampled main：`297.248us`。
+  - `p_core` share：`31.47%`。
+  - `v_pml` share：`21.95%`。
+  - pressure-PML share：`46.58%`。
+  - len16 packed pressure-PML share：`22.13%`。
+  - formal current-best WP speedup vs zmem：`1.192835x`。
+- 当前二阶 pressure update 每点最小 state traffic：
+  - `p_prev_read`：`4B`。
+  - `p_cur_read`：`4B`。
+  - `cw2_read`：`4B`。
+  - `p_next_write`：`4B`。
+  - total：`16B`。
+- 已审查并拒绝：
+  - `delta_pressure_state`：
+    - 精确代数可行，但每点最小 traffic 从 `16B` 增加到 `20B`。
+    - sampled-main effect 若所有 pressure updates 都这样做约 `0.8957x`，变慢。
+  - `scaled_pressure_q_only` (`q=p/cw2`)：
+    - 时间更新代数看似可去掉 final `cw2` load。
+    - 但所有 pressure stencil 都必须重建 `p=cw2*q`。
+    - `p_core` 单点至少从 `1` 次 `cw2` 读取变成 `>=29` 个 pressure value reconstruction；`p_core+v_pml` 合计 `53.42%` sampled-main 处于风险区。
+  - `scaled_pressure_dual_p_and_q`：
+    - 保留 `p` 和 `q` 两套表示，避免 stencil 重建，但每点最小 traffic 从 `16B` 增加到 `32B`。
+  - `first_order_full_domain_velocity_pressure`：
+    - 不是 bitwise 等价替换，会改变当前 mixed second-order core。
+    - 每 core 点最多省 `4B` old-p read，但至少新增 `24B` velocity read/write state traffic。
+  - `precomputed_cw2dt`：
+    - 只减少乘法，不减少 `cw2` 的 4B global load。
+  - `half_or_compressed_cw2`：
+    - 当前精度契约下拒绝；即使理想 `2x` 加速 len16 `cw2` source line，sampled-main ceiling 也只有 `1.0282x`。
+  - `cpml_mem_dzz_rescaled_state`：
+    - 代数缩放不能消除 recursive state 的每步 read/write；`mem_dzz` alone 需要 `5.0614x` local speedup 才能触及 gate。
+- 决策：
+  - 拒绝 pressure state representation CUDA prototype。
+  - 不写 `q=p/cw2`、delta pressure state、dual `p/q`、full-domain first-order velocity-pressure、precomputed `cw2dt`、compressed `cw2` 或 `mem_dzz` rescale prototype。
+- 当前下一步：
+  - 转向 PML `vx/vy` round-trip ownership design，必须先有 `>=5%` model 再写 CUDA。
+  - source-aware multi-step/wavefront 只有解决 synchronization/halo ownership 后才允许重开。
+  - precision-relaxation 只有用户明确给出新 tolerance policy 才允许研究。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

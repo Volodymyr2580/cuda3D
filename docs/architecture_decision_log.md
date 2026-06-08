@@ -1517,3 +1517,89 @@ Report:
 reports/day_20260608/formal_current_best_table_20260608_182525/summary.md
 reports/day_20260608/formal_current_best_table_20260608_182525/summary.json
 ```
+
+## 2026-06-08 - Reject Pressure State Representation Prototype
+
+Decision:
+
+```text
+Reject pressure state representation CUDA prototypes under the current exact
+numerical contract.  The state changes do not remove old-p/cw2 or mem_dzz
+traffic without moving larger traffic into other hot kernels, adding another
+state write, changing the scheme, or relaxing precision.
+```
+
+Evidence:
+
+```text
+sampled main                                  297.248us
+p_core share                                   31.47%
+v_pml share                                    21.95%
+pressure-PML share                             46.58%
+len16 packed pressure-PML share                22.13%
+formal current-best WP speedup vs zmem          1.192835x
+
+current second-order pressure update:
+  p_prev read                                    4B
+  p_cur read                                     4B
+  cw2 read                                       4B
+  p_next write                                   4B
+  total                                         16B
+```
+
+Candidate outcomes:
+
+```text
+delta_pressure_state:
+  exact recurrence algebra, but update traffic rises 16B -> 20B per point
+  sampled-main effect if applied to all pressure updates: 0.8957x
+
+scaled_pressure_q_only (q=p/cw2):
+  final update can remove one cw2 load only if pressure stencils reconstruct p
+  p_core alone needs >=29 pressure-value reconstructions per output
+  p_core + v_pml share at risk: 53.42%
+
+scaled_pressure_dual_p_and_q:
+  avoids stencil reconstruction but update traffic rises 16B -> 32B
+
+first_order_full_domain_velocity_pressure:
+  not bitwise equivalent; saves 4B old-p read but adds >=24B velocity
+  read/write state traffic per core point
+
+precomputed_cw2dt:
+  removes a multiply, not the cw2 global load
+
+half_or_compressed_cw2:
+  outside current exactness contract; ideal len16 cw2-line ceiling only 1.0282x
+
+cpml_mem_dzz_rescaled_state:
+  algebraic rescaling does not remove recursive state read/write
+  mem_dzz alone needs 5.0614x local speedup to touch the gate
+```
+
+Boundary:
+
+```text
+Do not implement q=p/cw2, delta pressure state, dual p/q state, first-order
+full-domain velocity-pressure rewrite, precomputed cw2dt, compressed cw2, or
+CPML mem_dzz rescaling prototypes under the current exactness gate.
+
+These are not merely micro-tuning rejects; they are math/state representation
+rejects for the current variable-cw2 stencil path.
+```
+
+Next:
+
+```text
+Move to PML vx/vy round-trip ownership design with a >=5% model before CUDA.
+Source-aware multi-step/wavefront may reopen only if synchronization and halo
+ownership are solved first.  Precision relaxation requires an explicit new
+tolerance policy.
+```
+
+Report:
+
+```text
+docs/day_20260608/pressure_state_representation_model.md
+reports/day_20260608/pressure_state_representation_model.json
+```

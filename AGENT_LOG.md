@@ -4327,3 +4327,51 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 正式 WP speedup vs `zmem_reference`：`1.192835x`。
   - 该结果未达到 `1.5x` archive threshold，不创建 `archives/speedups/1.5x_*`。
   - 下一步若继续底层核心重写，应先做 math-level pressure state representation / PML ownership design gate；不要回到已拒绝的 micro routes。
+
+## 2026-06-08 18:40:06 +08:00
+
+- 操作目标：
+  - 继续 Phase 4.16 之后的底层核心重写路线，对 pressure state representation 做 math-level gate。
+  - 判断 `q=p/cw2`、delta pressure state、first-order full-domain velocity-pressure 等看似结构性改写是否值得打开 CUDA prototype。
+- 修改文件：
+  - 新增 `tools/pressure_state_representation_model.py`。
+  - 新增 `docs/day_20260608/pressure_state_representation_model.md`。
+  - 新增 `reports/day_20260608/pressure_state_representation_model.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - `git status --short --branch`
+  - `git log --oneline -5`
+  - `Select-String -Path "src\single_solver.cu" -Pattern "__global__ void cuda_fd3d_p_core_ns|__global__ void cuda_fd3d_v_pml_tile_ns|__global__ void cuda_fd3d_p_pml_len16_halfwarp_ns" -Context 0,90`
+  - `python -m py_compile tools\pressure_state_representation_model.py`
+  - `python tools\pressure_state_representation_model.py --json-out reports\day_20260608\pressure_state_representation_model.json --md-out docs\day_20260608\pressure_state_representation_model.md`
+  - `python -c "import json; json.load(open('reports/day_20260608/pressure_state_representation_model.json', encoding='utf-8')); print('pressure state json ok')"`
+- 测试结果：
+  - 模型脚本 Python 编译通过。
+  - 生成 JSON 可被标准 `json.load` 读取。
+  - 本轮未修改 CUDA 源码，未运行远端构建或 benchmark。
+- 输出/哈希/误差摘要：
+  - sampled main：`297.248us`。
+  - `p_core` sampled-main share：`31.47%`。
+  - `v_pml` sampled-main share：`21.95%`。
+  - pressure-PML sampled-main share：`46.58%`。
+  - len16 packed pressure-PML sampled-main share：`22.13%`。
+  - formal current-best WP speedup vs zmem：`1.192835x`。
+  - 当前二阶 pressure update 每点最小 state traffic：`16B`：
+    - `p_prev_read` `4B`
+    - `p_cur_read` `4B`
+    - `cw2_read` `4B`
+    - `p_next_write` `4B`
+  - `delta_pressure_state`：traffic `16B -> 20B`，sampled-main effect 若全 pressure update 使用约 `0.8957x`。
+  - `scaled_pressure_q_only` (`q=p/cw2`)：`p_core` 至少需要 `>=29` 个 pressure value reconstruction per output，`p_core+v_pml` 合计 `53.42%` sampled-main 处于风险区。
+  - `scaled_pressure_dual_p_and_q`：traffic `16B -> 32B`。
+  - `first_order_full_domain_velocity_pressure`：不是 bitwise 等价；每 core 点最多省 `4B` old-p read，但至少新增 `24B` velocity state read/write。
+  - `half_or_compressed_cw2`：当前精度契约下拒绝；理想 len16 cw2-line sampled-main ceiling 仅 `1.0282x`。
+  - `cpml_mem_dzz_rescaled_state`：`mem_dzz` alone 需要 `5.0614x` local speedup 才能触及 gate，代数重标定不减少 recursive state read/write。
+- 风险与下一步：
+  - 决策：拒绝 pressure state representation CUDA prototype。
+  - 禁止实现 `q=p/cw2`、delta pressure state、dual `p/q`、first-order full-domain velocity-pressure、precomputed `cw2dt`、compressed `cw2` 或 CPML `mem_dzz` rescale prototype。
+  - 下一步转向 PML `vx/vy` round-trip ownership design；必须先有 `>=5%` model 再写 CUDA。
+  - source-aware multi-step/wavefront 只有先解决 synchronization/halo ownership 才允许重开。
+  - precision-relaxation 只有用户明确给出新 tolerance policy 才允许研究。

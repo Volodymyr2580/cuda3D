@@ -1,0 +1,397 @@
+{
+  "baseline": {
+    "formal_current_best_wp_speedup_vs_zmem": 1.1928347521636058,
+    "len16_packed_share": 0.22126529586966662,
+    "p_core_share": 0.3147091541967201,
+    "pressure_pml_share": 0.4657839021064341,
+    "sampled_main_us": 297.24800000000005,
+    "v_pml_share": 0.2195069436968457
+  },
+  "candidates": {
+    "cpml_mem_dzz_rescaled_state": {
+      "decision": "reject_cuda_prototype",
+      "equivalence": "algebraic rescaling can keep the recurrence but cannot remove one read and one write per step",
+      "reason": "The CPML state is recursive and has no intra-step reuse target; rescaling changes arithmetic but not state traffic.",
+      "state": "store a transformed mem_dzz variable",
+      "traffic_model": {
+        "mem_dzz_source_share_in_len16": 0.26820264765784113,
+        "required_mem_dzz_group_speedup_if_alone": 5.061363928550588
+      }
+    },
+    "delta_pressure_state": {
+      "decision": "reject_cuda_prototype",
+      "equivalence": "exact algebra for the time recurrence, but changes stored state",
+      "reason": "It removes the old-p read but adds a delta write; minimum pressure-update bytes rise from 16 to 20 per point before any extra bookkeeping.",
+      "state": "store p_cur and delta=p_cur-p_prev",
+      "traffic_model": {
+        "candidate_min_bytes_per_point": {
+          "cw2_read": 4,
+          "delta_next_write": 4,
+          "delta_read": 4,
+          "p_cur_read": 4,
+          "p_next_write": 4,
+          "total": 20
+        },
+        "current_pressure_update_bytes_per_point": {
+          "cw2_read": 4,
+          "p_cur_read": 4,
+          "p_next_write": 4,
+          "p_prev_read": 4,
+          "total": 16
+        },
+        "local_update_speedup_ceiling": 0.8,
+        "sampled_main_effect_if_all_pressure_updates_followed_this": 0.8956994085883261
+      }
+    },
+    "first_order_full_domain_velocity_pressure": {
+      "decision": "reject_cuda_prototype",
+      "equivalence": "not bitwise equivalent; would replace the current mixed second-order core with a new first-order scheme",
+      "reason": "It saves one old-p read but introduces full-domain velocity state traffic and a different numerical scheme.",
+      "state": "single pressure field plus full-domain vx/vy/vz updates",
+      "traffic_model": {
+        "extra_to_saved_byte_ratio": 6.0,
+        "minimum_extra_velocity_read_write_bytes_per_core_point": 24,
+        "old_p_read_saved_per_core_point": 4,
+        "p_core_sampled_main_share": 0.3147091541967201
+      }
+    },
+    "half_or_compressed_cw2": {
+      "decision": "reject_for_current_exactness_gate",
+      "equivalence": "requires precision relaxation or a separate quantization proof",
+      "reason": "Even the ideal len16 cw2-line-only benefit is small, and precision changes are outside the current exactness contract.",
+      "state": "store cw2 in fp16 or compressed form",
+      "traffic_model": {
+        "ideal_len16_cw2_line_2x_speedup_sampled_main": 1.0281619661660402,
+        "known_correctness_gate": "rel L2 <= 1e-5, no NaN/Inf"
+      }
+    },
+    "precomputed_cw2dt": {
+      "decision": "reject_cuda_prototype",
+      "equivalence": "exact if dt is fixed for a run",
+      "reason": "It removes a multiply, not the global-memory traffic that dominates the source profile.",
+      "state": "store cw2dt instead of cw2 or precompute cw2*dt",
+      "traffic_model": {
+        "bytes_removed": 0,
+        "reason": "The same 4-byte model coefficient is still loaded once per pressure update."
+      }
+    },
+    "scaled_pressure_dual_p_and_q": {
+      "decision": "reject_cuda_prototype",
+      "equivalence": "can preserve existing pressure stencils if both p and q are kept coherent",
+      "reason": "Keeping both representations avoids stencil reconstruction but doubles pressure state write/read work.",
+      "state": "store p for stencils and q for cw2-free update",
+      "traffic_model": {
+        "candidate_min_bytes_per_point": 32,
+        "current_pressure_update_bytes_per_point": 16,
+        "local_update_speedup_ceiling": 0.5,
+        "sampled_main_effect_if_all_pressure_updates_followed_this": 0.6822288050530027
+      }
+    },
+    "scaled_pressure_q_only": {
+      "decision": "reject_cuda_prototype",
+      "equivalence": "time update algebra is exact only if p=cw2*q is reconstructed wherever pressure is used",
+      "reason": "It can remove one cw2 load at the final update only by adding cw2 reconstruction to p_core/v_pml pressure stencils.  p_core alone would go from one cw2 read per output to at least 29 pressure-value reconstructions per output.",
+      "state": "store q=p/cw2 instead of p",
+      "traffic_model": {
+        "extra_cw2_loads_per_p_core_output_min": 28,
+        "p_core_min_pressure_values_per_output": 29,
+        "p_core_sampled_main_share_at_risk": 0.3147091541967201,
+        "utopian_remove_len16_cw2_source_line_sampled_speedup": 1.0579560897713367,
+        "utopian_remove_len16_final_group_sampled_speedup": 1.1553861726627683,
+        "v_pml_sampled_main_share_at_risk": 0.2195069436968457
+      }
+    }
+  },
+  "current_pressure_update_bytes_per_point": {
+    "cw2_read": 4,
+    "p_cur_read": 4,
+    "p_next_write": 4,
+    "p_prev_read": 4,
+    "total": 16
+  },
+  "gate": {
+    "accepted_candidates": [],
+    "decision": "reject_pressure_state_representation_cuda_prototype",
+    "next_allowed": [
+      "PML vx/vy round-trip ownership design with a >=5% model before CUDA",
+      "source-aware multi-step or wavefront design only if it solves synchronization/halo ownership",
+      "precision-relaxation study only with an explicit new tolerance policy"
+    ],
+    "prohibited": [
+      "q=p/cw2 pressure-state prototype under the current variable-cw2 stencil path",
+      "delta pressure state prototype",
+      "first-order full-domain velocity-pressure rewrite as a drop-in optimization",
+      "precomputed cw2dt or compressed cw2 prototype under the current exactness gate",
+      "CPML mem_dzz algebraic rescaling without state-traffic removal"
+    ],
+    "reason": "No exact pressure-state representation removes old-p/cw2 or mem_dzz traffic without moving larger traffic into p_core/v_pml stencils, adding another state write, changing the numerical scheme, or relaxing precision.",
+    "rejected_candidates": [
+      "delta_pressure_state",
+      "scaled_pressure_q_only",
+      "scaled_pressure_dual_p_and_q",
+      "first_order_full_domain_velocity_pressure",
+      "precomputed_cw2dt",
+      "half_or_compressed_cw2",
+      "cpml_mem_dzz_rescaled_state"
+    ]
+  },
+  "inputs": {
+    "formal": {
+      "current_best_alias": "len16_current_best",
+      "decision": "formal_same_session_table_complete",
+      "summary_by_candidate": {
+        "directfill": {
+          "all_compare_pass": true,
+          "max_abs": 0.0,
+          "max_rel_l2": 0.0,
+          "mean_candidate_gradient": 2.315404,
+          "mean_candidate_wp": 2.203314666666667,
+          "mean_elapsed_speedup_vs_zmem": 1.1054084804084805,
+          "mean_gradient_speedup_vs_zmem": 1.097977317218388,
+          "mean_wp_speedup_vs_zmem": 1.0999565935084965
+        },
+        "len16_current_best": {
+          "all_compare_pass": true,
+          "max_abs": 4.76837158203125e-06,
+          "max_rel_l2": 6.384336369813099e-07,
+          "mean_candidate_gradient": 2.1559023333333336,
+          "mean_candidate_wp": 2.0317529999999997,
+          "mean_elapsed_speedup_vs_zmem": 1.1561077805484965,
+          "mean_gradient_speedup_vs_zmem": 1.1792127983148408,
+          "mean_wp_speedup_vs_zmem": 1.1928347521636058
+        }
+      }
+    },
+    "writeback_gate": {
+      "derived": {
+        "final_group_speedup_required_if_alone": 1.54816782101005,
+        "final_plus_mem_dzz_group_speedup_required": 1.3256818132117034,
+        "mem_dzz_group_speedup_required_if_alone": 5.061363928550588,
+        "packed_kernel_speedup_required_for_5pct_sampled_main": 1.274230212853896,
+        "packed_len16_kernel_share_of_sampled_main": 0.22126529586966662,
+        "total_pressure_pml_share_of_sampled_main": 0.4657839021064341,
+        "total_pressure_speedup_required_for_5pct_sampled_main": 1.1138762550416206
+      },
+      "profile": {
+        "p_core_us": 93.54666666666667,
+        "p_pml_len16_sampled_main_share": 0.22126529586966662,
+        "p_pml_len16_us": 65.77066666666667,
+        "p_pml_residual_us": 72.68266666666668,
+        "p_pml_total_sampled_main_share": 0.4657839021064341,
+        "p_pml_total_us": 138.45333333333335,
+        "profile_label": "len16",
+        "sampled_main_us": 297.24800000000005,
+        "v_pml_us": 65.248
+      },
+      "source_groups": {
+        "address_branch_control_visible": 0.04308808553971487,
+        "cpml_mem_dzz_update": 0.26820264765784113,
+        "final_p0_p1_cw2_update": 0.6078156822810591,
+        "other_or_unparsed": 0.0616726069246436,
+        "z_cache_shared_loads": 0.019220977596741344
+      },
+      "source_top_lines": [
+        {
+          "line": 1813,
+          "not_issued_samples": 4643,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.36023421588594706,
+          "samples": 5660,
+          "text": "p0[base]=2*__ldg(p1+base)-p0[base]"
+        },
+        {
+          "line": 1814,
+          "not_issued_samples": 3161,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.24758146639511203,
+          "samples": 3890,
+          "text": "+__ldg(cw2+base)*dt*(c1+c2+c3);"
+        },
+        {
+          "line": 1810,
+          "not_issued_samples": 2612,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.2092031568228106,
+          "samples": 3287,
+          "text": "mem_dzz[pind]=mem_dzz[pind]*coef+c1*(coef-1);"
+        },
+        {
+          "line": 1804,
+          "not_issued_samples": 660,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.05899949083503055,
+          "samples": 927,
+          "text": "mem_dzz[pind]=mem_dzz[pind]*coef+c1*(coef-1);"
+        },
+        {
+          "line": 1778,
+          "not_issued_samples": 156,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.016929735234215888,
+          "samples": 266,
+          "text": "const size_t ts2 = (size_t)(gtid2 + radius) * stride2;"
+        },
+        {
+          "line": 1815,
+          "not_issued_samples": 190,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.014829429735234215,
+          "samples": 233,
+          "text": "}"
+        },
+        {
+          "line": 1737,
+          "not_issued_samples": 132,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.011838085539714868,
+          "samples": 186,
+          "text": "if (blockIdx.x >= ntile) return;"
+        },
+        {
+          "line": 1738,
+          "not_issued_samples": 109,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.011456211812627291,
+          "samples": 180,
+          "text": "const PmlTile tile = tiles[blockIdx.x];"
+        },
+        {
+          "line": 1751,
+          "not_issued_samples": 46,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.007191955193482688,
+          "samples": 113,
+          "text": "const int gtid1 = active_z0 + local_z;"
+        },
+        {
+          "line": 1784,
+          "not_issued_samples": 59,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.007064663951120163,
+          "samples": 111,
+          "text": "vz_line_cache[cbase-2])"
+        },
+        {
+          "line": 1806,
+          "not_issued_samples": 57,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.00560081466395112,
+          "samples": 88,
+          "text": "} else if (gtid1>=n1-npml) {"
+        },
+        {
+          "line": 1811,
+          "not_issued_samples": 46,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.0050916496945010185,
+          "samples": 80,
+          "text": "c1+=mem_dzz[pind];"
+        },
+        {
+          "line": 1748,
+          "not_issued_samples": 26,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.004391547861507129,
+          "samples": 69,
+          "text": "const int core1_hi = n1 - npml - CorePmlMargin;"
+        },
+        {
+          "line": 1770,
+          "not_issued_samples": 31,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.004073319755600814,
+          "samples": 64,
+          "text": "if (local_z < 3) {"
+        },
+        {
+          "line": 1788,
+          "not_issued_samples": 23,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.0038187372708757637,
+          "samples": 60,
+          "text": "vz_line_cache[cbase-4]);"
+        },
+        {
+          "line": 1760,
+          "not_issued_samples": 23,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.0037550916496945012,
+          "samples": 59,
+          "text": "const int stride3 = stride2 * (n2 + 2 * radius);"
+        },
+        {
+          "line": 1783,
+          "not_issued_samples": 22,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.0026731160896130346,
+          "samples": 42,
+          "text": "+stencil[2]*(vz_line_cache[cbase+1]-"
+        },
+        {
+          "line": 1782,
+          "not_issued_samples": 19,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.0026094704684317717,
+          "samples": 41,
+          "text": "vz_line_cache[cbase-1])"
+        },
+        {
+          "line": 1749,
+          "not_issued_samples": 7,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.0019093686354378818,
+          "samples": 30,
+          "text": "const int tile_z1 = min(tile.z0 + PmlTileBlockSize1, n1);"
+        },
+        {
+          "line": 1779,
+          "not_issued_samples": 2,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.0019093686354378818,
+          "samples": 30,
+          "text": "const size_t base = ts3 + ts2 + gtid1 + radius;"
+        },
+        {
+          "line": 1743,
+          "not_issued_samples": 14,
+          "occurrences": 9,
+          "sample_share_of_parsed": 0.0017184317718940936,
+          "samples": 27,
+          "text": "const int local_x = local_line & (PmlTileBlockSize2 - 1);"
+        },
+        {
+          "line": 1803,
+          "not_issued_samples": 12,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.001654786150712831,
+          "samples": 26,
+          "text": "const float coef = c_bz_pml[gtid1];"
+        },
+        {
+          "line": 1785,
+          "not_issued_samples": 15,
+          "occurrences": 9,
+          "sample_share_of_parsed": 0.0015911405295315683,
+          "samples": 25,
+          "text": "+stencil[3]*(vz_line_cache[cbase+2]-"
+        },
+        {
+          "line": 1786,
+          "not_issued_samples": 5,
+          "occurrences": 9,
+          "sample_share_of_parsed": 0.0014638492871690428,
+          "samples": 23,
+          "text": "vz_line_cache[cbase-3])"
+        },
+        {
+          "line": 1747,
+          "not_issued_samples": 12,
+          "occurrences": 10,
+          "sample_share_of_parsed": 0.00140020366598778,
+          "samples": 22,
+          "text": "const int core1_lo = npml + CorePmlMargin;"
+        }
+      ]
+    }
+  }
+}
