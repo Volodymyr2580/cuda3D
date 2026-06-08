@@ -110,3 +110,34 @@ Next work should profile this combined candidate against zmem and decompose
 the remaining `cuda_fd3d_p_pml_tile_ns` time.  Do not expand to shared vx/vy
 caches unless new profiler evidence changes the conclusion above.
 
+## NCU Follow-Up
+
+Short Nsight Compute profile:
+
+```text
+profile                       docs/day_20260608/zrecomp_cache_cpml_combo_ncu_summary.md
+sections                      SpeedOfLight, MemoryWorkloadAnalysis,
+                              SchedulerStats, WarpStateStats, Occupancy
+launch skip/count             10 / 30
+kernel filter                 cuda_fd3d_(p_core|v_pml_tile|p_pml_tile)
+```
+
+Kernel duration summary:
+
+| kernel | zmem | combo | speedup |
+| --- | ---: | ---: | ---: |
+| `cuda_fd3d_p_core_ns` | 76.061 us | 75.306 us | 1.010x |
+| `cuda_fd3d_p_pml_tile_ns` | 158.291 us | 142.902 us | 1.108x |
+| `cuda_fd3d_v_pml_tile_ns` | 58.320 us | 53.101 us | 1.098x |
+
+Profile read:
+
+```text
+p_core remains L2/memory-throughput limited and nearly unchanged.
+v_pml improves from CPML vmem ownership.
+p_pml improves from z-cache, but combo p_pml still has low eligible
+warps/scheduler (0.798) and high No Eligible (60.879%), so the next
+pressure-PML work should target issue/latency overhead rather than raw
+DRAM bandwidth.
+```
+

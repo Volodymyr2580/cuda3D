@@ -3129,3 +3129,44 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - combo 当前只验证 single GPU / single MPI rank；`CUDA3D_CPML_VMEM_DISABLE_MPI` 仍限制 MPI 场景。
   - 下一步应 profile combo candidate，确认剩余 `cuda_fd3d_p_pml_tile_ns` latency 与 occupancy/source counters。
   - 不继续 shared `vx/vy` cache、tile-mask fastpath、z-face specialize/fusion 或 `RECOMPUTE_X/Y/XYZ`。
+
+## 2026-06-08 11:48:00 +08:00 - Combo candidate NCU short profile
+
+- 操作目标：
+  - 对已通过 gate 的 combo candidate 做 Nsight Compute 短 profile。
+  - 判断收益来源和下一步剩余瓶颈。
+- 修改文件：
+  - 新增 `docs/day_20260608/zrecomp_cache_cpml_combo_ncu_summary.md`。
+  - 新增 `reports/day_20260608/zrecomp_cache_cpml_combo_ncu_summary.json`。
+  - 新增 `benchmarks/profiles/day_20260608/zmem_vs_combo_zmem_ncu.csv`。
+  - 新增 `benchmarks/profiles/day_20260608/zmem_vs_combo_combo_ncu.csv`。
+  - 更新 `docs/day_20260608/pressure_pml_zrecomp_cache_prototype.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 远端在 clean worktree `/work/wenzhe/cuda3D_codex_day_20260608` 重建 zmem baseline 与 combo candidate。
+  - 使用 Nsight Compute：
+    - `--section SpeedOfLight`
+    - `--section MemoryWorkloadAnalysis`
+    - `--section SchedulerStats`
+    - `--section WarpStateStats`
+    - `--section Occupancy`
+    - `--launch-skip 10`
+    - `--launch-count 30`
+    - kernel filter：`regex:.*cuda_fd3d_(p_core|v_pml_tile|p_pml_tile).*`
+  - 使用 `tools/ncu_csv_summary.py` 生成 markdown/json summary。
+- 测试结果：
+  - zmem 与 combo NCU CSV 均生成成功。
+  - summary 生成成功。
+- 输出/哈希/误差摘要：
+  - `cuda_fd3d_p_core_ns` duration：zmem `76.061us`，combo `75.306us`，基本不变。
+  - `cuda_fd3d_p_pml_tile_ns` duration：zmem `158.291us`，combo `142.902us`，kernel speedup `1.108x`。
+  - `cuda_fd3d_v_pml_tile_ns` duration：zmem `58.320us`，combo `53.101us`，kernel speedup `1.098x`。
+  - combo `p_pml_tile`：
+    - eligible warps/scheduler：`0.798`。
+    - No Eligible：`60.879%`。
+    - achieved occupancy：`75.965%`。
+    - block limit registers：`5`，block limit shared mem：`7`。
+- 风险与下一步：
+  - combo 收益来自 `p_pml` 与 `v_pml`，`p_core` 仍是 L2/memory-throughput limited。
+  - combo 后 `p_pml` 剩余瓶颈更像 issue/latency overhead，不是简单 DRAM 带宽。
+  - 下一步可尝试降低 z-cache fill 的 integer/division/control overhead；继续禁止 shared `vx/vy` cache。

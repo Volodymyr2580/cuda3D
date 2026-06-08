@@ -539,3 +539,24 @@ Profile the combined candidate and look for the next dominant source of
 pressure-PML latency.  Do not reopen shared vx/vy cache, tile-mask fastpath,
 z-face specialize/fusion, or RECOMPUTE_X/Y/XYZ without new profiler evidence.
 ```
+
+NCU follow-up:
+
+```text
+combo cuda_fd3d_p_core_ns duration          75.306us vs zmem 76.061us
+combo cuda_fd3d_p_pml_tile_ns duration      142.902us vs zmem 158.291us
+combo cuda_fd3d_v_pml_tile_ns duration       53.101us vs zmem 58.320us
+
+combo p_pml eligible warps/scheduler          0.798
+combo p_pml No Eligible                       60.879%
+combo p_pml achieved occupancy                75.965%
+```
+
+Implication:
+
+```text
+The combined candidate's remaining pressure-PML bottleneck is issue/latency
+overhead, not a simple raw-DRAM bandwidth limit.  The next pressure-PML
+experiment may target z-cache fill integer/control overhead, but shared
+vx/vy neighbor caching remains stopped.
+```

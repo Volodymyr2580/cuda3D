@@ -231,6 +231,24 @@ Phase 4.4 pressure PML z-recompute cache prototype 已完成：
   - profile 组合候选，分解剩余 `cuda_fd3d_p_pml_tile_ns` latency。
   - 不得重开 shared `vx/vy` cache、tile-mask fastpath、z-face specialize/fusion 或 `RECOMPUTE_X/Y/XYZ`，除非新 profiler evidence 推翻当前结论。
 
+Phase 4.5 combo candidate NCU profile 已完成：
+
+- 报告：`docs/day_20260608/zrecomp_cache_cpml_combo_ncu_summary.md`。
+- NCU sections：SpeedOfLight、MemoryWorkloadAnalysis、SchedulerStats、WarpStateStats、Occupancy。
+- `cuda_fd3d_p_core_ns` duration：zmem `76.061us`，combo `75.306us`，基本不变。
+- `cuda_fd3d_p_pml_tile_ns` duration：zmem `158.291us`，combo `142.902us`，kernel speedup `1.108x`。
+- `cuda_fd3d_v_pml_tile_ns` duration：zmem `58.320us`，combo `53.101us`，kernel speedup `1.098x`。
+- combo `p_pml_tile` 剩余特征：
+  - eligible warps/scheduler：`0.798`。
+  - No Eligible：`60.879%`。
+  - achieved occupancy：`75.965%`。
+  - block limit registers：`5`，block limit shared mem：`7`。
+- 结论：
+  - combo 主要改善 `p_pml` 与 `v_pml`。
+  - `p_core` 仍是 L2/memory-throughput limited，短期不要回到简单 block/register sweep。
+  - combo 后 `p_pml` 剩余瓶颈更像 issue/latency overhead；下一步若继续 pressure PML，应优先降低 z-cache fill 的 integer/division/control overhead。
+  - 继续禁止 shared `vx/vy` cache。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：
