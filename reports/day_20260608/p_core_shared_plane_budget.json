@@ -1,0 +1,524 @@
+{
+  "inputs": {
+    "profile_json": "E:\\cuda3D\\reports\\day_20260608\\len16_vs_directfill_ncu_20260608_1600\\summary.json",
+    "target_sampled_main_speedup": 1.05,
+    "radius": 7,
+    "current_shape_zxy": [
+      128,
+      2,
+      1
+    ]
+  },
+  "profile": {
+    "p_core_us": 93.54666666666667,
+    "v_pml_us": 65.248,
+    "p_pml_residual_us": 72.68266666666668,
+    "p_pml_len16_us": 65.77066666666667,
+    "p_core_l2_hit_rate_pct": 86.34,
+    "p_core_sol_l2_pct": 96.89,
+    "p_core_sol_memory_pct": 96.89,
+    "p_core_avg_active_threads": 29.22,
+    "p_core_eligible_warps_per_scheduler": 1.2033333333333334,
+    "sampled_main_us": 297.24800000000005,
+    "p_core_share": 0.3147091541967201
+  },
+  "current": {
+    "p1_global_floats_per_output": 29.109375,
+    "bytes_per_output": 128.4375,
+    "z_shared_floats_per_output": 1.109375,
+    "xy_global_floats_per_output": 28
+  },
+  "candidates": [
+    {
+      "shape_zxy": [
+        16,
+        16,
+        1
+      ],
+      "mode": "zx_shared_y_global",
+      "description": "share z+x plane, keep y-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 17.515625,
+      "bytes_per_output": 82.0625,
+      "p1_load_reduction": 0.3982823403113258,
+      "p_core_byte_speedup_ceiling": 1.5651180502665651,
+      "sampled_main_speedup_ceiling": 1.12819984182223,
+      "shared_bytes": 3600,
+      "shared_floats": 900,
+      "z_threads": 16,
+      "x_threads": 16,
+      "y_threads": 1
+    },
+    {
+      "shape_zxy": [
+        32,
+        8,
+        1
+      ],
+      "mode": "zx_shared_y_global",
+      "description": "share z+x plane, keep y-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 17.953125,
+      "bytes_per_output": 83.8125,
+      "p1_load_reduction": 0.38325281803542677,
+      "p_core_byte_speedup_ceiling": 1.5324384787472036,
+      "sampled_main_speedup_ceiling": 1.1227681925885362,
+      "shared_bytes": 4048,
+      "shared_floats": 1012,
+      "z_threads": 32,
+      "x_threads": 8,
+      "y_threads": 1
+    },
+    {
+      "shape_zxy": [
+        16,
+        8,
+        2
+      ],
+      "mode": "zx_shared_y_global",
+      "description": "share z+x plane, keep y-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 19.15625,
+      "bytes_per_output": 88.625,
+      "p1_load_reduction": 0.3419216317767042,
+      "p_core_byte_speedup_ceiling": 1.4492242595204514,
+      "sampled_main_speedup_ceiling": 1.1080973088433586,
+      "shared_bytes": 5280,
+      "shared_floats": 1320,
+      "z_threads": 16,
+      "x_threads": 8,
+      "y_threads": 2
+    },
+    {
+      "shape_zxy": [
+        8,
+        16,
+        2
+      ],
+      "mode": "zx_shared_y_global",
+      "description": "share z+x plane, keep y-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 19.15625,
+      "bytes_per_output": 88.625,
+      "p1_load_reduction": 0.3419216317767042,
+      "p_core_byte_speedup_ceiling": 1.4492242595204514,
+      "sampled_main_speedup_ceiling": 1.1080973088433586,
+      "shared_bytes": 5280,
+      "shared_floats": 1320,
+      "z_threads": 8,
+      "x_threads": 16,
+      "y_threads": 2
+    },
+    {
+      "shape_zxy": [
+        64,
+        4,
+        1
+      ],
+      "mode": "zx_shared_y_global",
+      "description": "share z+x plane, keep y-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 19.484375,
+      "bytes_per_output": 89.9375,
+      "p1_load_reduction": 0.33064949006977995,
+      "p_core_byte_speedup_ceiling": 1.4280750521195273,
+      "sampled_main_speedup_ceiling": 1.104162462993618,
+      "shared_bytes": 5616,
+      "shared_floats": 1404,
+      "z_threads": 64,
+      "x_threads": 4,
+      "y_threads": 1
+    },
+    {
+      "shape_zxy": [
+        32,
+        4,
+        2
+      ],
+      "mode": "zx_shared_y_global",
+      "description": "share z+x plane, keep y-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 20.46875,
+      "bytes_per_output": 93.875,
+      "p1_load_reduction": 0.29683306494900696,
+      "p_core_byte_speedup_ceiling": 1.3681757656458056,
+      "sampled_main_speedup_ceiling": 1.0925238293965445,
+      "shared_bytes": 6624,
+      "shared_floats": 1656,
+      "z_threads": 32,
+      "x_threads": 4,
+      "y_threads": 2
+    },
+    {
+      "shape_zxy": [
+        8,
+        8,
+        4
+      ],
+      "mode": "zx_shared_y_global",
+      "description": "share z+x plane, keep y-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 21.5625,
+      "bytes_per_output": 98.25,
+      "p1_load_reduction": 0.2592592592592593,
+      "p_core_byte_speedup_ceiling": 1.3072519083969465,
+      "sampled_main_speedup_ceiling": 1.079876449099603,
+      "shared_bytes": 7744,
+      "shared_floats": 1936,
+      "z_threads": 8,
+      "x_threads": 8,
+      "y_threads": 4
+    },
+    {
+      "shape_zxy": [
+        64,
+        2,
+        2
+      ],
+      "mode": "zx_shared_y_global",
+      "description": "share z+x plane, keep y-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 23.75,
+      "bytes_per_output": 107.0,
+      "p1_load_reduction": 0.18411164787976386,
+      "p_core_byte_speedup_ceiling": 1.2003504672897196,
+      "sampled_main_speedup_ceiling": 1.055440269118752,
+      "shared_bytes": 9984,
+      "shared_floats": 2496,
+      "z_threads": 64,
+      "x_threads": 2,
+      "y_threads": 2
+    },
+    {
+      "shape_zxy": [
+        64,
+        2,
+        2
+      ],
+      "mode": "zy_shared_x_global",
+      "description": "share z+y plane, keep x-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 23.75,
+      "bytes_per_output": 107.0,
+      "p1_load_reduction": 0.18411164787976386,
+      "p_core_byte_speedup_ceiling": 1.2003504672897196,
+      "sampled_main_speedup_ceiling": 1.055440269118752,
+      "shared_bytes": 9984,
+      "shared_floats": 2496,
+      "z_threads": 64,
+      "x_threads": 2,
+      "y_threads": 2
+    },
+    {
+      "shape_zxy": [
+        32,
+        4,
+        2
+      ],
+      "mode": "zy_shared_x_global",
+      "description": "share z+y plane, keep x-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 25.5,
+      "bytes_per_output": 114.0,
+      "p1_load_reduction": 0.12399355877616747,
+      "p_core_byte_speedup_ceiling": 1.1266447368421053,
+      "sampled_main_speedup_ceiling": 1.036673427066563,
+      "shared_bytes": 11776,
+      "shared_floats": 2944,
+      "z_threads": 32,
+      "x_threads": 4,
+      "y_threads": 2
+    },
+    {
+      "shape_zxy": [
+        8,
+        8,
+        4
+      ],
+      "mode": "zy_shared_x_global",
+      "description": "share z+y plane, keep x-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 26.375,
+      "bytes_per_output": 117.5,
+      "p1_load_reduction": 0.09393451422436927,
+      "p_core_byte_speedup_ceiling": 1.0930851063829787,
+      "sampled_main_speedup_ceiling": 1.0275380713050783,
+      "shared_bytes": 12672,
+      "shared_floats": 3168,
+      "z_threads": 8,
+      "x_threads": 8,
+      "y_threads": 4
+    },
+    {
+      "shape_zxy": [
+        16,
+        8,
+        2
+      ],
+      "mode": "zy_shared_x_global",
+      "description": "share z+y plane, keep x-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 29.0,
+      "bytes_per_output": 128.0,
+      "p1_load_reduction": 0.0037573805689747886,
+      "p_core_byte_speedup_ceiling": 1.00341796875,
+      "sampled_main_speedup_ceiling": 1.0010731524066085,
+      "shared_bytes": 15360,
+      "shared_floats": 3840,
+      "z_threads": 16,
+      "x_threads": 8,
+      "y_threads": 2
+    },
+    {
+      "shape_zxy": [
+        64,
+        4,
+        1
+      ],
+      "mode": "zy_shared_x_global",
+      "description": "share z+y plane, keep x-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 32.28125,
+      "bytes_per_output": 141.125,
+      "p1_load_reduction": -0.10896403650026842,
+      "p_core_byte_speedup_ceiling": 0.9100974313551816,
+      "sampled_main_speedup_ceiling": 0.9698492700602291,
+      "shared_bytes": 18720,
+      "shared_floats": 4680,
+      "z_threads": 64,
+      "x_threads": 4,
+      "y_threads": 1
+    },
+    {
+      "shape_zxy": [
+        8,
+        8,
+        4
+      ],
+      "mode": "zxy_shared",
+      "description": "share full z+x+y tile",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 34.03125,
+      "bytes_per_output": 148.125,
+      "p1_load_reduction": -0.16908212560386482,
+      "p_core_byte_speedup_ceiling": 0.8670886075949367,
+      "sampled_main_speedup_ceiling": 0.9539799232823808,
+      "shared_bytes": 34848,
+      "shared_floats": 8712,
+      "z_threads": 8,
+      "x_threads": 8,
+      "y_threads": 4
+    },
+    {
+      "shape_zxy": [
+        32,
+        8,
+        1
+      ],
+      "mode": "zy_shared_x_global",
+      "description": "share z+y plane, keep x-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 35.5625,
+      "bytes_per_output": 154.25,
+      "p1_load_reduction": -0.22168545356951164,
+      "p_core_byte_speedup_ceiling": 0.8326580226904376,
+      "sampled_main_speedup_ceiling": 0.9405142448856887,
+      "shared_bytes": 22080,
+      "shared_floats": 5520,
+      "z_threads": 32,
+      "x_threads": 8,
+      "y_threads": 1
+    },
+    {
+      "shape_zxy": [
+        8,
+        16,
+        2
+      ],
+      "mode": "zy_shared_x_global",
+      "description": "share z+y plane, keep x-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 36.0,
+      "bytes_per_output": 156.0,
+      "p1_load_reduction": -0.23671497584541057,
+      "p_core_byte_speedup_ceiling": 0.8233173076923077,
+      "sampled_main_speedup_ceiling": 0.9367364499657354,
+      "shared_bytes": 22528,
+      "shared_floats": 5632,
+      "z_threads": 8,
+      "x_threads": 16,
+      "y_threads": 2
+    },
+    {
+      "shape_zxy": [
+        16,
+        8,
+        2
+      ],
+      "mode": "zxy_shared",
+      "description": "share full z+x+y tile",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 41.25,
+      "bytes_per_output": 177.0,
+      "p1_load_reduction": -0.41706924315619975,
+      "p_core_byte_speedup_ceiling": 0.725635593220339,
+      "sampled_main_speedup_ceiling": 0.8936612621764884,
+      "shared_bytes": 42240,
+      "shared_floats": 10560,
+      "z_threads": 16,
+      "x_threads": 8,
+      "y_threads": 2
+    },
+    {
+      "shape_zxy": [
+        8,
+        16,
+        2
+      ],
+      "mode": "zxy_shared",
+      "description": "share full z+x+y tile",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 41.25,
+      "bytes_per_output": 177.0,
+      "p1_load_reduction": -0.41706924315619975,
+      "p_core_byte_speedup_ceiling": 0.725635593220339,
+      "sampled_main_speedup_ceiling": 0.8936612621764884,
+      "shared_bytes": 42240,
+      "shared_floats": 10560,
+      "z_threads": 8,
+      "x_threads": 16,
+      "y_threads": 2
+    },
+    {
+      "shape_zxy": [
+        16,
+        16,
+        1
+      ],
+      "mode": "zy_shared_x_global",
+      "description": "share z+y plane, keep x-neighbor loads global",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 42.125,
+      "bytes_per_output": 180.5,
+      "p1_load_reduction": -0.44712828770799784,
+      "p_core_byte_speedup_ceiling": 0.7115650969529086,
+      "sampled_main_speedup_ceiling": 0.8868642871196916,
+      "shared_bytes": 28800,
+      "shared_floats": 7200,
+      "z_threads": 16,
+      "x_threads": 16,
+      "y_threads": 1
+    },
+    {
+      "shape_zxy": [
+        32,
+        4,
+        2
+      ],
+      "mode": "zxy_shared",
+      "description": "share full z+x+y tile",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 51.75,
+      "bytes_per_output": 219.0,
+      "p1_load_reduction": -0.7777777777777777,
+      "p_core_byte_speedup_ceiling": 0.586472602739726,
+      "sampled_main_speedup_ceiling": 0.8183946232347924,
+      "shared_bytes": 52992,
+      "shared_floats": 13248,
+      "z_threads": 32,
+      "x_threads": 4,
+      "y_threads": 2
+    },
+    {
+      "shape_zxy": [
+        16,
+        16,
+        1
+      ],
+      "mode": "zxy_shared",
+      "description": "share full z+x+y tile",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 52.734375,
+      "bytes_per_output": 222.9375,
+      "p1_load_reduction": -0.8115942028985508,
+      "p_core_byte_speedup_ceiling": 0.5761143818334735,
+      "sampled_main_speedup_ceiling": 0.8119832957413072,
+      "shared_bytes": 54000,
+      "shared_floats": 13500,
+      "z_threads": 16,
+      "x_threads": 16,
+      "y_threads": 1
+    },
+    {
+      "shape_zxy": [
+        32,
+        8,
+        1
+      ],
+      "mode": "zxy_shared",
+      "description": "share full z+x+y tile",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 59.296875,
+      "bytes_per_output": 249.1875,
+      "p1_load_reduction": -1.0370370370370372,
+      "p_core_byte_speedup_ceiling": 0.5154251316779533,
+      "sampled_main_speedup_ceiling": 0.7716808274320319,
+      "shared_bytes": 60720,
+      "shared_floats": 15180,
+      "z_threads": 32,
+      "x_threads": 8,
+      "y_threads": 1
+    },
+    {
+      "shape_zxy": [
+        64,
+        2,
+        2
+      ],
+      "mode": "zxy_shared",
+      "description": "share full z+x+y tile",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 78.0,
+      "bytes_per_output": 324.0,
+      "p1_load_reduction": -1.679549114331723,
+      "p_core_byte_speedup_ceiling": 0.39641203703703703,
+      "sampled_main_speedup_ceiling": 0.6760480103329065,
+      "shared_bytes": 79872,
+      "shared_floats": 19968,
+      "z_threads": 64,
+      "x_threads": 2,
+      "y_threads": 2
+    },
+    {
+      "shape_zxy": [
+        64,
+        4,
+        1
+      ],
+      "mode": "zxy_shared",
+      "description": "share full z+x+y tile",
+      "outputs_per_cta": 256,
+      "p1_global_floats_per_output": 82.265625,
+      "bytes_per_output": 341.0625,
+      "p1_load_reduction": -1.8260869565217392,
+      "p_core_byte_speedup_ceiling": 0.3765805387575591,
+      "sampled_main_speedup_ceiling": 0.6574652369672532,
+      "shared_bytes": 84240,
+      "shared_floats": 21060,
+      "z_threads": 64,
+      "x_threads": 4,
+      "y_threads": 1
+    }
+  ],
+  "gate": {
+    "decision": "allow_cuda_prototype",
+    "candidate": "CUDA3D_P_CORE_SHARED_ZX_PLANE",
+    "reason": "A z+x shared-plane p_core kernel can reduce estimated p1 global loads enough to pass the >=5% sampled-main modeling gate.  This is a dataflow change, not another simple block/register sweep.",
+    "prototype_guardrails": [
+      "macro default-off",
+      "preserve current second-order p0/p1/cw2 math",
+      "profile/debug/correctness/perf_1gpu_6shots repeat before acceptance",
+      "stop immediately if repeat speedup <5% or correctness exceeds tolerance"
+    ]
+  }
+}

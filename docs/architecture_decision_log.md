@@ -2333,3 +2333,91 @@ Report:
 docs/day_20260608/pml_len32_fullwarp_specialization_budget.md
 reports/day_20260608/pml_len32_fullwarp_specialization_budget.json
 ```
+
+## 2026-06-08 - Reject Current P-Core ZX Shared-Plane Prototype
+
+Decision:
+
+```text
+Reject the current CUDA3D_P_CORE_SHARED_ZX_PLANE prototype and do not keep the
+slow kernel in source.
+```
+
+Budget evidence:
+
+```text
+model:
+  tools/p_core_shared_plane_budget.py
+
+anchor:
+  sampled main                    297.248us
+  p_core                           93.547us
+  p_core sampled-main share        31.47%
+  p_core L2 SOL                    96.89%
+
+current p_core p1 global floats/output:
+  29.109375
+
+best modeled candidate:
+  shape                            16x16x1
+  mode                             z+x shared plane, y global
+  p1 floats/output                 17.516
+  p_core byte ceiling              1.5651x
+  sampled-main ceiling             1.1282x
+
+budget decision:
+  allow_cuda_prototype
+```
+
+Prototype evidence:
+
+```text
+worktree:
+  /work/wenzhe/cuda3D/.codex_worktrees/p_core_zx_20260608_2158
+
+binary sha256:
+  45213389d52df56c9ab433f2bb48b72517d3c301555f32a6bde7c16d172602fe
+
+smoke:
+  pass
+
+correctness:
+  pass, 6 outputs rel L2 all 0
+
+perf_1gpu_6shots repeat:
+  round 1 WP 2.589493s, Gradient 2.731454s, compare pass
+  round 2 WP 2.597138s, Gradient 2.734513s, compare pass
+  round 3 WP 2.583236s, Gradient 2.727773s, compare pass
+  mean WP                         2.589956s
+  mean Gradient                   2.731247s
+  WP speedup vs current-best      0.784474x
+  Gradient speedup vs current-best 0.789347x
+```
+
+Reason:
+
+```text
+The byte model correctly identified possible p1 global-load reduction, but it
+underestimated shared tile fill, control overhead, and warp/coalescing changes.
+The prototype is numerically exact but a large slowdown, so this p-core shared
+plane shape is not a valid optimization path.
+```
+
+Boundary:
+
+```text
+Do not continue the current 16x16x1 z+x shared-plane p_core kernel.
+Do not use p-core p1 byte reduction alone as sufficient evidence for a CUDA
+prototype.
+Reopen p-core shared-plane work only if a new warp/coalescing design proves
+lower shared-fill/control overhead with profiler/source evidence before coding.
+```
+
+Report:
+
+```text
+docs/day_20260608/p_core_shared_plane_budget.md
+reports/day_20260608/p_core_shared_plane_budget.json
+reports/day_20260608/p_core_zx_prototype_20260608_2158/summary.md
+reports/day_20260608/p_core_zx_prototype_20260608_2158/perf6_repeat_summary.json
+```

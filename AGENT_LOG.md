@@ -4906,3 +4906,62 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 不把 full-active length-32 lines 当作新的 lane-compaction opportunity。
   - 只有 future source-level profile 能单独分离 length-32 residual，并证明扣除额外 launch/tile-list/control overhead 后仍有 `>=5%` repeat speedup ceiling，才允许重开。
   - 下一步继续寻找能真实减少 memory traffic / state ownership cost 的 `fd_3d_f` 结构路线，或等待 true multi-GPU 平台。
+
+## 2026-06-08 22:20:57 +08:00
+
+- 操作目标：
+  - 建立 p-core shared-plane stencil budget，检查是否存在比 current z-only shared kernel 更强的 p1 global-load reduction 路线。
+  - 对通过 budget gate 的 `[16,16,1]` z+x shared-plane prototype 进行远端 build、smoke、correctness 和 perf repeat 验证。
+- 修改文件：
+  - 新增 `tools/p_core_shared_plane_budget.py`。
+  - 新增 `docs/day_20260608/p_core_shared_plane_budget.md`。
+  - 新增 `reports/day_20260608/p_core_shared_plane_budget.json`。
+  - 新增 `reports/day_20260608/p_core_zx_prototype_20260608_2158/summary.md`。
+  - 新增 `reports/day_20260608/p_core_zx_prototype_20260608_2158/perf6_repeat_summary.json`。
+  - 新增 `reports/day_20260608/p_core_zx_prototype_20260608_2158/build.log`。
+  - 新增 `reports/day_20260608/p_core_zx_prototype_20260608_2158/binary.sha256`。
+  - 新增 smoke/correctness/perf comparison 摘要文件于 `reports/day_20260608/p_core_zx_prototype_20260608_2158/`。
+  - 曾临时修改 `include/inc3D/single_solver.h`、`src/single_solver.cu`、`src/rem_fd.cu` 实现 `CUDA3D_P_CORE_SHARED_ZX_PLANE`；因 perf gate 失败，本地源码已恢复，不保留失败 kernel。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地：
+    - `python tools\p_core_shared_plane_budget.py --json-out reports\day_20260608\p_core_shared_plane_budget.json --md-out docs\day_20260608\p_core_shared_plane_budget.md`
+    - `python -m py_compile tools\p_core_shared_plane_budget.py`
+    - `git diff --check`
+  - 远端：
+    - `git -c http.proxy= -c https.proxy= fetch origin exp/day-20260608-cpml-compact-temporal`
+    - `git worktree add --detach /work/wenzhe/cuda3D/.codex_worktrees/p_core_zx_20260608_2158 FETCH_HEAD`
+    - 上传临时 prototype 源码到该 worktree。
+    - `make -B -f makefile.rtx5090 test NVFLAGS="<current-best flags> -DCUDA3D_P_CORE_SHARED_ZX_PLANE"`
+    - `python3 tools/run_benchmark.py --case smoke_1gpu --tag p_core_zx_smoke_fixed --np 1 --gpus 0 --timeout 300`
+    - `python3 tools/run_benchmark.py --case correctness --tag p_core_zx_correctness --np 1 --gpus 0 --timeout 600`
+    - `python3 tools/compare_outputs.py --baseline <len16 correctness baseline>/outputs --candidate <p_core_zx correctness>/outputs --out <report>/compare_correctness_vs_len16_base`
+    - `python3 tools/run_benchmark.py --case perf_1gpu_6shots --tag p_core_zx_perf6_retry_r{1,2,3} --np 1 --gpus 0 --timeout 2400`
+    - 每轮 perf 后用 `tools/compare_outputs.py` 对 formal current-best len16 r1 输出做比较。
+- 测试结果：
+  - budget gate：允许 prototype。
+  - build：通过。
+  - smoke：通过。
+  - correctness：通过，6 个输出 rel L2 全部 `0`。
+  - perf repeat：三轮输出对比全部通过，max rel L2 `0`。
+  - performance gate：失败，明显慢于 current-best。
+- 输出/哈希/误差摘要：
+  - prototype binary sha256：`45213389d52df56c9ab433f2bb48b72517d3c301555f32a6bde7c16d172602fe`。
+  - current p_core p1 global floats/output：`29.109375`。
+  - `[16,16,1]` z+x shared-plane modeled p1 floats/output：`17.516`。
+  - modeled sampled-main ceiling：`1.1282x`。
+  - perf repeat rows：
+    - r1：WP `2.589493s`，Gradient `2.731454s`。
+    - r2：WP `2.597138s`，Gradient `2.734513s`。
+    - r3：WP `2.583236s`，Gradient `2.727773s`。
+  - mean WP：`2.589956s`。
+  - mean Gradient：`2.731247s`。
+  - WP speedup vs formal current-best：`0.784474x`。
+  - Gradient speedup vs formal current-best：`0.789347x`。
+- 风险与下一步：
+  - 决策：拒绝当前 `CUDA3D_P_CORE_SHARED_ZX_PLANE` / `16x16x1` z+x shared-plane prototype。
+  - 当前源码已恢复，不保留失败宏。
+  - 不继续当前 p-core shared-plane 形态；模型高估是因为 shared tile fill、control overhead、warp mapping/coalescing 变化吞掉了 global-load reduction。
+  - 只有新的 warp/coalescing 设计能先证明 shared-fill/control overhead 明显更低，才允许重开 p-core shared-plane CUDA prototype。

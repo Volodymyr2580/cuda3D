@@ -966,6 +966,41 @@ Phase 4.26 pressure-PML len32 full-warp specialization budget 已完成并拒绝
 - 重开条件：
   - 只有 source-level profile 能单独分离 length-32 residual，并证明扣除额外 launch/tile-list/control overhead 后仍有 `>=5%` repeat speedup ceiling，才允许重开。
 
+Phase 4.27 p-core shared-plane prototype 已完成并拒绝：
+
+- 工具：`tools/p_core_shared_plane_budget.py`。
+- 预算报告：`docs/day_20260608/p_core_shared_plane_budget.md`。
+- 预算 JSON：`reports/day_20260608/p_core_shared_plane_budget.json`。
+- prototype 远端 worktree：`/work/wenzhe/cuda3D/.codex_worktrees/p_core_zx_20260608_2158`。
+- prototype 报告：`reports/day_20260608/p_core_zx_prototype_20260608_2158/summary.md`。
+- prototype binary sha256：`45213389d52df56c9ab433f2bb48b72517d3c301555f32a6bde7c16d172602fe`。
+- budget gate：
+  - current-best sampled main：`297.248us`。
+  - `p_core`：`93.547us`，占 sampled-main `31.47%`。
+  - `p_core` L2 SOL：`96.89%`。
+  - current p1 global floats/output：`29.109375`。
+  - `[16,16,1]` z+x shared-plane modeled p1 floats/output：`17.516`。
+  - modeled p_core byte ceiling：`1.5651x`。
+  - modeled sampled-main ceiling：`1.1282x`。
+  - 因此允许一个 default-off prototype：`CUDA3D_P_CORE_SHARED_ZX_PLANE`。
+- prototype 实测：
+  - smoke pass。
+  - correctness pass，6 个输出 rel L2 全部 `0`。
+  - `perf_1gpu_6shots` repeat 三轮输出对比全部 pass，max rel L2 `0`。
+  - mean WP：`2.589956s`。
+  - mean Gradient：`2.731247s`。
+  - vs formal current-best mean WP `2.031753s`：`0.784474x`。
+  - vs formal current-best mean Gradient `2.155902s`：`0.789347x`。
+- 决策：
+  - 拒绝当前 `16x16x1` z+x shared-plane p-core prototype。
+  - 当前源码已恢复，不保留 `CUDA3D_P_CORE_SHARED_ZX_PLANE` 慢路径。
+  - 原因：模型只计入 p1 global-load 减少，未充分计入 shared tile fill、控制开销、warp mapping/coalescing 变化；实测大幅慢于 current-best。
+- 禁止继续：
+  - 不继续当前 `16x16x1` z+x shared-plane p-core kernel。
+  - 不把 p-core shared-plane byte model alone 当作 prototype 充分证据。
+- 重开条件：
+  - 只有新的 warp/coalescing 设计能证明 shared-fill/control overhead 明显更低，并先给出 profiler/source evidence，才允许重开 p-core shared-plane CUDA prototype。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

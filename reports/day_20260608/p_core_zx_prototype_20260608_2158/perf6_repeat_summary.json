@@ -1,0 +1,38 @@
+{
+  "rows": [
+    {
+      "round": 1,
+      "run_dir": "/work/wenzhe/cuda3D/.codex_worktrees/p_core_zx_20260608_2158/benchmarks/runs/perf_1gpu_6shots_p_core_zx_perf6_retry_r1_20260608_221622",
+      "gradient_s": 2.731454,
+      "wp_s": 2.589493,
+      "pass": true,
+      "max_rel_l2": 0.0
+    },
+    {
+      "round": 2,
+      "run_dir": "/work/wenzhe/cuda3D/.codex_worktrees/p_core_zx_20260608_2158/benchmarks/runs/perf_1gpu_6shots_p_core_zx_perf6_retry_r2_20260608_221627",
+      "gradient_s": 2.734513,
+      "wp_s": 2.597138,
+      "pass": true,
+      "max_rel_l2": 0.0
+    },
+    {
+      "round": 3,
+      "run_dir": "/work/wenzhe/cuda3D/.codex_worktrees/p_core_zx_20260608_2158/benchmarks/runs/perf_1gpu_6shots_p_core_zx_perf6_retry_r3_20260608_221631",
+      "gradient_s": 2.727773,
+      "wp_s": 2.583236,
+      "pass": true,
+      "max_rel_l2": 0.0
+    }
+  ],
+  "mean_wp_s": 2.5899556666666665,
+  "mean_gradient_s": 2.731246666666667,
+  "all_pass": true,
+  "max_rel_l2": 0.0,
+  "formal_current_best": {
+    "mean_wp_s": 2.031753,
+    "mean_gradient_s": 2.155902
+  },
+  "wp_speedup_vs_current_best": 0.7844740456947333,
+  "gradient_speedup_vs_current_best": 0.7893472333757234
+}
