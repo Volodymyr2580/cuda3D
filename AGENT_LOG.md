@@ -4664,3 +4664,73 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 禁止跳过输出生成或 correctness 工作。
   - 禁止优化 `run_benchmark.py` output copy 来解释当前 elapsed metric，因为 output copy 在 `/usr/bin/time` 之后。
   - 下一步建议做 current-best host/setup profile 或 targeted timers，分解 `0.814s` 来源。
+
+## 2026-06-08 20:39:48 +08:00
+
+- 操作目标：
+  - 执行 Phase 4.22 的下一步，添加 default-off targeted timers，分解 current-best `elapsed - Gradient` 的来源。
+  - 用远端 RTX 5090 隔离 worktree 构建 timer binary，运行 `perf_1gpu_6shots`，并验证插桩不改变数值输出。
+- 修改文件：
+  - 修改 `src/main.cu`：新增 `CUDA3D_HOST_SETUP_TIMERS` 下的 main setup phase timers。
+  - 修改 `src/optimization_cuda.cu`：新增 `cal_fwi_grad_3d` pre-Gradient init timer。
+  - 新增 `tools/host_setup_timer_summary.py`。
+  - 新增 `reports/day_20260608/host_setup_timer_probe_20260608_203508/run.log`。
+  - 新增 `reports/day_20260608/host_setup_timer_probe_20260608_203508/manifest.json`。
+  - 新增 `reports/day_20260608/host_setup_timer_probe_20260608_203508/run.stdout`。
+  - 新增 `reports/day_20260608/host_setup_timer_probe_20260608_203508/run_dir.txt`。
+  - 新增 `reports/day_20260608/host_setup_timer_probe_20260608_203508/binary.sha256`。
+  - 新增 `reports/day_20260608/host_setup_timer_probe_20260608_203508/build.log`。
+  - 新增 `reports/day_20260608/host_setup_timer_probe_20260608_203508/summary.md`。
+  - 新增 `reports/day_20260608/host_setup_timer_probe_20260608_203508/summary.json`。
+  - 新增 `reports/day_20260608/host_setup_timer_probe_20260608_203508/compare_vs_formal_len16_r1/comparison.md`。
+  - 新增 `reports/day_20260608/host_setup_timer_probe_20260608_203508/compare_vs_formal_len16_r1/comparison.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地：
+    - `git status --short --branch`
+    - `git log --oneline -5`
+    - `Select-String -Path src\main.cu,src\optimization_cuda.cu -Pattern "MPI_Init|MPI_Wtime|Gradient TIME all|cal_fwi_grad_3d|MPI_Finalize|read_dir_3d|cudaSetDevice|cudaGetDeviceCount" -Context 2,2`
+    - `python -m py_compile tools\host_setup_timer_summary.py`
+    - `python tools\host_setup_timer_summary.py --run-log reports\day_20260608\host_setup_timer_probe_20260608_203508\run.log --json-out reports\day_20260608\host_setup_timer_probe_20260608_203508\summary.json --md-out reports\day_20260608\host_setup_timer_probe_20260608_203508\summary.md`
+  - 远端：
+    - `git -c http.proxy= -c https.proxy= fetch origin exp/day-20260608-cpml-compact-temporal`
+    - `git worktree add --detach /work/wenzhe/cuda3D/.codex_worktrees/host_setup_timers_20260608_203508 FETCH_HEAD`
+    - `tools/remote_put.py` 上传 `src/main.cu` 和 `src/optimization_cuda.cu` 到隔离 worktree。
+    - `make -B -f makefile.rtx5090 test NVFLAGS="<current-best flags> -DCUDA3D_HOST_SETUP_TIMERS"`
+    - `python3 tools/run_benchmark.py --case perf_1gpu_6shots --tag host_setup_timers --np 1 --gpus 0 --timeout 2400`
+    - `python3 tools/compare_outputs.py --baseline <formal len16 r1>/outputs --candidate <timer run>/outputs --out <report>/compare_vs_formal_len16_r1`
+    - `make -B -f makefile.rtx5090 test NVFLAGS="<current-best flags>"` 验证 default-off build。
+  - 本地拉取：
+    - `tools/remote_get.py` 拉取 run log、manifest、build log、comparison 和 binary sha。
+- 测试结果：
+  - timer binary 构建通过。
+  - timer run returncode `0`，输出 `6` 个文件。
+  - timer binary vs formal len16 current-best r1 输出对比 pass。
+  - 6 个输出 max rel L2 `0`，max abs `0`。
+  - default-off current-best build 通过，确认 `CUDA3D_HOST_SETUP_TIMERS` 默认关闭不影响普通构建。
+- 输出/哈希/误差摘要：
+  - timer binary sha256：`d51f08cbb3d1f54276fddc8c357de9afa679c5a2e8c0a3e059471f748d084e9e`。
+  - default-off binary sha256：`824bf4a383ba90c10fba9b76b42ad264a12b3865d3e3fa97460c733890633196`。
+  - elapsed：`2.980s`。
+  - `Gradient TIME all`：`2.162907s`。
+  - WP：`2.046621s`。
+  - elapsed - Gradient：`0.817093s`。
+  - measured pre-Gradient setup：`0.238399s`。
+  - unaccounted elapsed-minus-Gradient：`0.578694s`。
+  - main timers：
+    - `gpu_setup`：`0.174303s`。
+    - `root_model_read`：`0.018118s`。
+    - `shot_list`：`0.022419s`。
+    - `total_pre_gradient`：`0.215846s`。
+    - `gradient_call_total`：`2.188155s`。
+    - `post_gradient_barrier_and_free`：`0.001178s`。
+  - cal timer：
+    - `pre_gradient_init`：`0.022553s`。
+- 风险与下一步：
+  - 决策：保留 `CUDA3D_HOST_SETUP_TIMERS` 作为默认关闭诊断路径。
+  - 不写 host/setup optimization prototype；当前最大未解释 gap `0.578694s` 在 after-MPI timer 外部，可能包含 bash/oneAPI source、mpirun、`MPI_Init`、finalization。
+  - `gpu_setup` 是最大 measured stage，但更像 CUDA device/context 初始化，一次性启动成本；移动或预热它不能作为 CUDA-core speedup。
+  - 下一步若继续 wall-clock 路线，应添加 process-level timer around `MPI_Init` 或做 Nsight Systems OS/runtime profile。
+  - CUDA-core 优化仍以 `Gradient TIME all` 和 WP 为主指标。

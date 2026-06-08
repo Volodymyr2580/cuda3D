@@ -1,0 +1,32 @@
+{
+  "run_log": "reports\\day_20260608\\host_setup_timer_probe_20260608_203508\\run.log",
+  "elapsed_s": 2.98,
+  "gradient_s": 2.162907,
+  "wp_s": 2.046621,
+  "read_time_s": 0.000104,
+  "timers": {
+    "main": {
+      "input_scan": 2.4e-05,
+      "gpu_setup": 0.174303,
+      "input_bcast": 1e-06,
+      "coeff_init": 1.1e-05,
+      "static_alloc": 0.00019,
+      "root_model_read": 0.018118,
+      "model_bcast": 2e-06,
+      "acqui_read": 0.000739,
+      "acqui_bcast": 0.0,
+      "lint": 3.9e-05,
+      "shot_list": 0.022419,
+      "total_pre_gradient": 0.215846,
+      "gradient_call_total": 2.188155,
+      "post_gradient_barrier_and_free": 0.001178,
+      "total_after_mpi_to_pre_finalize": 2.405179
+    },
+    "cal": {
+      "pre_gradient_init": 0.022553
+    }
+  },
+  "measured_pre_gradient_s": 0.238399,
+  "elapsed_minus_gradient_s": 0.8170929999999998,
+  "unaccounted_elapsed_minus_gradient_s": 0.5786939999999998
+}

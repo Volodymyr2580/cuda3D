@@ -831,6 +831,42 @@ Phase 4.22 host / setup overhead gate 已完成：
 - 当前下一步：
   - 做 current-best host/setup profiling 或 targeted timer，分解 `0.814s` 的来源。
 
+Phase 4.23 host/setup targeted timer probe 已完成：
+
+- 实现宏默认关闭：`CUDA3D_HOST_SETUP_TIMERS`。
+- 修改范围：
+  - `src/main.cu`：main setup phase timers。
+  - `src/optimization_cuda.cu`：`cal_fwi_grad_3d` pre-Gradient init timer。
+  - `tools/host_setup_timer_summary.py`：解析 timer run log。
+- 报告：`reports/day_20260608/host_setup_timer_probe_20260608_203508/summary.md`。
+- JSON：`reports/day_20260608/host_setup_timer_probe_20260608_203508/summary.json`。
+- 远端 worktree：`/work/wenzhe/cuda3D/.codex_worktrees/host_setup_timers_20260608_203508`。
+- 构建：
+  - timer binary 使用 current-best flags 追加 `-DCUDA3D_HOST_SETUP_TIMERS`。
+  - default-off current-best build 通过，确认默认行为不依赖 timer macro。
+- 正确性：
+  - timer binary vs formal len16 current-best r1 输出对比 pass。
+  - 6 个输出 max rel L2 `0`，max abs `0`。
+- timer probe 结果：
+  - elapsed：`2.980s`。
+  - `Gradient TIME all`：`2.162907s`。
+  - WP：`2.046621s`。
+  - elapsed - Gradient：`0.817093s`。
+  - measured pre-Gradient setup：`0.238399s`。
+  - unaccounted elapsed-minus-Gradient：`0.578694s`。
+  - 主要 measured stage：
+    - `gpu_setup`：`0.174303s`。
+    - `cal pre_gradient_init`：`0.022553s`。
+    - `shot_list`：`0.022419s`。
+    - `root_model_read`：`0.018118s`。
+- 决策：
+  - 不写 blind host/setup optimization prototype。
+  - `gpu_setup` 主要是 CUDA device/context setup，一次性启动成本，不能伪装成 CUDA kernel speedup。
+  - 当前 `0.578694s` unaccounted gap 主要在 after-MPI timer 外部，可能包含 bash/oneAPI source、mpirun 启动、`MPI_Init` 和 finalization。
+- 当前下一步：
+  - 若继续 wall-clock 路线，应增加 process-level timer 或 Nsight Systems OS/runtime profile，拆 `MPI_Init`/mpirun/source/finalize。
+  - CUDA-core 优化结论仍以 `Gradient TIME all` 与 WP 为主。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

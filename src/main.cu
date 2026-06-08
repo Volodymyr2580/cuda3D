@@ -22,6 +22,22 @@ int main(int argc, char **argv){
   comm=MPI_COMM_WORLD;
   MPI_Comm_size(comm,&ntids);
   MPI_Comm_rank(comm,&mytid);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  double host_timer_after_mpi = MPI_Wtime();
+  double host_timer_after_input_scan = host_timer_after_mpi;
+  double host_timer_after_gpu_setup = host_timer_after_mpi;
+  double host_timer_after_input_bcast = host_timer_after_mpi;
+  double host_timer_after_coeff_init = host_timer_after_mpi;
+  double host_timer_after_static_alloc = host_timer_after_mpi;
+  double host_timer_after_root_model_read = host_timer_after_mpi;
+  double host_timer_after_model_bcast = host_timer_after_mpi;
+  double host_timer_after_acqui_read = host_timer_after_mpi;
+  double host_timer_after_acqui_bcast = host_timer_after_mpi;
+  double host_timer_after_lint = host_timer_after_mpi;
+  double host_timer_before_gradient = host_timer_after_mpi;
+  double host_timer_after_gradient = host_timer_after_mpi;
+  double host_timer_after_main_free = host_timer_after_mpi;
+#endif
  
   // REM
   float r, irr, dtr, *j0k, vmax, *bt, *bb, *bl, *br;
@@ -400,6 +416,10 @@ int main(int argc, char **argv){
     }
 
   }
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  if(mytid==root)
+    host_timer_after_input_scan = MPI_Wtime();
+#endif
   ////---------- GPU setup and check------------------
   MPI_Bcast(&gpus_p_node, 1, MPI_INT, root, comm);
   //  printf("id=%d  gpus=%d\n", mytid, gpus_p_node);
@@ -420,6 +440,10 @@ int main(int argc, char **argv){
   if(mytid==root)
     printf("avail=%d gpus\n", aval);
   MPI_Barrier(comm);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  if(mytid==root)
+    host_timer_after_gpu_setup = MPI_Wtime();
+#endif
 
   // ---------------------bcast inputs-------------------------
   MPI_Bcast(&order,1,MPI_CHAR,root,comm);
@@ -454,6 +478,10 @@ int main(int argc, char **argv){
   MPI_Bcast(&bmutflag,1,MPI_INT,root,comm);
 
   MPI_Bcast(&L_n,1,MPI_INT,root,comm);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  if(mytid==root)
+    host_timer_after_input_bcast = MPI_Wtime();
+#endif
 
   if(L_n>2){
     printf("!!!!!!!!!!!!!!L norm can only be 1 or 2, check, exit!!!!!!!!!!!!!\n");
@@ -477,6 +505,10 @@ int main(int argc, char **argv){
   init_cpml_sg_3d(ay, by, ax, bx, az, bz,
 		  ay_h, by_h, ax_h, bx_h, az_h, bz_h, 
 		  ny, nx, nz, dy, dx, dz, npml, dt, vmax);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  if(mytid==root)
+    host_timer_after_coeff_init = MPI_Wtime();
+#endif
 
   nxyz=nx*nz*ny;
   nxy=nx*ny;
@@ -493,6 +525,10 @@ int main(int argc, char **argv){
   vin=alloc3float(nz, nx, ny);
   src=alloc1float(nt);
   wb=alloc2float(nx, ny);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  if(mytid==root)
+    host_timer_after_static_alloc = MPI_Wtime();
+#endif
 
   //--------------- ROOT Read vin, shot, setup grids--------------
   if(mytid==root){
@@ -539,10 +575,18 @@ int main(int argc, char **argv){
       return 0; 
     }    
   }
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  if(mytid==root)
+    host_timer_after_root_model_read = MPI_Wtime();
+#endif
   MPI_Bcast(&src[0],nt,MPI_FLOAT,root,comm);
   MPI_Bcast(&wb[0][0],nxy,MPI_FLOAT,root,comm);
   MPI_Bcast(&vin[0][0][0],nxyz,MPI_FLOAT,root,comm);
   MPI_Bcast(&ns,1,MPI_INT,root,comm);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  if(mytid==root)
+    host_timer_after_model_bcast = MPI_Wtime();
+#endif
 
   //----------------- src and rec coordiante setup--------------
   // ns total shots, ns_s, # of shots used in each iteration
@@ -578,10 +622,18 @@ int main(int argc, char **argv){
     }
     */
   }//  end acqui
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  if(mytid==root)
+    host_timer_after_acqui_read = MPI_Wtime();
+#endif
   // bcast acqui
   MPI_Bcast(&nrec_shot[0],ns,MPI_INT,root,comm);
   MPI_Bcast(&src_cor[0][0],3*ns,MPI_FLOAT,root,comm);      
   MPI_Bcast(&rec_cor[0][0],3*ntr_shot,MPI_FLOAT,root,comm);  
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  if(mytid==root)
+    host_timer_after_acqui_bcast = MPI_Wtime();
+#endif
 
   //--------- interpolation setup for src rec not sitting on modeling grid---------
   src0_indx=alloc2int(3, ns);       // src0 index
@@ -610,6 +662,10 @@ int main(int argc, char **argv){
   
   lint3d_init(ntr_shot, rec_cor, ny, nx, nz, dy, dx, dz, rec0_indx,
 	      rw000, rw001, rw010, rw011, rw100, rw101, rw110, rw111);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  if(mytid==root)
+    host_timer_after_lint = MPI_Wtime();
+#endif
   //------------------ build prior bounds ----------------------
   if(mytid==root){
     grad_cur=alloc1float(nxyz);    pre_cur=alloc1float(nxyz);
@@ -627,6 +683,24 @@ int main(int argc, char **argv){
     sht_num=alloc1int(ns_pad); // workers
 
   MPI_Bcast(&sht_num[0],ns_pad,MPI_INT,root,comm);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  if(mytid==root){
+    host_timer_before_gradient = MPI_Wtime();
+    printf("HOST_SETUP_TIMER main input_scan=%lf gpu_setup=%lf input_bcast=%lf coeff_init=%lf static_alloc=%lf root_model_read=%lf model_bcast=%lf acqui_read=%lf acqui_bcast=%lf lint=%lf shot_list=%lf total_pre_gradient=%lf\n",
+	   host_timer_after_input_scan - host_timer_after_mpi,
+	   host_timer_after_gpu_setup - host_timer_after_input_scan,
+	   host_timer_after_input_bcast - host_timer_after_gpu_setup,
+	   host_timer_after_coeff_init - host_timer_after_input_bcast,
+	   host_timer_after_static_alloc - host_timer_after_coeff_init,
+	   host_timer_after_root_model_read - host_timer_after_static_alloc,
+	   host_timer_after_model_bcast - host_timer_after_root_model_read,
+	   host_timer_after_acqui_read - host_timer_after_model_bcast,
+	   host_timer_after_acqui_bcast - host_timer_after_acqui_read,
+	   host_timer_after_lint - host_timer_after_acqui_bcast,
+	   host_timer_before_gradient - host_timer_after_lint,
+	   host_timer_before_gradient - host_timer_after_mpi);
+  }
+#endif
   //  if(mytid==ntids-1){
   //    for(is=0; is<ns_pad; is++)
   //      printf("shot_num[%d]=%d\n", is, sht_num[is]);
@@ -652,6 +726,13 @@ int main(int argc, char **argv){
 		  shotfile, directfile, tmutfile, bmutfile, L_n,
 		  tmutflag, bmutflag, directflag, order, vmax, fmflag,
 		  ntids, mytid, root, comm);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  if(mytid==root){
+    host_timer_after_gradient = MPI_Wtime();
+    printf("HOST_SETUP_TIMER main gradient_call_total=%lf\n",
+	   host_timer_after_gradient - host_timer_before_gradient);
+  }
+#endif
 
   MPI_Barrier(comm);
 
@@ -677,7 +758,15 @@ int main(int argc, char **argv){
   free3float(vin);
 
   if(mytid==root){
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+    host_timer_after_main_free = MPI_Wtime();
+#endif
     free1float(grad_cur); free1float(pre_cur);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+    printf("HOST_SETUP_TIMER main post_gradient_barrier_and_free=%lf total_after_mpi_to_pre_finalize=%lf\n",
+	   host_timer_after_main_free - host_timer_after_gradient,
+	   host_timer_after_main_free - host_timer_after_mpi);
+#endif
 
     printf("\n*******************ALL DONE******************\n");
   }

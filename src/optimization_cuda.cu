@@ -44,6 +44,9 @@ void cal_fwi_grad_3d(float *obj_xc, float *obj_l,
   /////
 
   nzpad=nz+2*(npml+radius);
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+  double host_cal_entry = MPI_Wtime();
+#endif
   nxz=nx*nz;
   myisc=0; 
   isc=0;
@@ -73,6 +76,9 @@ void cal_fwi_grad_3d(float *obj_xc, float *obj_l,
 
   if(mytid==root){
     t3=MPI_Wtime();
+#ifdef CUDA3D_HOST_SETUP_TIMERS
+    printf("HOST_SETUP_TIMER cal pre_gradient_init=%lf\n", t3 - host_cal_entry);
+#endif
     printf("\nComputing GRADIENT, Random shot starting point=%d\n",sht_num[mytid]);
   }
 

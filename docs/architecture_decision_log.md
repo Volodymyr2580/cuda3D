@@ -2030,3 +2030,82 @@ Report:
 docs/day_20260608/host_setup_overhead_gate.md
 reports/day_20260608/host_setup_overhead_gate.json
 ```
+
+## 2026-06-08 - Profile Host Setup With Default-Off Timers
+
+Decision:
+
+```text
+Keep CUDA3D_HOST_SETUP_TIMERS as a default-off diagnostic path.  Do not optimize
+host/setup yet; the largest unexplained wall-clock gap is outside the current
+in-program timer window.
+```
+
+Evidence:
+
+```text
+timer binary flags:
+  current-best flags + -DCUDA3D_HOST_SETUP_TIMERS
+
+correctness:
+  timer binary vs formal len16 current-best r1
+  pass, max rel L2 0, max abs 0
+
+program timing:
+  elapsed                         2.980s
+  Gradient TIME all               2.162907s
+  WP computing time               2.046621s
+  elapsed - Gradient              0.817093s
+
+measured in-program pre-Gradient setup:
+  total                           0.238399s
+  main total_pre_gradient         0.215846s
+  cal pre_gradient_init           0.022553s
+
+largest measured stages:
+  gpu_setup                       0.174303s
+  cal pre_gradient_init           0.022553s
+  shot_list                       0.022419s
+  root_model_read                 0.018118s
+
+unaccounted elapsed-minus-Gradient:
+  0.578694s
+```
+
+Reason:
+
+```text
+The measured in-program setup is real, but the dominant remaining gap is outside
+the after-MPI timer window.  It likely includes bash / oneAPI source overhead,
+mpirun process launch, MPI_Init, and finalization.  Optimizing CUDA solver code
+cannot honestly claim that entire wall-clock gap.
+
+The largest measured in-program item, gpu_setup, is likely CUDA device/context
+initialization.  Moving or warming it outside the measured region would be a
+benchmarking policy change, not a CUDA kernel speedup.
+```
+
+Boundary:
+
+```text
+CUDA3D_HOST_SETUP_TIMERS must remain default-off.
+Do not use timer-marker movement or context warmup outside the measured command
+as an optimization result.
+Do not count bash/mpirun/MPI_Init savings as CUDA-core speedup.
+```
+
+Next:
+
+```text
+If wall-clock route continues, add a process-level timer around MPI_Init and/or
+run Nsight Systems OS/runtime profiling to split mpirun/source/MPI_Init/finalize.
+CUDA-core optimization should continue to use Gradient TIME all and WP as the
+primary metrics.
+```
+
+Report:
+
+```text
+reports/day_20260608/host_setup_timer_probe_20260608_203508/summary.md
+reports/day_20260608/host_setup_timer_probe_20260608_203508/summary.json
+```
