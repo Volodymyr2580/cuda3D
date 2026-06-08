@@ -1,0 +1,135 @@
+{
+  "pass": true,
+  "rounds": [
+    {
+      "round": 1,
+      "base": "benchmarks/runs/perf_1gpu_6shots_directfill_base_for_len16_ab_datafixed_20260608_152804",
+      "cand": "benchmarks/runs/perf_1gpu_6shots_len16_halfwarp_candidate_datafixed_20260608_152837",
+      "compare": "reports/day_20260608/len16_halfwarp_perf6_compare_20260608_152909",
+      "base_wp": 2.212397,
+      "cand_wp": 2.041717,
+      "wp_speedup": 1.0835963064420782,
+      "base_gradient": 2.322951,
+      "cand_gradient": 2.161666,
+      "gradient_speedup": 1.0746114339588078,
+      "compare_pass": true,
+      "max_rel_l2": 6.384336369813099e-07,
+      "tile_matches": [
+        [
+          10816,
+          7168
+        ],
+        [
+          12064,
+          8032
+        ],
+        [
+          10816,
+          7648
+        ],
+        [
+          10816,
+          7408
+        ],
+        [
+          12064,
+          8300
+        ],
+        [
+          10816,
+          7892
+        ]
+      ]
+    },
+    {
+      "round": 2,
+      "base": "/work/wenzhe/cuda3D/.codex_worktrees/sprint_0648/benchmarks/runs/perf_1gpu_6shots_len16_repeat2_base_20260608_152951",
+      "cand": "/work/wenzhe/cuda3D/.codex_worktrees/sprint_0648/benchmarks/runs/perf_1gpu_6shots_len16_repeat2_cand_20260608_153003",
+      "compare": "/work/wenzhe/cuda3D/.codex_worktrees/sprint_0648/reports/day_20260608/len16_halfwarp_perf6_repeat_20260608_152944/compare_round2",
+      "base_wp": 2.203528,
+      "cand_wp": 2.037935,
+      "wp_speedup": 1.081255290281584,
+      "base_gradient": 2.312805,
+      "cand_gradient": 2.159917,
+      "gradient_speedup": 1.0707842014299622,
+      "compare_pass": true,
+      "max_rel_l2": 6.384336369813099e-07,
+      "tile_matches": [
+        [
+          10816,
+          7168
+        ],
+        [
+          12064,
+          8032
+        ],
+        [
+          10816,
+          7648
+        ],
+        [
+          10816,
+          7408
+        ],
+        [
+          12064,
+          8300
+        ],
+        [
+          10816,
+          7892
+        ]
+      ]
+    },
+    {
+      "round": 3,
+      "base": "/work/wenzhe/cuda3D/.codex_worktrees/sprint_0648/benchmarks/runs/perf_1gpu_6shots_len16_repeat3_base_20260608_153015",
+      "cand": "/work/wenzhe/cuda3D/.codex_worktrees/sprint_0648/benchmarks/runs/perf_1gpu_6shots_len16_repeat3_cand_20260608_153027",
+      "compare": "/work/wenzhe/cuda3D/.codex_worktrees/sprint_0648/reports/day_20260608/len16_halfwarp_perf6_repeat_20260608_152944/compare_round3",
+      "base_wp": 2.207329,
+      "cand_wp": 2.037589,
+      "wp_speedup": 1.0833043366449269,
+      "base_gradient": 2.313544,
+      "cand_gradient": 2.15826,
+      "gradient_speedup": 1.0719486994152696,
+      "compare_pass": true,
+      "max_rel_l2": 6.384336369813099e-07,
+      "tile_matches": [
+        [
+          10816,
+          7168
+        ],
+        [
+          12064,
+          8032
+        ],
+        [
+          10816,
+          7648
+        ],
+        [
+          10816,
+          7408
+        ],
+        [
+          12064,
+          8300
+        ],
+        [
+          10816,
+          7892
+        ]
+      ]
+    }
+  ],
+  "summary": {
+    "rounds": 3,
+    "mean_base_wp": 2.2077513333333334,
+    "mean_cand_wp": 2.039080333333333,
+    "mean_wp_speedup": 1.0827186444561965,
+    "mean_base_gradient": 2.3164333333333333,
+    "mean_cand_gradient": 2.1599476666666666,
+    "mean_gradient_speedup": 1.0724481116013465,
+    "max_rel_l2": 6.384336369813099e-07
+  }
+}

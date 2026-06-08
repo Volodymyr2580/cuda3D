@@ -994,3 +994,74 @@ routes.  A CUDA prototype is allowed only if it preserves the accepted
 direct-fill pressure z-cache math path and targets lane utilization/ownership,
 not p1 x/y direct derivative substitution.
 ```
+
+## 2026-06-08 - Accept Length-16 Half-Warp Pressure-PML Packing
+
+Decision:
+
+```text
+Accept CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK as the current macro-gated
+RTX 5090 single-GPU best candidate on top of the direct-fill pressure z-cache
+path.
+```
+
+Implemented shape:
+
+```text
+Host splits pressure-PML tiles into residual tiles and whole length-16 active-z
+tiles.
+
+Residual tiles still run cuda_fd3d_p_pml_tile_ns.
+Length-16 tiles run cuda_fd3d_p_pml_len16_halfwarp_ns.
+
+One warp handles two length-16 z-lines:
+  lanes 0..15   line A
+  lanes 16..31  line B
+CTA shape: 32x4x1
+Required PML tile shape: 32x4x2
+```
+
+Evidence:
+
+```text
+smoke_1gpu                                 pass
+debug dump profile_1gpu step 0/1/2         pass
+correctness 6-output compare               pass
+perf_1gpu_6shots repeat output compare     pass, max rel L2 6.384336e-07
+
+mean base WP vs direct-fill                2.207751s
+mean candidate WP                          2.039080s
+mean WP speedup                            1.082719x
+
+mean base Gradient                         2.316433s
+mean candidate Gradient                     2.159948s
+mean Gradient speedup                      1.072448x
+```
+
+Reason:
+
+```text
+The active-segment model correctly identified length-16 pressure-PML z-lines as
+a meaningful lane-utilization problem.  Packing two such lines into one warp
+reduces wasted lanes while preserving the accepted direct-fill z-cache dataflow.
+The repeat gain clears the >=5% prototype gate.
+```
+
+Boundary:
+
+```text
+This acceptance does not reopen z-face direct derivative, z-face fusion, or
+shared-VP routes.  Future work must keep the direct-fill pressure z-cache math
+path unless new profiler evidence justifies a different dataflow.
+
+The estimated product speedup versus zmem_reference is about 1.191983x, but this
+is not a formal cumulative table until zmem/direct-fill/len16 are rerun in one
+same-session comparison.
+```
+
+Report:
+
+```text
+docs/day_20260608/len16_halfwarp_pressure_pml_prototype.md
+reports/day_20260608/len16_halfwarp_perf6_repeat_20260608_152944/summary.md
+```

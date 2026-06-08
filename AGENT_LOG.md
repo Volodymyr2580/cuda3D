@@ -3747,3 +3747,92 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - length-16 half-warp packing 有足够模型上界，下一步允许进入设计/原型 gate。
   - 该路线必须保持 direct-fill pressure z-cache 数值路径，不得变成已禁止的 z-face direct derivative、z-face fusion 或 shared-VP 变体。
   - 原型必须 macro-default-off，先跑 debug dump step `0/1/2`、correctness、`perf_1gpu_6shots repeat`；若 repeat 没有 `>=5%` WP speedup，应立即停止。
+
+## 2026-06-08 15:55:00 +08:00 - Length-16 half-warp pressure-PML prototype accepted
+
+- 操作目标：
+  - 按 active segment compaction model 的 gate，实现并验收 `length-16 half-warp pressure-PML active segment packing`。
+  - 保留 direct-fill pressure z-cache 数值路径，只改变 whole length-16 active-z pressure-PML tile 的 warp lane ownership。
+  - 在远端隔离 worktree 内完成构建、debug dump、correctness、`perf_1gpu_6shots repeat`，不污染主远端目录。
+- 修改文件：
+  - `include/inc3D/single_solver.h`
+  - `src/rem_fd.cu`
+  - `src/single_solver.cu`
+  - 新增报告：`docs/day_20260608/len16_halfwarp_pressure_pml_prototype.md`
+  - 新增/取回报告摘要：
+    - `reports/day_20260608/len16_halfwarp_perf6_compare_20260608_152909/comparison.md`
+    - `reports/day_20260608/len16_halfwarp_correctness_compare_20260608_152526/comparison.md`
+    - `reports/day_20260608/len16_halfwarp_correctness_compare_20260608_152526/comparison.json`
+    - `reports/day_20260608/len16_halfwarp_perf6_repeat_20260608_152944/summary.md`
+    - `reports/day_20260608/len16_halfwarp_perf6_repeat_20260608_152944/summary.json`
+    - `reports/day_20260608/len16_halfwarp_debug_profile_20260608_153419/compare_step0/comparison.md`
+    - `reports/day_20260608/len16_halfwarp_debug_profile_20260608_153419/compare_step1/comparison.md`
+    - `reports/day_20260608/len16_halfwarp_debug_profile_20260608_153419/compare_step2/comparison.md`
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地实现新宏默认关闭：`CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK`。
+  - 远端隔离 worktree：`/work/wenzhe/cuda3D/.codex_worktrees/sprint_0648`。
+  - 远端构建命令使用 makefile command-line override：
+    - `make -B -f makefile.rtx5090 NVFLAGS="... -DCUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK" test`
+  - 远端为隔离 worktree补齐测试数据：
+    - `bench_smoke/d_obs` 目录用于 smoke 输出。
+    - `perf_1gpu_6shots` 与 `profile_1gpu` velocity/d_obs 测试数据通过 symlink 或单文件复制接入隔离 worktree。
+  - 远端运行：
+    - `smoke_1gpu`
+    - `correctness`
+    - `profile_1gpu` debug dump step `0/1/2`
+    - `perf_1gpu_6shots` A/B + repeat 3 轮
+  - 本地取回 correctness compare 时，Windows Python 缺少 `paramiko`，未修改本机全局 Python 环境，改用 WSL Python 运行同一 `tools/remote_get.py` 脚本完成取回。
+  - 自审发现未来 case 若所有 pressure-PML tiles 都被 len16 packed kernel 接管，residual p tile 数可能为 `0`；补充 host-side guard，避免 0-size `cudaMalloc` 或 0-grid residual launch。
+  - guard 补丁后重新上传 `include/inc3D/single_solver.h`、`src/rem_fd.cu`、`src/single_solver.cu` 到远端隔离 worktree，并重跑 release rebuild + smoke。
+  - 额外运行 macro-off build，确认不启用 `CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK` 时 direct-fill 组合仍可编译。
+  - macro-off build 会覆盖远端 binary；随后重新以 len16 candidate flags 编译，确保远端隔离 worktree 的最终 `bin/cuda_3D_FM` 是 len16 candidate。
+- 测试结果：
+  - release build 通过。
+  - smoke 通过，run：`benchmarks/runs/smoke_1gpu_len16_halfwarp_smoke_datafixed_20260608_153645`，returncode `0`，输出 `3` 个文件。
+  - guard rebuild 通过，远端 build log：`reports/day_20260608/len16_halfwarp_guard_rebuild_make.log`，只有既有 unused warning。
+  - guard rebuild 后 smoke 通过，run：`benchmarks/runs/smoke_1gpu_len16_halfwarp_guard_rebuild_20260608_155133`，returncode `0`，输出 `3` 个文件；smoke tile split：len16 `0`，residual p `240`。
+  - macro-off build 通过，远端 build log：`reports/day_20260608/len16_halfwarp_guard_macro_off_make.log`。
+  - final candidate rebuild 通过，远端 build log：`reports/day_20260608/len16_halfwarp_guard_candidate_final_make.log`。
+  - correctness 通过：
+    - baseline：`benchmarks/runs/correctness_directfill_base_for_len16_ab_20260608_152404`
+    - candidate：`benchmarks/runs/correctness_len16_halfwarp_candidate_20260608_152436`
+    - compare：`reports/day_20260608/len16_halfwarp_correctness_compare_20260608_152526`
+    - 6 个输出 rel L2 全部 `0`
+  - debug dump 通过：
+    - root：`reports/day_20260608/len16_halfwarp_debug_profile_20260608_153419`
+    - step `0`：pass，所有数组 rel L2 `0`
+    - step `1`：pass，所有数组 rel L2 `0`
+    - step `2`：pass，`p0` rel L2 `7.852061e-09`，其他数组 rel L2 `0`
+  - `perf_1gpu_6shots` repeat 通过：
+    - summary：`reports/day_20260608/len16_halfwarp_perf6_repeat_20260608_152944/summary.md`
+    - 3 轮输出 compare 全部 pass
+    - max rel L2 `6.384336e-07`
+- 输出/哈希/误差摘要：
+  - mean base WP vs direct-fill：`2.207751s`
+  - mean candidate WP：`2.039080s`
+  - mean WP speedup：`1.082719x`
+  - mean base Gradient：`2.316433s`
+  - mean candidate Gradient：`2.159948s`
+  - mean Gradient speedup：`1.072448x`
+  - round speedups：
+    - round 1 WP `1.083596x`，Gradient `1.074611x`
+    - round 2 WP `1.081255x`，Gradient `1.070784x`
+    - round 3 WP `1.083304x`，Gradient `1.071949x`
+  - candidate six-shot tile split：
+    - shot 1：len16 `10816`，residual p `7168`
+    - shot 2：len16 `12064`，residual p `8032`
+    - shot 3：len16 `10816`，residual p `7648`
+    - shot 4：len16 `10816`，residual p `7408`
+    - shot 5：len16 `12064`，residual p `8300`
+    - shot 6：len16 `10816`，residual p `7892`
+  - final candidate binary SHA256 after guard rebuild：`c0d785d747f058e78b183d6b7d3984a4f04549c835d2ef6c994f5d7ce70becf7`
+- 风险与下一步：
+  - 决策：接受 `CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK` 为当前 RTX 5090 single-GPU best candidate。
+  - guard rebuild 后只重跑 smoke；未重跑完整 perf repeat，因为 guard 只改变 host-side launch/allocation 条件，不改变当前 perf case 中 device kernel 数学路径。
+  - 该结果不是正式 `perf_3gpu` 阈值存档；若要对外报告累计倍率，需要同机同 session 重跑 zmem/direct-fill/len16。
+  - correctness case 本身 len16 tiles 为 `0`，因此 packed kernel 的数学等价主要由 `profile_1gpu` debug dump 与 `perf_1gpu_6shots` 输出对比覆盖。
+  - 下一步应对 len16 candidate 做 NCU source/profile，判断剩余 bottleneck 是否变成 memory coalescing、shared-memory pressure、final `p0/mem_dzz` update，或可扩展到 length-23 active segment。
+  - 不要回到已拒绝的 z-face direct/fusion/shared-VP、simple active-line list、z-cache fill 微调、`new_mem` 表达式、`p0` read-only load、ptxas cache-policy、inject/extract block-size、当前 tile 下 `vx/vy` split，除非有新的 profiler evidence。

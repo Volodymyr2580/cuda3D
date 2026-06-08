@@ -368,7 +368,41 @@ Phase 4.8 direct-fill SourceCounters profile 已完成：
   - exact active-point list ceiling：p_pml lane speedup `1.524x`，sampled-main ceiling `1.228x`，但 descriptor traffic 约 `72.933 MiB/step aggregate-shots`，只能作为设计路线。
   - len-16 half-warp packing ceiling：p_pml lane speedup `1.464x`，sampled-main ceiling `1.207x`，作为下一步设计门。
   - 关键边界：该路线是 lane-utilization / active segment ownership，不是重开已失败的 z-face direct derivative、z-face fusion 或 shared-VP 路线；必须保留 direct-fill pressure z-cache 的数值路径。
-- 下一步不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load、z-safe shared `p1` direct second derivative、ptxas `dlcm` cache-policy sweep、p_core 显式 `__ldg`、inject/extract block-size 微调、当前 tile 下的 vx/vy split，或当前 single-GPU launch aggregation/CUDA Graph；应优先推进 `length-16 half-warp pressure-PML active segment packing` 的设计/原型 gate，或其他能改变 memory coalescing/ownership 的路线。
+
+Phase 4.9 length-16 half-warp pressure-PML prototype 已完成并接受：
+
+- 实现宏默认关闭：`CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK`。
+- 报告：`docs/day_20260608/len16_halfwarp_pressure_pml_prototype.md`。
+- 依赖 flags：
+  - `CUDA3D_PML_RECOMPUTE_Z`
+  - `CUDA3D_PML_ZMEM_IN_P`
+  - `CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE`
+  - `PmlTileBlockSize=32x4x2`
+- 数据流：
+  - host 将 pressure-PML tile 拆分为 residual tiles 与 whole length-16 active-z tiles。
+  - residual tiles 继续使用 `cuda_fd3d_p_pml_tile_ns`。
+  - length-16 tiles 使用新 kernel `cuda_fd3d_p_pml_len16_halfwarp_ns`。
+  - 一个 warp 处理两条 length-16 z-line，lane `0..15` 与 `16..31` 分别处理一条线。
+  - 保留 direct-fill pressure z-cache 数值路径和既有 `vx/vy` divergence path，不重开 z-face direct/fusion/shared-VP。
+- debug dump gate：
+  - `profile_1gpu` step `0/1/2` 全部通过。
+  - step 2 仅 `p0` 出现 rel L2 `7.852061e-09`，低于容差；其他数组 rel L2 为 `0`。
+- correctness：
+  - 6 个输出对比通过。
+  - correctness case 的 len16 tile 数为 `0`，因此主要验证 macro wiring/residual path；packed kernel 由 `profile_1gpu` debug dump 和 `perf_1gpu_6shots` 覆盖。
+- `perf_1gpu_6shots` repeat：
+  - 3 轮输出对比全部通过，max rel L2 `6.384336e-07`。
+  - mean base WP：`2.207751s`。
+  - mean candidate WP：`2.039080s`。
+  - mean WP speedup vs direct-fill：`1.082719x`。
+  - mean Gradient speedup vs direct-fill：`1.072448x`。
+- 当前结论：
+  - 这是 direct-fill 之后第一个通过 `>=5%` meaningful repeat gate 的 CUDA prototype。
+  - 作为当前 RTX 5090 single-GPU best candidate 保留。
+  - 估算相对旧 `zmem_reference` 的累计 WP speedup 约 `1.191983x`，但该数是 `direct-fill vs zmem` 与 `len16 vs direct-fill` 的乘积，只能作方向参考；正式对外表格需要同机同 session 重跑 zmem/direct-fill/len16。
+- 下一步：
+  - 对 len16 candidate 做 Nsight Compute source/profile，确认剩余瓶颈是否转向 memory coalescing、shared pressure、final `p0/mem_dzz` update 或 length-23 active segment。
+  - 不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load、z-safe shared `p1` direct second derivative、ptxas `dlcm` cache-policy sweep、p_core 显式 `__ldg`、inject/extract block-size 微调、当前 tile 下的 vx/vy split，或当前 single-GPU launch aggregation/CUDA Graph，除非有新的 profiler evidence。
 
 ## 速度阈值存档规则
 

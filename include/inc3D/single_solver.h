@@ -118,6 +118,17 @@ __global__ void cuda_fd3d_p_pml_tile_ns(float *p0, const float *__restrict__ p1,
 				const float *__restrict__ mem_dy_v,
 				const PmlTile *__restrict__ tiles, int ntile);
 
+#ifdef CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK
+__global__ void cuda_fd3d_p_pml_len16_halfwarp_ns(float *p0, const float *__restrict__ p1,
+				const float *__restrict__ vy, const float *__restrict__ vx,
+				float *cw2, float _dy2, float _dx2, float _dz2,
+				int n3, int n2, int n1, int npml, float dt,
+				float *mem_dzz,
+				const float *__restrict__ mem_dz_v,
+				float *mem_dz_next_v,
+				const PmlTile *__restrict__ tiles, int ntile);
+#endif
+
 __global__ void cuda_fd3d_p_pml_zface_ns(float *p0, const float *__restrict__ p1, const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
 				float *cw2, float _dy2, float _dx2, float _dz2,
 				int n3, int n2, int n1, int npml, float dt,

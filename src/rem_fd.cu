@@ -210,6 +210,14 @@ static int min_int_local(int a, int b) {
   return a < b ? a : b;
 }
 
+static int max_int_local(int a, int b) {
+  return a > b ? a : b;
+}
+
+static int interval_len_local(int lo, int hi) {
+  return hi > lo ? hi - lo : 0;
+}
+
 static int tile_fully_inside_box(int z0, int x0, int y0,
 				 int bz, int bx, int by,
 				 int n1, int n2, int n3,
@@ -371,6 +379,61 @@ static int build_pml_tile_list(PmlTile **tiles_out,
   return ntile;
 }
 
+#ifdef CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK
+static int pml_tile_whole_len16(const PmlTile *tile,
+				int n3, int n2, int n1, int npml) {
+  const int core1_lo = npml + CorePmlMargin;
+  const int core2_lo = npml + CorePmlMargin;
+  const int core3_lo = npml + CorePmlMargin;
+  const int core1_hi = n1 - npml - CorePmlMargin;
+  const int core2_hi = n2 - npml - CorePmlMargin;
+  const int core3_hi = n3 - npml - CorePmlMargin;
+  const int z0 = tile->z0;
+  const int x0 = tile->x0;
+  const int y0 = tile->y0;
+  const int z1 = min_int_local(z0 + PmlTileBlockSize1, n1);
+  const int x1 = min_int_local(x0 + PmlTileBlockSize2, n2);
+  const int y1 = min_int_local(y0 + PmlTileBlockSize3, n3);
+  if (x1 - x0 != PmlTileBlockSize2 || y1 - y0 != PmlTileBlockSize3)
+    return 0;
+  if (!(x0 >= core2_lo && x1 <= core2_hi && y0 >= core3_lo && y1 <= core3_hi))
+    return 0;
+  const int core_z_overlap = interval_len_local(max_int_local(z0, core1_lo),
+						min_int_local(z1, core1_hi));
+  const int active_z_len = (z1 - z0) - core_z_overlap;
+  return active_z_len == 16;
+}
+
+static void split_pml_len16_tiles(PmlTile **p_tiles,
+				  int *p_ntile,
+				  PmlTile **len16_tiles,
+				  int *len16_ntile,
+				  int n3, int n2, int n1, int npml) {
+  PmlTile *src = *p_tiles;
+  const int ntile = *p_ntile;
+  PmlTile *residual = (PmlTile*)malloc((size_t)ntile * sizeof(PmlTile));
+  PmlTile *packed = (PmlTile*)malloc((size_t)ntile * sizeof(PmlTile));
+  if (residual == NULL || packed == NULL) {
+    printf("ERROR allocating pressure PML len16 split lists\n");
+    exit(0);
+  }
+  int n_residual = 0;
+  int n_packed = 0;
+  for (int i = 0; i < ntile; ++i) {
+    if (pml_tile_whole_len16(&src[i], n3, n2, n1, npml)) {
+      packed[n_packed++] = src[i];
+    } else {
+      residual[n_residual++] = src[i];
+    }
+  }
+  free(src);
+  *p_tiles = residual;
+  *p_ntile = n_residual;
+  *len16_tiles = packed;
+  *len16_ntile = n_packed;
+}
+#endif
+
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
 static int build_pml_zface_tile_list(PmlTile **tiles_out,
 				      int n3, int n2, int n1,
@@ -476,6 +539,10 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   PmlTile *h_v_pml_tiles = NULL, *h_p_pml_tiles = NULL;
   PmlTile *d_v_pml_tiles = NULL, *d_p_pml_tiles = NULL;
   int n_v_pml_tiles = 0, n_p_pml_tiles = 0;
+#endif
+#if defined(CUDA3D_PML_TILE_LIST_P) && defined(CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK)
+  PmlTile *h_p_len16_tiles = NULL, *d_p_len16_tiles = NULL;
+  int n_p_len16_tiles = 0;
 #endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
   PmlTile *h_zface_p_pml_tiles = NULL, *d_zface_p_pml_tiles = NULL;
@@ -625,6 +692,9 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   check_gpu_error_2("Error in Memset");
 
   dim3 dimg_v, dimb_v, dimg_p, dimb_p, dimg_pml, dimb_pml, dimg_pml_zface, dimb_pml_zface, dimg_pml_zface_shared, dimb_pml_zface_shared, dims, dimbs, dimr, dimbr;// dims(1,1), dimbs(2*nbell+1, 2*nbell+1);
+#if defined(CUDA3D_PML_TILE_LIST_P) && defined(CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK)
+  dim3 dimg_pml_len16, dimb_pml_len16;
+#endif
   dims.x=1;
   dims.y=1;
   dims.z=1;
@@ -702,8 +772,24 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 #endif
 #ifdef CUDA3D_PML_TILE_LIST_P
   n_p_pml_tiles = build_pml_tile_list(&h_p_pml_tiles, nby, nbx, nbz, nbd, 0);
+#ifdef CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK
+  split_pml_len16_tiles(&h_p_pml_tiles, &n_p_pml_tiles,
+			&h_p_len16_tiles, &n_p_len16_tiles,
+			nby, nbx, nbz, nbd);
+  if (n_p_len16_tiles > 0) {
+    cudaMalloc((void**)&d_p_len16_tiles, (size_t)n_p_len16_tiles * sizeof(PmlTile));
+    cudaMemcpy(d_p_len16_tiles, h_p_len16_tiles, (size_t)n_p_len16_tiles * sizeof(PmlTile), cudaMemcpyHostToDevice);
+  }
+#endif
+#ifdef CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK
+  if (n_p_pml_tiles > 0) {
+    cudaMalloc((void**)&d_p_pml_tiles, (size_t)n_p_pml_tiles * sizeof(PmlTile));
+    cudaMemcpy(d_p_pml_tiles, h_p_pml_tiles, (size_t)n_p_pml_tiles * sizeof(PmlTile), cudaMemcpyHostToDevice);
+  }
+#else
   cudaMalloc((void**)&d_p_pml_tiles, (size_t)n_p_pml_tiles * sizeof(PmlTile));
   cudaMemcpy(d_p_pml_tiles, h_p_pml_tiles, (size_t)n_p_pml_tiles * sizeof(PmlTile), cudaMemcpyHostToDevice);
+#endif
 #endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
   n_zface_p_pml_tiles = build_pml_zface_tile_list(&h_zface_p_pml_tiles, nby, nbx, nbz, nbd);
@@ -728,6 +814,14 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   dimg_pml.x=n_p_pml_tiles;
   dimg_pml.y=1;
   dimg_pml.z=1;
+#ifdef CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK
+  dimb_pml_len16.x=32;
+  dimb_pml_len16.y=4;
+  dimb_pml_len16.z=1;
+  dimg_pml_len16.x=n_p_len16_tiles;
+  dimg_pml_len16.y=1;
+  dimg_pml_len16.z=1;
+#endif
 #endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
   dimb_pml_zface.x=PmlZFaceBlockSize1;
@@ -741,6 +835,11 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
     printf("PML tile-list enabled: v_tiles=%d, p_tiles=%d, block=%dx%dx%d\n",
 	   n_v_pml_tiles, n_p_pml_tiles,
 	   PmlTileBlockSize1, PmlTileBlockSize2, PmlTileBlockSize3);
+#if defined(CUDA3D_PML_TILE_LIST_P) && defined(CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK)
+  if(mytid==0)
+    printf("PML pressure len16 halfwarp enabled: len16_tiles=%d residual_p_tiles=%d block=32x4x1\n",
+	   n_p_len16_tiles, n_p_pml_tiles);
+#endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
   if(mytid==0)
     printf("PML zface pressure specialize enabled: zface_p_tiles=%d, block=%dx%dx%d\n",
@@ -770,6 +869,9 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 #endif
 #ifdef CUDA3D_PML_TILE_LIST_P
   cudaFuncSetCacheConfig(cuda_fd3d_p_pml_tile_ns, cudaFuncCachePreferL1);
+#ifdef CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK
+  cudaFuncSetCacheConfig(cuda_fd3d_p_pml_len16_halfwarp_ns, cudaFuncCachePreferL1);
+#endif
 #endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
   cudaFuncSetCacheConfig(cuda_fd3d_p_pml_zface_ns, cudaFuncCachePreferL1);
@@ -869,6 +971,36 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
     check_gpu_error_loop("compute P pml zface shared VP debug");
 #endif
 #ifdef CUDA3D_PML_TILE_LIST_P
+#ifdef CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK
+    if (n_p_len16_tiles > 0) {
+      cuda_fd3d_p_pml_len16_halfwarp_ns<<<dimg_pml_len16, dimb_pml_len16 >>>(d_p0, d_p1, d_vy, d_vx,
+					     d_cw2, tdy, tdx, tdz,
+					     nby, nbx, nbz, nbd, dt2,
+					     d_memory_dzz,
+					     d_memory_dz,
+					     d_memory_dz_next,
+					     d_p_len16_tiles, n_p_len16_tiles);
+      check_gpu_error_loop("compute P pml len16 halfwarp");
+    }
+#endif
+#ifdef CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK
+    if (n_p_pml_tiles > 0) {
+      cuda_fd3d_p_pml_tile_ns<<<dimg_pml, dimb_pml >>>(d_p0, d_p1, d_vy, d_vx, d_vz,
+				     d_cw2, tdy, tdx, tdz,
+				     nby, nbx, nbz, nbd, dt2,
+				     d_ay, d_by, d_ax, d_bx, d_az, d_bz,
+				     d_memory_dyy, d_memory_dxx, d_memory_dzz,
+				     d_memory_dz,
+#ifdef CUDA3D_PML_ZMEM_IN_P
+				     d_memory_dz_next,
+#else
+				     d_memory_dz,
+#endif
+				     d_memory_dx, d_memory_dy,
+				     d_p_pml_tiles, n_p_pml_tiles);
+      check_gpu_error_loop("compute P pml");
+    }
+#else
     cuda_fd3d_p_pml_tile_ns<<<dimg_pml, dimb_pml >>>(d_p0, d_p1, d_vy, d_vx, d_vz,
 				     d_cw2, tdy, tdx, tdz,
 				     nby, nbx, nbz, nbd, dt2,
@@ -882,6 +1014,8 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 #endif
 				     d_memory_dx, d_memory_dy,
 				     d_p_pml_tiles, n_p_pml_tiles);
+    check_gpu_error_loop("compute P pml");
+#endif
 #else
     cuda_fd3d_p_pml_ns<<<dimg_pml, dimb_pml >>>(d_p0, d_p1, d_vy, d_vx, d_vz,
 				     d_cw2, tdy, tdx, tdz,
@@ -895,8 +1029,8 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 				     d_memory_dz,
 #endif
 				     d_memory_dx, d_memory_dy);
-#endif
     check_gpu_error_loop("compute P pml");
+#endif
 #if defined(CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL) && defined(CUDA3D_CPML_VMEM_DEBUG_FILL)
     cudaDeviceSynchronize();
     check_gpu_error_2("sync before CPML VMEM coverage check");
@@ -1002,6 +1136,10 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   if (d_p_pml_tiles) cudaFree(d_p_pml_tiles);
   if (h_v_pml_tiles) free(h_v_pml_tiles);
   if (h_p_pml_tiles) free(h_p_pml_tiles);
+#endif
+#if defined(CUDA3D_PML_TILE_LIST_P) && defined(CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK)
+  if (d_p_len16_tiles) cudaFree(d_p_len16_tiles);
+  if (h_p_len16_tiles) free(h_p_len16_tiles);
 #endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
   if (d_zface_p_pml_tiles) cudaFree(d_zface_p_pml_tiles);
