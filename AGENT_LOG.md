@@ -3921,3 +3921,60 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 拒绝直接写简单 `CUDA3D_PML_PRESSURE_LEN23_*` prototype；length-23 单独只能移除约 `0.790M` inactive lanes，且不能两线合并进一个 warp，额外 launch/tile-list/control overhead 风险过高。
   - 下一步允许打开 Phase 4.11：exact active-point / compact descriptor budget。
   - 只有该预算证明 `>=5%` repeat speedup ceiling，才允许写新的 CUDA prototype；否则转向 packed len16 kernel source-level drill-down 或 v-PML memory layout/coalescing 设计。
+
+## 2026-06-08 16:36:00 +08:00 - Phase 4.11 compact descriptor budget rejected
+
+- 操作目标：
+  - 执行 Phase 4.11 exact active-point / compact descriptor budget。
+  - 以已接受的 len16 candidate 为当前基准，重新评估 compact descriptor 是否仍有 `>=5%` repeat speedup ceiling。
+  - 若 gate 不足，明确禁止后续重复写 length-23/exact-point 小原型。
+- 修改文件：
+  - 新增工具：`tools/pml_compact_descriptor_budget.py`。
+  - 新增报告：`docs/day_20260608/pml_compact_descriptor_budget.md`。
+  - 新增 JSON：`reports/day_20260608/pml_compact_descriptor_budget.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地运行：
+    - `python -m py_compile tools/pml_compact_descriptor_budget.py`
+    - `python tools/pml_compact_descriptor_budget.py --json-out reports/day_20260608/pml_compact_descriptor_budget.json --md-out docs/day_20260608/pml_compact_descriptor_budget.md`
+  - 上传工具到远端隔离 worktree：
+    - `/work/wenzhe/cuda3D/.codex_worktrees/sprint_0648/tools/pml_compact_descriptor_budget.py`
+  - 远端运行：
+    - `python3 -m py_compile tools/pml_compact_descriptor_budget.py`
+    - `python3 tools/pml_compact_descriptor_budget.py --json-out reports/day_20260608/pml_compact_descriptor_budget.json --md-out docs/day_20260608/pml_compact_descriptor_budget.md`
+  - 取回远端生成的 `docs/day_20260608/pml_compact_descriptor_budget.md` 与 `reports/day_20260608/pml_compact_descriptor_budget.json`，确保报告路径为服务器路径。
+- 测试结果：
+  - 本地 py_compile 通过。
+  - 本地预算生成成功。
+  - 远端 py_compile 通过。
+  - 远端预算生成成功。
+  - 本地与远端 gate 一致：`reject_cuda_prototype`。
+- 输出/哈希/误差摘要：
+  - accepted len16 lanes：`19,908,928`。
+  - active lanes：`19,118,944`。
+  - remaining length-23 inactive lanes：`789,984`。
+  - post-len16 pressure-PML sampled-main share：`46.58%`。
+  - direct-fill -> len16 observed pressure-PML speedup：`1.1869x`。
+  - direct-fill -> len16 lane ceiling：`1.4638x`。
+  - observed lane-to-time efficiency factor：`0.811`。
+  - `exact_length23_points_only`：
+    - lane reduction vs len16：`3.97%`
+    - p-PML lane ceiling：`1.0413x`
+    - sampled-main ceiling：`1.0188x`
+    - calibrated sampled-main estimate：`1.0153x`
+    - descriptor traffic：`7.701 MiB/step aggregate-shots`
+    - descriptor bytes per saved inactive lane：`10.23`
+  - `exact_all_active_points`：
+    - lane reduction vs len16：`3.97%`
+    - sampled-main ceiling：`1.0188x`
+    - calibrated sampled-main estimate：`1.0153x`
+    - descriptor traffic：`72.933 MiB/step aggregate-shots`
+    - descriptor bytes per saved inactive lane：`96.83`
+- 风险与下一步：
+  - 决策：拒绝 exact active-point / compact descriptor CUDA prototype。
+  - 决策：拒绝简单 length-23 pressure-PML prototype。
+  - 原因：len16 已消化主要 lane waste，剩余 length-23 lane savings 的 optimistic sampled-main ceiling 也不到 `2%`，低于 `>=5%` prototype gate；descriptor/control overhead 还未计入，真实收益会更低。
+  - 只有新 descriptor/ownership 设计证明扣除 overhead 后仍有 `>=5%` `perf_1gpu_6shots` repeat speedup ceiling，才允许重开。
+  - 下一步转向 `cuda_fd3d_p_pml_len16_halfwarp_ns` source-level drill-down 或 v-PML memory layout/coalescing 设计。

@@ -429,6 +429,38 @@ Phase 4.10 len16 NCU profile 已完成：
   - Phase 4.11：exact active-point / compact descriptor budget。
   - 若 gate 失败，转向 `cuda_fd3d_p_pml_len16_halfwarp_ns` source-level drill-down 或 v-PML memory layout/coalescing 设计。
 
+Phase 4.11 exact active-point / compact descriptor budget 已完成并拒绝 CUDA prototype：
+
+- 工具：`tools/pml_compact_descriptor_budget.py`。
+- 报告：`docs/day_20260608/pml_compact_descriptor_budget.md`。
+- JSON：`reports/day_20260608/pml_compact_descriptor_budget.json`。
+- post-len16 lane shape：
+  - accepted len16 lanes：`19,908,928`。
+  - active lanes：`19,118,944`。
+  - length-23 remaining inactive lanes：`789,984`。
+  - post-len16 pressure-PML sampled-main share：`46.58%`。
+  - direct-fill -> len16 observed pressure-PML speedup：`1.1869x`。
+  - direct-fill -> len16 lane ceiling：`1.4638x`。
+  - observed lane-to-time efficiency factor：`0.811`。
+- compact descriptor candidates vs accepted len16：
+  - `exact_length23_points_only`：
+    - lane reduction：`3.97%`。
+    - p-PML lane ceiling：`1.0413x`。
+    - sampled-main ceiling：`1.0188x`。
+    - calibrated sampled-main estimate：`1.0153x`。
+    - descriptor traffic：`7.701 MiB/step aggregate-shots`。
+  - `exact_all_active_points`：
+    - lane reduction：`3.97%`。
+    - sampled-main ceiling：`1.0188x`。
+    - calibrated sampled-main estimate：`1.0153x`。
+    - descriptor traffic：`72.933 MiB/step aggregate-shots`。
+- 决策：
+  - 不写 exact active-point / compact descriptor CUDA prototype。
+  - 不写简单 length-23 active-point prototype。
+  - compact descriptor 只有在新设计证明扣除 descriptor/control overhead 后仍有 `>=5%` `perf_1gpu_6shots` repeat speedup ceiling 时才允许重开。
+- 当前下一步：
+  - 优先做 `cuda_fd3d_p_pml_len16_halfwarp_ns` source-level drill-down，或转向 v-PML memory layout/coalescing 设计。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

@@ -1,0 +1,92 @@
+{
+  "inputs": {
+    "active_model": {
+      "case_dir": "/work/wenzhe/cuda3D/.codex_worktrees/sprint_0648/benchmarks/cases/perf_1gpu_6shots",
+      "tile_block_zxy": [
+        32,
+        4,
+        2
+      ],
+      "npml": 12,
+      "core_pml_margin": 4
+    },
+    "profile": {
+      "directfill": {
+        "p_pml_us": 164.328,
+        "p_core_us": 93.752,
+        "v_pml_us": 65.528,
+        "sampled_main_us": 323.608
+      },
+      "len16": {
+        "p_pml_residual_us": 72.68266666666668,
+        "p_pml_packed_us": 65.77066666666667,
+        "p_pml_total_us": 138.45333333333335,
+        "p_core_us": 93.54666666666667,
+        "v_pml_us": 65.248,
+        "sampled_main_us": 297.248,
+        "p_pml_share": 0.4657839021064342
+      },
+      "observed": {
+        "p_pml_speedup_direct_to_len16": 1.1868836671802772,
+        "sampled_main_speedup_direct_to_len16": 1.0886801593282378
+      }
+    }
+  },
+  "post_len16_lane_shape": {
+    "accepted_len16_lanes": 19908928,
+    "active_lanes": 19118944,
+    "length16_lines": 542100,
+    "length23_lines": 87776,
+    "length32_lines": 263328,
+    "length23_active_lanes": 2018848,
+    "length23_inactive_lanes": 789984,
+    "direct_to_len16_lane_ceiling": 1.4638176400055292,
+    "observed_direct_to_len16_p_pml_speedup": 1.1868836671802772,
+    "lane_to_time_efficiency": 0.8108138846965897,
+    "post_len16_p_pml_share": 0.4657839021064342
+  },
+  "candidates": {
+    "line_descriptor_len16_current": {
+      "description": "No further compaction; one compact line descriptor per active z-line.",
+      "lanes": 19908928,
+      "lane_reduction_vs_len16": 0.0,
+      "p_pml_lane_speedup_ceiling_vs_len16": 1.0,
+      "sampled_main_speedup_ceiling_vs_len16": 1.0,
+      "calibrated_p_pml_speedup_vs_len16": 1.0,
+      "calibrated_sampled_main_speedup_vs_len16": 1.0,
+      "descriptor_mib_per_step_aggregate_shots": 6.814605712890625,
+      "descriptor_bytes_per_saved_lane": null
+    },
+    "exact_length23_points_only": {
+      "description": "Keep accepted len16 packing and length32 full warps, compact only length-23 active points.",
+      "lanes": 19119168,
+      "lane_reduction_vs_len16": 0.03966863509677665,
+      "p_pml_lane_speedup_ceiling_vs_len16": 1.0413072368002625,
+      "sampled_main_speedup_ceiling_vs_len16": 1.018824838405069,
+      "calibrated_p_pml_speedup_vs_len16": 1.0334924811361028,
+      "calibrated_sampled_main_speedup_vs_len16": 1.0153260416070762,
+      "descriptor_mib_per_step_aggregate_shots": 7.7012939453125,
+      "descriptor_bytes_per_saved_lane": 10.225121555915722
+    },
+    "exact_all_active_points": {
+      "description": "Compact every active pressure-PML point with one uint32 point descriptor.",
+      "lanes": 19119104,
+      "lane_reduction_vs_len16": 0.03967184973495308,
+      "p_pml_lane_speedup_ceiling_vs_len16": 1.0413107225108458,
+      "sampled_main_speedup_ceiling_vs_len16": 1.018826392638635,
+      "calibrated_p_pml_speedup_vs_len16": 1.0334953073986417,
+      "calibrated_sampled_main_speedup_vs_len16": 1.0153273121599435,
+      "descriptor_mib_per_step_aggregate_shots": 72.9329833984375,
+      "descriptor_bytes_per_saved_lane": 96.82635118709992
+    }
+  },
+  "gate": {
+    "decision": "reject_cuda_prototype",
+    "reason": "After the accepted len16 packing, exact active-point compaction can only remove the remaining length-23 inactive lanes.  The optimistic sampled-main ceiling is below the >=5% prototype gate, and the required descriptor stream risks adding more memory/control overhead than the saved inactive lanes.",
+    "next_allowed": [
+      "source-level drill-down of cuda_fd3d_p_pml_len16_halfwarp_ns",
+      "v-PML memory layout/coalescing design"
+    ],
+    "reopen_condition": "Only reopen compact descriptors if a new design shows >=5% perf_1gpu_6shots repeat speedup ceiling after descriptor/control overhead."
+  }
+}

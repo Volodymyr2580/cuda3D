@@ -1116,3 +1116,63 @@ Report:
 docs/day_20260608/len16_halfwarp_ncu_profile.md
 reports/day_20260608/len16_vs_directfill_ncu_20260608_1600/summary.md
 ```
+
+## 2026-06-08 - Reject Post-Len16 Compact Descriptor Prototype
+
+Decision:
+
+```text
+Reject exact active-point / compact descriptor CUDA prototype after the accepted
+len16 pressure-PML packing.
+```
+
+Evidence:
+
+```text
+accepted len16 lanes                         19,908,928
+active lanes                                 19,118,944
+remaining length-23 inactive lanes              789,984
+post-len16 pressure-PML sampled-main share       46.58%
+
+exact_length23_points_only sampled ceiling        1.0188x
+exact_length23_points_only calibrated estimate    1.0153x
+exact_length23_points_only descriptor traffic     7.701 MiB/step aggregate-shots
+
+exact_all_active_points sampled ceiling           1.0188x
+exact_all_active_points calibrated estimate       1.0153x
+exact_all_active_points descriptor traffic        72.933 MiB/step aggregate-shots
+```
+
+Reason:
+
+```text
+The accepted len16 kernel already removes the large lane-waste population.
+Only length-23 inactive lanes remain, and the optimistic sampled-main ceiling is
+below the >=5% prototype gate before descriptor/control overhead.  The exact
+all-point descriptor stream is especially unattractive because it adds about
+72.933 MiB/step aggregate-shots of descriptor reads.
+```
+
+Boundary:
+
+```text
+Do not implement exact active-point, simple length-23, or compact descriptor
+pressure-PML CUDA prototypes from the current post-len16 state.
+
+This route may reopen only if a new descriptor/ownership design proves >=5%
+perf_1gpu_6shots repeat speedup ceiling after descriptor/control overhead.
+```
+
+Next allowed routes:
+
+```text
+1. Source-level drill-down of cuda_fd3d_p_pml_len16_halfwarp_ns.
+2. v-PML memory layout/coalescing design.
+```
+
+Report:
+
+```text
+docs/day_20260608/pml_compact_descriptor_budget.md
+reports/day_20260608/pml_compact_descriptor_budget.json
+```
