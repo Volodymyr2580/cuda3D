@@ -62,7 +62,15 @@ Combined candidate with Phase 1 CPML vmem scaffold:
 ```text
 mean WP speedup             1.083390x
 mean Gradient speedup       1.080857x
-verdict                     pass meaningful >=5% gate
+verdict                     pass meaningful >=5% gate; superseded by direct-fill version below
+```
+
+Direct-fill combined candidate:
+
+```text
+mean WP speedup             1.100929x
+mean Gradient speedup       1.097530x
+verdict                     current accepted candidate
 ```
 
 Perf repeat table:
@@ -72,6 +80,14 @@ Perf repeat table:
 | 1 | 2.435633 | 2.249627 | 1.082683 | 2.545943 | 2.357701 | 1.079841 |
 | 2 | 2.413101 | 2.227910 | 1.083123 | 2.533939 | 2.346707 | 1.079785 |
 | 3 | 2.416663 | 2.228645 | 1.084364 | 2.542785 | 2.348029 | 1.082944 |
+
+Direct-fill perf repeat table:
+
+| round | baseline WP | candidate WP | WP speedup | baseline Gradient | candidate Gradient | Gradient speedup |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 2.438928 | 2.217328 | 1.099940 | 2.549396 | 2.324237 | 1.096874 |
+| 2 | 2.417782 | 2.194350 | 1.101821 | 2.535653 | 2.311585 | 1.096933 |
+| 3 | 2.415093 | 2.193495 | 1.101025 | 2.541987 | 2.313455 | 1.098784 |
 
 ## Failed Aggressive Variant
 
@@ -106,9 +122,14 @@ CUDA3D_CPML_VMEM_DISABLE_MPI
 CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE
 ```
 
-Next work should profile this combined candidate against zmem and decompose
-the remaining `cuda_fd3d_p_pml_tile_ns` time.  Do not expand to shared vx/vy
-caches unless new profiler evidence changes the conclusion above.
+The accepted implementation uses direct cache fill: each CTA thread fills
+its own central z entry, while `threadIdx.x < 4` fills left halo entries and
+`threadIdx.x < 3` fills right halo entries.  This avoids the first prototype's
+linear cache-fill loop with division/modulo indexing.
+
+Next work should profile this direct-fill combined candidate against zmem and
+decompose the remaining `cuda_fd3d_p_pml_tile_ns` time.  Do not expand to
+shared vx/vy caches unless new profiler evidence changes the conclusion above.
 
 ## NCU Follow-Up
 
@@ -140,4 +161,3 @@ warps/scheduler (0.798) and high No Eligible (60.879%), so the next
 pressure-PML work should target issue/latency overhead rather than raw
 DRAM bandwidth.
 ```
-

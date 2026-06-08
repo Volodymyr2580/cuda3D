@@ -223,7 +223,18 @@ Phase 4.4 pressure PML z-recompute cache prototype 已完成：
   - `perf_1gpu_6shots` repeat 3 轮输出对比全部通过。
   - mean WP speedup：`1.083390x`。
   - mean Gradient speedup：`1.080857x`。
-  - 结论：组合候选通过 meaningful `>=5%` gate，是当前可继续推进的候选。
+  - 结论：组合候选通过 meaningful `>=5%` gate，但已被 direct-fill 版本取代。
+- Direct-fill 组合候选：
+  - 将 z-cache fill 从 linear loop + division/modulo 改为 direct fill：
+    - 每个 thread 填自己的 central z cache entry。
+    - `threadIdx.x < 4` 填 left halo。
+    - `threadIdx.x < 3` 填 right halo。
+  - debug dump step `0/1/2` 通过。
+  - correctness rel L2：`0`。
+  - `perf_1gpu_6shots` repeat 3 轮输出对比全部通过。
+  - mean WP speedup：`1.100929x`。
+  - mean Gradient speedup：`1.097530x`。
+  - 结论：这是当前 best combo candidate。
 - 已失败并禁止继续的子路线：
   - pressure-PML `vx/vy` shared-neighbor cache。
   - 该路线 correctness pass，但 mean WP speedup 只有 `0.419906x`，mean Gradient speedup `0.426565x`，性能灾难性退化。
@@ -248,6 +259,17 @@ Phase 4.5 combo candidate NCU profile 已完成：
   - `p_core` 仍是 L2/memory-throughput limited，短期不要回到简单 block/register sweep。
   - combo 后 `p_pml` 剩余瓶颈更像 issue/latency overhead；下一步若继续 pressure PML，应优先降低 z-cache fill 的 integer/division/control overhead。
   - 继续禁止 shared `vx/vy` cache。
+
+Phase 4.6 direct-fill z-cache 已完成：
+
+- 结果：direct-fill combo 将 Phase 4.4 combo mean WP speedup 从 `1.083390x` 提高到 `1.100929x`。
+- mean Gradient speedup：`1.097530x`。
+- debug/correctness/perf repeat 均通过。
+- 当前 best candidate flags 仍为：
+  - `CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL`
+  - `CUDA3D_CPML_VMEM_DISABLE_MPI`
+  - `CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE`
+- 当前 best implementation 是 direct-fill z-cache，不是 linear-loop z-cache。
 
 ## 速度阈值存档规则
 

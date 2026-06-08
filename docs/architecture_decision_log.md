@@ -560,3 +560,40 @@ overhead, not a simple raw-DRAM bandwidth limit.  The next pressure-PML
 experiment may target z-cache fill integer/control overhead, but shared
 vx/vy neighbor caching remains stopped.
 ```
+
+## 2026-06-08 - Accept Direct-Fill Pressure Z-Cache
+
+Decision:
+
+```text
+Replace the first linear-loop z-cache fill with direct fill inside
+CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE.
+```
+
+Evidence:
+
+```text
+linear-loop combo mean WP speedup              1.083390x
+linear-loop combo mean Gradient speedup        1.080857x
+
+direct-fill combo debug dump step 0/1/2        pass
+direct-fill combo correctness rel L2           0
+direct-fill combo perf6 output compares        pass
+direct-fill combo mean WP speedup              1.100929x
+direct-fill combo mean Gradient speedup        1.097530x
+```
+
+Reason:
+
+```text
+NCU showed the accepted combo was increasingly issue/latency limited in
+p_pml_tile.  Direct fill removes the z-cache linear fill loop's division and
+modulo indexing.  The algorithm and memory_dz_next ownership are unchanged.
+```
+
+Rejected boundary:
+
+```text
+Do not use shared vx/vy pressure-neighbor cache.  It remained removed after
+direct-fill testing.
+```

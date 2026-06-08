@@ -3170,3 +3170,50 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - combo 收益来自 `p_pml` 与 `v_pml`，`p_core` 仍是 L2/memory-throughput limited。
   - combo 后 `p_pml` 剩余瓶颈更像 issue/latency overhead，不是简单 DRAM 带宽。
   - 下一步可尝试降低 z-cache fill 的 integer/division/control overhead；继续禁止 shared `vx/vy` cache。
+
+## 2026-06-08 12:01:00 +08:00 - Direct-fill z-cache optimization
+
+- 操作目标：
+  - 根据 NCU 指向的 issue/latency overhead，降低 z-cache fill 的 integer division/modulo/control overhead。
+  - 将 linear cache-fill loop 改为 direct fill：每个 thread 填 central entry，少数 thread 填 halo。
+- 修改文件：
+  - `src/single_solver.cu`
+    - 新增 `fill_pml_pressure_vz_cache_entry` `__device__ __forceinline__` helper。
+    - `cuda_fd3d_p_pml_tile_ns` 内 z-cache fill 改为 direct fill。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 更新 `docs/day_20260608/pressure_pml_zrecomp_cache_prototype.md`。
+  - 新增/拉回远端报告：
+    - `reports/day_20260608/zrecomp_cache_directfill_combo_debug_step0_comparison.md`
+    - `reports/day_20260608/zrecomp_cache_directfill_combo_debug_step1_comparison.md`
+    - `reports/day_20260608/zrecomp_cache_directfill_combo_debug_step2_comparison.md`
+    - `reports/day_20260608/zrecomp_cache_directfill_combo_correctness_comparison.md`
+    - `reports/day_20260608/zrecomp_cache_directfill_combo_perf6_repeat_summary.md`
+    - `reports/day_20260608/zrecomp_cache_directfill_combo_perf6_repeat_summary.json`
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 上传 `src/single_solver.cu` 到 clean worktree `/work/wenzhe/cuda3D_codex_day_20260608`。
+  - 编译 combo debug flags：
+    - zmem reference flags
+    - `CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL`
+    - `CUDA3D_CPML_VMEM_DISABLE_MPI`
+    - `CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE`
+    - `CUDA3D_PML_DEBUG_DUMP`
+  - 运行 combo debug dump step `0/1/2` 并对比 baseline dump。
+  - 编译 combo release flags。
+  - 运行 correctness 并对比 baseline outputs。
+  - 运行 `perf_1gpu_6shots` repeat 3 轮 A/B，每轮均比较 outputs。
+- 测试结果：
+  - direct-fill combo debug dump step `0/1/2` 通过。
+  - direct-fill combo correctness 通过，6 个输出 rel L2 全部 `0`。
+  - direct-fill combo perf repeat 3 轮输出对比全部通过。
+  - mean WP speedup：`1.100929x`。
+  - mean Gradient speedup：`1.097530x`。
+- 输出/哈希/误差摘要：
+  - round 1：WP `2.438928 -> 2.217328`，speedup `1.099940x`；Gradient `2.549396 -> 2.324237`，speedup `1.096874x`。
+  - round 2：WP `2.417782 -> 2.194350`，speedup `1.101821x`；Gradient `2.535653 -> 2.311585`，speedup `1.096933x`。
+  - round 3：WP `2.415093 -> 2.193495`，speedup `1.101025x`；Gradient `2.541987 -> 2.313455`，speedup `1.098784x`。
+- 风险与下一步：
+  - direct-fill 是当前 best combo candidate。
+  - 仍只验证 single GPU / single MPI rank。
+  - 下一步需要 profile direct-fill combo，确认 p_pml issue/latency 是否改善，以及新的 dominant bottleneck。

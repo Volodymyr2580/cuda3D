@@ -1665,6 +1665,60 @@ __global__ void cuda_fd3d_p_pml_ns(float *p0, const float *__restrict__ p1, cons
   }
 }
 
+#ifdef CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE
+__device__ __forceinline__ void fill_pml_pressure_vz_cache_entry(
+  float *vz_line_cache, int cache_idx, int local_z,
+  int tile_z0, int cache_x, int cache_y,
+  const float *__restrict__ p1,
+  const float *__restrict__ mem_dz_v,
+  float *mem_dz_next_v,
+  float _dz2,
+  int n3, int n2, int n1, int npml,
+  int core1_lo, int core1_hi,
+  int core2_lo, int core2_hi,
+  int core3_lo, int core3_hi) {
+  const int cache_z = tile_z0 + local_z - 4;
+  const int central_z0 = tile_z0;
+  const int central_z1_full = tile_z0 + PmlTileBlockSize1;
+  const int central_z1 = central_z1_full < n1 ? central_z1_full : n1;
+  int active_z_lo = central_z0;
+  int active_z_hi = central_z1;
+  const bool xy_in_domain = cache_x >= 0 && cache_x < n2 &&
+    cache_y >= 0 && cache_y < n3;
+  if (!xy_in_domain || central_z1 <= central_z0) {
+    active_z_hi = active_z_lo;
+  } else {
+    const bool xy_in_core = (cache_x >= core2_lo) && (cache_x < core2_hi) &&
+      (cache_y >= core3_lo) && (cache_y < core3_hi);
+    if (xy_in_core && central_z0 < core1_lo) {
+      active_z_hi = central_z1 < core1_lo ? central_z1 : core1_lo;
+    } else if (xy_in_core && central_z1 > core1_hi) {
+      active_z_lo = central_z0 > core1_hi ? central_z0 : core1_hi;
+    } else if (xy_in_core) {
+      active_z_hi = active_z_lo;
+    }
+  }
+  const bool cache_needed = (active_z_hi > active_z_lo) &&
+    (cache_z >= active_z_lo - 4) && (cache_z < active_z_hi + 3);
+  if (!cache_needed) {
+    vz_line_cache[cache_idx] = 0.0f;
+    return;
+  }
+  const bool in_owned_z = (local_z >= 4) && (local_z < 4 + PmlTileBlockSize1);
+  const bool in_domain = cache_z >= 0 && cache_z < n1 &&
+    cache_x >= 0 && cache_x < n2 &&
+    cache_y >= 0 && cache_y < n3;
+  const bool in_core = in_domain &&
+    (cache_z >= core1_lo) && (cache_z < core1_hi) &&
+    (cache_x >= core2_lo) && (cache_x < core2_hi) &&
+    (cache_y >= core3_lo) && (cache_y < core3_hi);
+  const bool write_owned = in_owned_z && in_domain && !in_core;
+  vz_line_cache[cache_idx] = recompute_vz_after_update_from_old_mem(
+    p1, mem_dz_v, mem_dz_next_v, _dz2,
+    n3, n2, n1, npml, cache_y, cache_x, cache_z, write_owned);
+}
+#endif
+
 __global__ void cuda_fd3d_p_pml_tile_ns(float *p0, const float *__restrict__ p1, const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
 				   float *cw2, float _dy2, float _dx2, float _dz2,
 				   int n3, int n2, int n1, int npml, float dt,
@@ -1703,56 +1757,32 @@ __global__ void cuda_fd3d_p_pml_tile_ns(float *p0, const float *__restrict__ p1,
 #error CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE requires CUDA3D_PML_RECOMPUTE_Z and CUDA3D_PML_ZMEM_IN_P
 #endif
   const int z_cache_len = PmlTileBlockSize1 + 7;
-  const int z_cache_items = z_cache_len * PmlTileBlockSize2 * PmlTileBlockSize3;
   __shared__ float vz_line_cache[(PmlTileBlockSize1 + 7) * PmlTileBlockSize2 * PmlTileBlockSize3];
-  const int cache_thread = threadIdx.x +
-    (int)blockDim.x * (threadIdx.y + (int)blockDim.y * threadIdx.z);
-  const int cache_threads = (int)blockDim.x * (int)blockDim.y * (int)blockDim.z;
-  for (int cache_idx = cache_thread; cache_idx < z_cache_items; cache_idx += cache_threads) {
-    const int line = cache_idx / z_cache_len;
-    const int local_z = cache_idx - line * z_cache_len;
-    const int local_x = line % PmlTileBlockSize2;
-    const int local_y = line / PmlTileBlockSize2;
-    const int cache_z = tile.z0 + local_z - 4;
-    const int cache_x = tile.x0 + local_x;
-    const int cache_y = tile.y0 + local_y;
-    const int central_z0 = tile.z0;
-    const int central_z1 = min(n1, tile.z0 + PmlTileBlockSize1);
-    int active_z_lo = central_z0;
-    int active_z_hi = central_z1;
-    const bool xy_in_domain = cache_x >= 0 && cache_x < n2 &&
-      cache_y >= 0 && cache_y < n3;
-    if (!xy_in_domain || central_z1 <= central_z0) {
-      active_z_hi = active_z_lo;
-    } else {
-      const bool xy_in_core = (cache_x >= core2_lo) && (cache_x < core2_hi) &&
-	(cache_y >= core3_lo) && (cache_y < core3_hi);
-      if (xy_in_core && central_z0 < core1_lo) {
-	active_z_hi = min(central_z1, core1_lo);
-      } else if (xy_in_core && central_z1 > core1_hi) {
-	active_z_lo = max(central_z0, core1_hi);
-      } else if (xy_in_core) {
-	active_z_hi = active_z_lo;
-      }
-    }
-    const bool cache_needed = (active_z_hi > active_z_lo) &&
-      (cache_z >= active_z_lo - 4) && (cache_z < active_z_hi + 3);
-    if (!cache_needed) {
-      vz_line_cache[cache_idx] = 0.0f;
-      continue;
-    }
-    const bool in_owned_z = (local_z >= 4) && (local_z < 4 + PmlTileBlockSize1);
-    const bool in_domain = cache_z >= 0 && cache_z < n1 &&
-      cache_x >= 0 && cache_x < n2 &&
-      cache_y >= 0 && cache_y < n3;
-    const bool in_core = in_domain &&
-      (cache_z >= core1_lo) && (cache_z < core1_hi) &&
-      (cache_x >= core2_lo) && (cache_x < core2_hi) &&
-      (cache_y >= core3_lo) && (cache_y < core3_hi);
-    const bool write_owned = in_owned_z && in_domain && !in_core;
-    vz_line_cache[cache_idx] = recompute_vz_after_update_from_old_mem(
+  const int z_cache_line_base = (threadIdx.z * PmlTileBlockSize2 + threadIdx.y) * z_cache_len;
+  const int z_cache_x = gtid2;
+  const int z_cache_y = gtid3;
+  fill_pml_pressure_vz_cache_entry(
+    vz_line_cache, z_cache_line_base + threadIdx.x + 4, threadIdx.x + 4,
+    tile.z0, z_cache_x, z_cache_y,
+    p1, mem_dz_v, mem_dz_next_v, _dz2,
+    n3, n2, n1, npml,
+    core1_lo, core1_hi, core2_lo, core2_hi, core3_lo, core3_hi);
+  if (threadIdx.x < 4) {
+    fill_pml_pressure_vz_cache_entry(
+      vz_line_cache, z_cache_line_base + threadIdx.x, threadIdx.x,
+      tile.z0, z_cache_x, z_cache_y,
       p1, mem_dz_v, mem_dz_next_v, _dz2,
-      n3, n2, n1, npml, cache_y, cache_x, cache_z, write_owned);
+      n3, n2, n1, npml,
+      core1_lo, core1_hi, core2_lo, core2_hi, core3_lo, core3_hi);
+  }
+  if (threadIdx.x < 3) {
+    const int local_z = PmlTileBlockSize1 + 4 + threadIdx.x;
+    fill_pml_pressure_vz_cache_entry(
+      vz_line_cache, z_cache_line_base + local_z, local_z,
+      tile.z0, z_cache_x, z_cache_y,
+      p1, mem_dz_v, mem_dz_next_v, _dz2,
+      n3, n2, n1, npml,
+      core1_lo, core1_hi, core2_lo, core2_hi, core3_lo, core3_hi);
   }
   __syncthreads();
 #endif
