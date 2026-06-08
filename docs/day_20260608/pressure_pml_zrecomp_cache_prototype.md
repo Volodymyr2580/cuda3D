@@ -424,3 +424,30 @@ Reject whole-build ptxas dlcm overrides.  The accepted direct-fill path
 depends on useful cache locality; forcing cg is strongly harmful and ca is
 noise-level neutral to slightly slower.
 ```
+
+## Rejected P-Core Readonly LDG Candidate
+
+Tested:
+
+```text
+CUDA3D_P_CORE_READONLY_LDG
+```
+
+The candidate explicitly wrapped `cuda_fd3d_p_core_ns` `p1` and `cw2` reads in
+`__ldg` while leaving the accepted direct-fill pressure-PML path unchanged.
+
+Result:
+
+```text
+correctness                    pass, rel L2 = 0 for 6 outputs
+perf6 repeat compares          pass
+mean WP speedup vs direct-fill 0.999319x
+mean Gradient speedup          0.999254x
+```
+
+Decision:
+
+```text
+Reject p_core explicit __ldg.  It is numerically safe, but it does not move
+the p_core memory path in a measurable positive direction.
+```

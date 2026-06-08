@@ -328,7 +328,12 @@ Phase 4.8 direct-fill SourceCounters profile 已完成：
   - `-Xptxas -dlcm=ca`：perf repeat compare pass，mean WP `0.999263x`，mean Gradient `0.999576x`。
   - `-Xptxas -dlcm=cg`：perf repeat compare pass，mean WP `0.859344x`，mean Gradient `0.864052x`。
   - 结论：强制全局 load cache policy 不解决 direct-fill 的 L1TEX scoreboard stall；`cg` 明显破坏当前 cache reuse。
-- 下一步不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load、z-safe shared `p1` direct second derivative 或 ptxas `dlcm` cache-policy sweep，应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构。
+- `p_core_readonly_ldg` 已测试并拒绝：
+  - correctness pass，6 个输出 rel L2 全部 `0`。
+  - `perf_1gpu_6shots` repeat mean WP speedup vs direct-fill：`0.999319x`。
+  - mean Gradient speedup vs direct-fill：`0.999254x`。
+  - 结论：对 `cuda_fd3d_p_core_ns` 的 `p1/cw2` 显式使用 `__ldg` 不能改善 p_core memory path。
+- 下一步不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load、z-safe shared `p1` direct second derivative、ptxas `dlcm` cache-policy sweep 或 p_core 显式 `__ldg`，应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构。
 
 ## 速度阈值存档规则
 

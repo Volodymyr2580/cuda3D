@@ -787,3 +787,38 @@ Do not repeat ptxas dlcm cache-policy sweeps for the accepted direct-fill
 candidate.  Future memory work needs source/dataflow changes or profiler
 evidence for a narrower per-load policy, not a whole-binary cache override.
 ```
+
+## 2026-06-08 - Reject P-Core Explicit Readonly LDG
+
+Decision:
+
+```text
+Reject CUDA3D_P_CORE_READONLY_LDG, which explicitly changes p_core p1/cw2
+loads to __ldg in cuda_fd3d_p_core_ns.
+```
+
+Evidence:
+
+```text
+correctness rel L2                         0 for 6 outputs
+perf6 output compares                      pass
+mean WP speedup vs direct-fill             0.999319x
+mean Gradient speedup vs direct-fill       0.999254x
+```
+
+Reason:
+
+```text
+p_core is memory-throughput heavy, but explicit read-only loads do not
+improve the current compiled path on RTX 5090.  The compiler/hardware cache
+path is already adequate, and the candidate is measurement-neutral to
+slightly slower.
+```
+
+Rejected boundary:
+
+```text
+Do not retry explicit __ldg wrapping for p_core p1/cw2 loads.  Future p_core
+work needs a real data-reuse or temporal-ownership change, not only load
+syntax changes.
+```

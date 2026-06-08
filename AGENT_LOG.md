@@ -3481,3 +3481,41 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 决策：拒绝 ptxas `dlcm` cache-policy sweep。
   - `cg` 明显破坏当前 direct-fill cache locality；`ca` 不超过噪声。
   - 后续 memory work 必须更具体到源码/dataflow 或 per-load 证据，不能继续 whole-binary cache-policy sweep。
+
+## 2026-06-08 13:28:00 +08:00 - Reject p_core explicit readonly LDG
+
+- 操作目标：
+  - 测试 `cuda_fd3d_p_core_ns` 中只读 `p1/cw2` load 显式使用 `__ldg` 是否能改善 p_core memory path。
+  - 候选宏：`CUDA3D_P_CORE_READONLY_LDG`。
+- 修改文件：
+  - 临时修改 `src/single_solver.cu`：在 `p_core` 内用宏包装 `p1/cw2` 读取。
+  - 测试后已恢复到 direct-fill best；本地 `git diff -- src/single_solver.cu` 为空，远端已重新上传并重编译 direct-fill best。
+  - 新增报告：
+    - `reports/day_20260608/pcore_readonly_ldg_correctness_comparison.md`
+    - `reports/day_20260608/pcore_readonly_ldg_correctness_comparison.json`
+    - `reports/day_20260608/pcore_readonly_ldg_perf6_repeat_summary.md`
+    - `reports/day_20260608/pcore_readonly_ldg_perf6_repeat_summary.json`
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 更新 `docs/day_20260608/pressure_pml_zrecomp_cache_prototype.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 上传临时 `src/single_solver.cu` 到 `/work/wenzhe/cuda3D_codex_day_20260608_68de1a7`。
+  - 编译 direct-fill flags + `CUDA3D_P_CORE_READONLY_LDG`。
+  - 运行 correctness，对比 zmem baseline outputs。
+  - 运行 `perf_1gpu_6shots` direct-fill vs candidate 3 轮 A/B，每轮输出对比。
+  - 恢复本地和远端源码到 direct-fill best，并在远端重编译 direct-fill best。
+- 测试结果：
+  - 编译通过。
+  - correctness 通过，6 个输出 rel L2 全部 `0`。
+  - `perf_1gpu_6shots` repeat 3 轮输出对比全部通过。
+  - mean WP speedup vs direct-fill：`0.999319x`。
+  - mean Gradient speedup vs direct-fill：`0.999254x`。
+- 输出/哈希/误差摘要：
+  - round 1：WP speedup `0.999245x`，Gradient speedup `1.000178x`。
+  - round 2：WP speedup `0.999866x`，Gradient speedup `0.998967x`。
+  - round 3：WP speedup `0.998847x`，Gradient speedup `0.998618x`。
+- 风险与下一步：
+  - 决策：拒绝 `CUDA3D_P_CORE_READONLY_LDG`。
+  - p_core 的 read-only load syntax 不是有效优化点。
+  - 后续 p_core work 需要数据复用、temporal ownership 或更大结构变化，而不是 load 包装。
