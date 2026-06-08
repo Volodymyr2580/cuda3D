@@ -2971,3 +2971,42 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
 - 风险与下一步：
   - 不写 direct K=2 fused CUDA kernel；safe global-middle 设计无 meaningful speedup，cooperative grid-sync 不可行，CTA-local p_mid reuse 计入 halo duplication 后字节模型失败，且仍属于禁止的 two-step 家族。
   - 下一步只能进入 `Phase 4.2 source-aware swept/wavefront temporal design`，先解决 p_mid ownership、source injection、intermediate receiver extraction、shell/PML reconciliation 和 half-updated value 依赖证明。
+
+## 2026-06-08 11:20:00 +08:00 - Day sprint Phase 4.2 source-aware temporal gate
+
+- 操作目标：
+  - 继续 Phase 4.2，检查实际 source/receiver 布局是否阻止 K=2 deep-core temporal pipeline。
+  - 复现 shot-local y/x 子域裁剪，避免用全域几何高估 temporal 覆盖率。
+- 修改文件：
+  - 新增 `tools/source_aware_temporal_model.py`。
+  - 新增 `docs/day_20260608/source_aware_temporal_model.md`。
+  - 新增 `docs/day_20260608/phase4_2_source_aware_temporal_gate_decision.md`。
+  - 新增 `reports/day_20260608/source_aware_temporal_model.json`。
+  - 新增 `reports/day_20260608/phase4_2_source_aware_temporal_gate_summary.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地运行：`python -m py_compile tools/source_aware_temporal_model.py`。
+  - 本地运行：`python tools/source_aware_temporal_model.py --case benchmarks/cases/perf_1gpu_6shots --json-out reports/day_20260608/source_aware_temporal_model.json --md-out docs/day_20260608/source_aware_temporal_model.md`。
+  - 上传 `tools/source_aware_temporal_model.py` 到 `/work/wenzhe/cuda3D/tools/`。
+  - 远端复跑同一模型并拉回远端路径版报告。
+- 测试结果：
+  - 模型工具本地与远端 `py_compile` 通过。
+  - 远端 source-aware model 运行通过。
+  - Gate 结果：`stop_swept_wavefront_cuda_prototype`。
+- 输出/哈希/误差摘要：
+  - shot-local aggregate K=2 deep-core share：`73.22%`。
+  - source influence overlaps K=2 deep core：`0` shots。
+  - receiver footprint overlaps K=2 deep core：`0` shots。
+  - shot domains：
+    - shot 0：`216 x 216`，K2 share `72.99%`。
+    - shot 1：`216 x 241`，K2 share `73.56%`。
+    - shot 2：`216 x 217`，K2 share `73.02%`。
+    - shot 3：`217 x 216`，K2 share `73.02%`。
+    - shot 4：`217 x 241`，K2 share `73.58%`。
+    - shot 5：`217 x 217`，K2 share `73.04%`。
+- 风险与下一步：
+  - Source/receiver placement 不阻止 temporal blocking，但 `p(t+1)` ownership/synchronization 与 halo duplication 仍失败。
+  - 当前停止 swept/wavefront temporal CUDA prototype。
+  - 下一自主方向转向 dominant `cuda_fd3d_p_pml_tile_ns` 的 pressure PML dataflow 或 wave-step scheduling。

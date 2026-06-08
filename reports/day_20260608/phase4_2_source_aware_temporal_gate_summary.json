@@ -1,0 +1,23 @@
+{
+  "date": "2026-06-08",
+  "phase": "phase4_2_source_aware_temporal_gate",
+  "decision": "stop_swept_wavefront_cuda_prototype",
+  "case": "perf_1gpu_6shots",
+  "aggregate_k2_deep_share": 0.7321623231918444,
+  "source_overlap_shots": 0,
+  "receiver_overlap_shots": 0,
+  "shot_domains": [
+    {"shot": 0, "domain_yx": [216, 216], "k2_deep_share": 0.7299286285111882},
+    {"shot": 1, "domain_yx": [216, 241], "k2_deep_share": 0.7355804806411584},
+    {"shot": 2, "domain_yx": [216, 217], "k2_deep_share": 0.7301806632568884},
+    {"shot": 3, "domain_yx": [217, 216], "k2_deep_share": 0.7301806632568884},
+    {"shot": 4, "domain_yx": [217, 241], "k2_deep_share": 0.7358344668969907},
+    {"shot": 5, "domain_yx": [217, 217], "k2_deep_share": 0.730432785026868}
+  ],
+  "interpretation": {
+    "source_receiver_gate": "pass",
+    "ownership_gate": "fail",
+    "reason": "source/receiver placement is compatible with K=2 deep core, but p_mid ownership/synchronization and halo duplication still fail"
+  },
+  "next_direction": "pressure_pml_dataflow_or_wave_step_scheduling"
+}

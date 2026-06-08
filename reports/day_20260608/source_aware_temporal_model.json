@@ -1,0 +1,615 @@
+{
+  "case_dir": "/work/wenzhe/cuda3D/benchmarks/cases/perf_1gpu_6shots",
+  "ny_nx_nz": [
+    384,
+    384,
+    95
+  ],
+  "shots": 6,
+  "receivers_per_shot": 441,
+  "spacing_dy_dx_dz": [
+    0.025,
+    0.025,
+    0.025
+  ],
+  "npml": 12,
+  "xpad": 0.5,
+  "xypad_grid_points": 20,
+  "radius": 7,
+  "nbell": 1,
+  "total_core_points": 23581350,
+  "total_k2_deep_points": 17265376,
+  "aggregate_k2_deep_share": 0.7321623231918444,
+  "source_overlap_shots": 0,
+  "receiver_overlap_shots": 0,
+  "shots_detail": [
+    {
+      "shot": 0,
+      "source_index_yxz": [
+        95,
+        95,
+        1
+      ],
+      "receiver_count": 441,
+      "receiver_min_yx": [
+        2,
+        2
+      ],
+      "receiver_max_yx": [
+        195,
+        195
+      ],
+      "domain_origin_yx": [
+        0,
+        0
+      ],
+      "domain_size_yx": [
+        216,
+        216
+      ],
+      "n3n2n1": [
+        240,
+        240,
+        119
+      ],
+      "core_lo_zxy": [
+        16,
+        16,
+        16
+      ],
+      "core_hi_zxy": [
+        102,
+        223,
+        223
+      ],
+      "k2_deep_lo_zxy": [
+        23,
+        23,
+        23
+      ],
+      "k2_deep_hi_zxy": [
+        95,
+        216,
+        216
+      ],
+      "core_points": 3763968,
+      "k2_deep_points": 2747428,
+      "k2_deep_share": 0.7299286285111882,
+      "source_footprint_zxy": [
+        [
+          12,
+          15
+        ],
+        [
+          106,
+          109
+        ],
+        [
+          106,
+          109
+        ]
+      ],
+      "source_influence_zxy": [
+        [
+          5,
+          22
+        ],
+        [
+          99,
+          116
+        ],
+        [
+          99,
+          116
+        ]
+      ],
+      "source_influence_overlaps_k2_deep": false,
+      "receiver_footprint_zxy": [
+        [
+          13,
+          14
+        ],
+        [
+          14,
+          208
+        ],
+        [
+          14,
+          208
+        ]
+      ],
+      "receiver_footprint_overlaps_k2_deep": false
+    },
+    {
+      "shot": 1,
+      "source_index_yxz": [
+        95,
+        191,
+        1
+      ],
+      "receiver_count": 441,
+      "receiver_min_yx": [
+        2,
+        91
+      ],
+      "receiver_max_yx": [
+        195,
+        291
+      ],
+      "domain_origin_yx": [
+        0,
+        71
+      ],
+      "domain_size_yx": [
+        216,
+        241
+      ],
+      "n3n2n1": [
+        240,
+        265,
+        119
+      ],
+      "core_lo_zxy": [
+        16,
+        16,
+        16
+      ],
+      "core_hi_zxy": [
+        102,
+        248,
+        223
+      ],
+      "k2_deep_lo_zxy": [
+        23,
+        23,
+        23
+      ],
+      "k2_deep_hi_zxy": [
+        95,
+        241,
+        216
+      ],
+      "core_points": 4216368,
+      "k2_deep_points": 3101478,
+      "k2_deep_share": 0.7355804806411584,
+      "source_footprint_zxy": [
+        [
+          12,
+          15
+        ],
+        [
+          131,
+          134
+        ],
+        [
+          106,
+          109
+        ]
+      ],
+      "source_influence_zxy": [
+        [
+          5,
+          22
+        ],
+        [
+          124,
+          141
+        ],
+        [
+          99,
+          116
+        ]
+      ],
+      "source_influence_overlaps_k2_deep": false,
+      "receiver_footprint_zxy": [
+        [
+          13,
+          14
+        ],
+        [
+          32,
+          233
+        ],
+        [
+          14,
+          208
+        ]
+      ],
+      "receiver_footprint_overlaps_k2_deep": false
+    },
+    {
+      "shot": 2,
+      "source_index_yxz": [
+        95,
+        287,
+        1
+      ],
+      "receiver_count": 441,
+      "receiver_min_yx": [
+        2,
+        187
+      ],
+      "receiver_max_yx": [
+        195,
+        382
+      ],
+      "domain_origin_yx": [
+        0,
+        167
+      ],
+      "domain_size_yx": [
+        216,
+        217
+      ],
+      "n3n2n1": [
+        240,
+        241,
+        119
+      ],
+      "core_lo_zxy": [
+        16,
+        16,
+        16
+      ],
+      "core_hi_zxy": [
+        102,
+        224,
+        223
+      ],
+      "k2_deep_lo_zxy": [
+        23,
+        23,
+        23
+      ],
+      "k2_deep_hi_zxy": [
+        95,
+        217,
+        216
+      ],
+      "core_points": 3782064,
+      "k2_deep_points": 2761590,
+      "k2_deep_share": 0.7301806632568884,
+      "source_footprint_zxy": [
+        [
+          12,
+          15
+        ],
+        [
+          131,
+          134
+        ],
+        [
+          106,
+          109
+        ]
+      ],
+      "source_influence_zxy": [
+        [
+          5,
+          22
+        ],
+        [
+          124,
+          141
+        ],
+        [
+          99,
+          116
+        ]
+      ],
+      "source_influence_overlaps_k2_deep": false,
+      "receiver_footprint_zxy": [
+        [
+          13,
+          14
+        ],
+        [
+          32,
+          228
+        ],
+        [
+          14,
+          208
+        ]
+      ],
+      "receiver_footprint_overlaps_k2_deep": false
+    },
+    {
+      "shot": 3,
+      "source_index_yxz": [
+        287,
+        95,
+        1
+      ],
+      "receiver_count": 441,
+      "receiver_min_yx": [
+        187,
+        2
+      ],
+      "receiver_max_yx": [
+        382,
+        195
+      ],
+      "domain_origin_yx": [
+        167,
+        0
+      ],
+      "domain_size_yx": [
+        217,
+        216
+      ],
+      "n3n2n1": [
+        241,
+        240,
+        119
+      ],
+      "core_lo_zxy": [
+        16,
+        16,
+        16
+      ],
+      "core_hi_zxy": [
+        102,
+        223,
+        224
+      ],
+      "k2_deep_lo_zxy": [
+        23,
+        23,
+        23
+      ],
+      "k2_deep_hi_zxy": [
+        95,
+        216,
+        217
+      ],
+      "core_points": 3782064,
+      "k2_deep_points": 2761590,
+      "k2_deep_share": 0.7301806632568884,
+      "source_footprint_zxy": [
+        [
+          12,
+          15
+        ],
+        [
+          106,
+          109
+        ],
+        [
+          131,
+          134
+        ]
+      ],
+      "source_influence_zxy": [
+        [
+          5,
+          22
+        ],
+        [
+          99,
+          116
+        ],
+        [
+          124,
+          141
+        ]
+      ],
+      "source_influence_overlaps_k2_deep": false,
+      "receiver_footprint_zxy": [
+        [
+          13,
+          14
+        ],
+        [
+          14,
+          208
+        ],
+        [
+          32,
+          228
+        ]
+      ],
+      "receiver_footprint_overlaps_k2_deep": false
+    },
+    {
+      "shot": 4,
+      "source_index_yxz": [
+        287,
+        191,
+        1
+      ],
+      "receiver_count": 441,
+      "receiver_min_yx": [
+        187,
+        91
+      ],
+      "receiver_max_yx": [
+        382,
+        291
+      ],
+      "domain_origin_yx": [
+        167,
+        71
+      ],
+      "domain_size_yx": [
+        217,
+        241
+      ],
+      "n3n2n1": [
+        241,
+        265,
+        119
+      ],
+      "core_lo_zxy": [
+        16,
+        16,
+        16
+      ],
+      "core_hi_zxy": [
+        102,
+        248,
+        224
+      ],
+      "k2_deep_lo_zxy": [
+        23,
+        23,
+        23
+      ],
+      "k2_deep_hi_zxy": [
+        95,
+        241,
+        217
+      ],
+      "core_points": 4236639,
+      "k2_deep_points": 3117465,
+      "k2_deep_share": 0.7358344668969907,
+      "source_footprint_zxy": [
+        [
+          12,
+          15
+        ],
+        [
+          131,
+          134
+        ],
+        [
+          131,
+          134
+        ]
+      ],
+      "source_influence_zxy": [
+        [
+          5,
+          22
+        ],
+        [
+          124,
+          141
+        ],
+        [
+          124,
+          141
+        ]
+      ],
+      "source_influence_overlaps_k2_deep": false,
+      "receiver_footprint_zxy": [
+        [
+          13,
+          14
+        ],
+        [
+          32,
+          233
+        ],
+        [
+          32,
+          228
+        ]
+      ],
+      "receiver_footprint_overlaps_k2_deep": false
+    },
+    {
+      "shot": 5,
+      "source_index_yxz": [
+        287,
+        287,
+        1
+      ],
+      "receiver_count": 441,
+      "receiver_min_yx": [
+        187,
+        187
+      ],
+      "receiver_max_yx": [
+        382,
+        382
+      ],
+      "domain_origin_yx": [
+        167,
+        167
+      ],
+      "domain_size_yx": [
+        217,
+        217
+      ],
+      "n3n2n1": [
+        241,
+        241,
+        119
+      ],
+      "core_lo_zxy": [
+        16,
+        16,
+        16
+      ],
+      "core_hi_zxy": [
+        102,
+        224,
+        224
+      ],
+      "k2_deep_lo_zxy": [
+        23,
+        23,
+        23
+      ],
+      "k2_deep_hi_zxy": [
+        95,
+        217,
+        217
+      ],
+      "core_points": 3800247,
+      "k2_deep_points": 2775825,
+      "k2_deep_share": 0.730432785026868,
+      "source_footprint_zxy": [
+        [
+          12,
+          15
+        ],
+        [
+          131,
+          134
+        ],
+        [
+          131,
+          134
+        ]
+      ],
+      "source_influence_zxy": [
+        [
+          5,
+          22
+        ],
+        [
+          124,
+          141
+        ],
+        [
+          124,
+          141
+        ]
+      ],
+      "source_influence_overlaps_k2_deep": false,
+      "receiver_footprint_zxy": [
+        [
+          13,
+          14
+        ],
+        [
+          32,
+          228
+        ],
+        [
+          32,
+          228
+        ]
+      ],
+      "receiver_footprint_overlaps_k2_deep": false
+    }
+  ],
+  "gate": {
+    "verdict": "stop_swept_wavefront_cuda_prototype",
+    "source_receiver_compatible": true,
+    "reason": "source/receiver placement is compatible with K=2 deep core, but the remaining p_mid ownership and halo-duplication gates still fail",
+    "next_allowed_work": "look for a non-duplicating p_mid ownership mechanism or switch away from temporal blocking"
+  }
+}

@@ -364,3 +364,54 @@ docs/day_20260608/temporal_pipeline_model.md
 docs/day_20260608/phase4_1_temporal_model_gate_decision.md
 reports/day_20260608/phase4_1_temporal_model_gate_summary.json
 ```
+
+## 2026-06-08 - Stop Source-Aware Swept/Wavefront Temporal Prototype
+
+Decision:
+
+```text
+Do not implement a swept/wavefront K=2 temporal CUDA prototype from the
+current source-aware model.
+```
+
+Evidence:
+
+```text
+aggregate shot-local K=2 deep-core share          73.22%
+source influence overlaps K=2 deep core          0 shots
+receiver footprint overlaps K=2 deep core        0 shots
+
+Phase 4.1 still applies:
+  safe global-middle design                       no meaningful byte saving
+  cooperative grid over-capacity                  51.98x
+  CTA-local pair-byte ratio vs baseline           11.29x - 21.30x
+```
+
+Reason:
+
+```text
+The benchmark source and receivers are shallow and do not overlap the K=2
+deep-core temporal region.  This removes source/receiver placement as the
+blocker, but it does not solve p(t+1) ownership.
+
+No current schedule provides non-duplicating p_mid reuse without a grid-wide
+sync or unsafe half-updated reads.  Direct CUDA code would therefore either
+be equivalent to the safe global-middle path or fall back into the failed
+CTA-local halo-duplication path.
+```
+
+Stop rule:
+
+```text
+Pause K=2 temporal work until a new p_mid ownership mechanism is proposed
+with >=5% predicted WP speedup after halo duplication and an explicit
+source/extract/PML schedule.
+```
+
+Next allowed route:
+
+```text
+Keep CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL as scaffold.
+Move attention to pressure PML dataflow or wave-step scheduling around
+cuda_fd3d_p_pml_tile_ns, currently the largest sampled kernel.
+```

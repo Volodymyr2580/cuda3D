@@ -163,6 +163,20 @@ Phase 4.1 K=2 temporal byte/synchronization model 已完成：
   - shell/PML reconciliation。
   - 不读取 half-updated values 的依赖锥证明。
 
+Phase 4.2 source-aware temporal gate 已完成：
+
+- 工具：`tools/source_aware_temporal_model.py`。
+- 报告：`docs/day_20260608/source_aware_temporal_model.md`。
+- gate：`docs/day_20260608/phase4_2_source_aware_temporal_gate_decision.md`。
+- shot-local aggregate K=2 deep-core share：`73.22%`。
+- source influence overlaps K=2 deep core：`0` shots。
+- receiver footprint overlaps K=2 deep core：`0` shots。
+- 结论：
+  - source/receiver placement 不阻止 temporal blocking。
+  - 但 `p(t+1)` ownership/synchronization 和 halo duplication 仍失败。
+  - 当前停止 swept/wavefront temporal CUDA prototype。
+- 后续自动推进应暂停 K=2 temporal 路线，转向 dominant `cuda_fd3d_p_pml_tile_ns` 的 pressure PML dataflow 或 wave-step scheduling。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：
