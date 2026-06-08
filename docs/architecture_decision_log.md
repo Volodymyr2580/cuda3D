@@ -1874,3 +1874,80 @@ Report:
 reports/day_20260608/multirank_samegpu_sched_20260608_193042/summary.md
 reports/day_20260608/multirank_samegpu_sched_20260608_193042/summary.json
 ```
+
+## 2026-06-08 - Defer True Multi-GPU Batching on Single-GPU Platform
+
+Decision:
+
+```text
+Defer true multi-GPU / multi-job batching validation on the current RTX 5090
+server because it exposes only one GPU.
+```
+
+Evidence:
+
+```text
+nvidia-smi -L:
+  GPU 0: NVIDIA GeForce RTX 5090
+
+current-best anchor:
+  mean elapsed                  2.970s
+  mean Gradient TIME all        2.155902s
+  mean WP                       2.031753s
+  WP speedup vs zmem            1.192835x
+
+same-GPU oversubscription:
+  np=2 elapsed speedup          0.8872x
+  np=3 elapsed speedup          0.9200x
+  decision                      rejected
+```
+
+Existing code requirements:
+
+```text
+src/main.cu reads gpus_p_node from the input file.
+GPU mapping is cudaSetDevice(mytid % gpus_p_node).
+Shot assignment is sht_num[is * ntids + mytid].
+
+Therefore, true one-rank-per-GPU runs require all three to agree:
+  mpirun -np N
+  CUDA_VISIBLE_DEVICES exposes N devices
+  input file last line gpus_p_node=N
+```
+
+Shot-balance upper bound for perf_1gpu_6shots:
+
+```text
+1 GPU   [6]             ideal 1.0000x
+2 GPUs  [3, 3]          ideal 2.0000x
+3 GPUs  [2, 2, 2]       ideal 3.0000x
+4 GPUs  [2, 2, 1, 1]    ideal 3.0000x
+6 GPUs  [1, 1, 1, 1, 1, 1] ideal 6.0000x
+```
+
+Boundary:
+
+```text
+Do not treat run_benchmark.py --gpus as a complete true multi-GPU setup.  It
+sets CUDA_VISIBLE_DEVICES, but the program's device mapping still uses the
+input file's gpus_p_node.
+
+Do not run more same-GPU multi-rank oversubscription probes for this case.
+Do not claim multi-GPU speedup from root-rank printed WP time.
+```
+
+Next:
+
+```text
+When a >=2 GPU platform is available, create input variants with last line
+gpus_p_node=N, run np=N with N visible GPUs, compare outputs to the np=1
+current-best baseline, and report elapsed plus Gradient TIME all over a
+3-round repeat.
+```
+
+Report:
+
+```text
+docs/day_20260608/true_multigpu_batching_protocol.md
+reports/day_20260608/true_multigpu_batching_protocol.json
+```

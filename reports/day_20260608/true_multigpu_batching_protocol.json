@@ -1,0 +1,230 @@
+{
+  "decision": "defer_true_multigpu_validation_current_platform_single_gpu",
+  "available_gpus": 1,
+  "case": {
+    "case": "perf_1gpu_6shots",
+    "ny": "384",
+    "nx": "384",
+    "nz": "95",
+    "nt": "1501",
+    "shots": "6",
+    "receivers_per_shot": "441",
+    "receiver_spacing": "0.25",
+    "trace_count": "2646",
+    "gpu_count": "1",
+    "xpad": "0.5",
+    "velocity": "vel_perf_1gpu_6shots_ny384_nx384_nz95.dir",
+    "nav": "nav_perf_1gpu_6shots_6shots_441rec.nav",
+    "input": "input_perf_1gpu_6shots.in"
+  },
+  "current_input_gpus_p_node": 1,
+  "formal_current_best": {
+    "alias": "len16_current_best",
+    "mean_elapsed_s": 2.97,
+    "mean_gradient_s": 2.155902333333333,
+    "mean_wp_s": 2.0317529999999997,
+    "wp_speedup_vs_zmem": 1.1928347521636058,
+    "gradient_speedup_vs_zmem": 1.1792127983148408,
+    "max_rel_l2_vs_zmem": 6.384336369813099e-07
+  },
+  "same_gpu_probe": {
+    "decision": "reject_same_gpu_multirank_probe",
+    "best_elapsed_speedup": 0.92,
+    "best_gradient_speedup": 0.9301097898607804
+  },
+  "source_evidence": {
+    "gpu_mapping": "src/main.cu reads gpus_p_node from input, checks ntids % gpus_p_node, then cudaSetDevice(mytid % gpus_p_node).",
+    "shot_distribution": "src/main.cu pads ns_s to ntids and assigns shot sht_num[is * ntids + mytid] to each rank.",
+    "multi_rank_metric_warning": "Printed WP computing time is root-rank local under multi-rank scheduling; use elapsed and Gradient TIME all."
+  },
+  "distributions": [
+    {
+      "ranks": 1,
+      "ns_pad": 6,
+      "myns": 6,
+      "per_rank": [
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      "active_counts": [
+        6
+      ],
+      "max_shots_per_rank": 6,
+      "ideal_shot_balance_speedup": 1.0,
+      "ideal_parallel_efficiency": 1.0,
+      "runnable_on_current_platform": true,
+      "requires_input_gpus_p_node": 1,
+      "requires_mpirun_np": 1,
+      "requires_cuda_visible_devices_count": 1,
+      "estimated_elapsed_s_ideal": 2.97,
+      "estimated_gradient_s_ideal": 2.155902333333333
+    },
+    {
+      "ranks": 2,
+      "ns_pad": 6,
+      "myns": 3,
+      "per_rank": [
+        [
+          0,
+          2,
+          4
+        ],
+        [
+          1,
+          3,
+          5
+        ]
+      ],
+      "active_counts": [
+        3,
+        3
+      ],
+      "max_shots_per_rank": 3,
+      "ideal_shot_balance_speedup": 2.0,
+      "ideal_parallel_efficiency": 1.0,
+      "runnable_on_current_platform": false,
+      "requires_input_gpus_p_node": 2,
+      "requires_mpirun_np": 2,
+      "requires_cuda_visible_devices_count": 2,
+      "estimated_elapsed_s_ideal": 1.485,
+      "estimated_gradient_s_ideal": 1.0779511666666666
+    },
+    {
+      "ranks": 3,
+      "ns_pad": 6,
+      "myns": 2,
+      "per_rank": [
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          5
+        ]
+      ],
+      "active_counts": [
+        2,
+        2,
+        2
+      ],
+      "max_shots_per_rank": 2,
+      "ideal_shot_balance_speedup": 3.0,
+      "ideal_parallel_efficiency": 1.0,
+      "runnable_on_current_platform": false,
+      "requires_input_gpus_p_node": 3,
+      "requires_mpirun_np": 3,
+      "requires_cuda_visible_devices_count": 3,
+      "estimated_elapsed_s_ideal": 0.9900000000000001,
+      "estimated_gradient_s_ideal": 0.7186341111111111
+    },
+    {
+      "ranks": 4,
+      "ns_pad": 8,
+      "myns": 2,
+      "per_rank": [
+        [
+          0,
+          4
+        ],
+        [
+          1,
+          5
+        ],
+        [
+          2
+        ],
+        [
+          3
+        ]
+      ],
+      "active_counts": [
+        2,
+        2,
+        1,
+        1
+      ],
+      "max_shots_per_rank": 2,
+      "ideal_shot_balance_speedup": 3.0,
+      "ideal_parallel_efficiency": 0.75,
+      "runnable_on_current_platform": false,
+      "requires_input_gpus_p_node": 4,
+      "requires_mpirun_np": 4,
+      "requires_cuda_visible_devices_count": 4,
+      "estimated_elapsed_s_ideal": 0.9900000000000001,
+      "estimated_gradient_s_ideal": 0.7186341111111111
+    },
+    {
+      "ranks": 6,
+      "ns_pad": 6,
+      "myns": 1,
+      "per_rank": [
+        [
+          0
+        ],
+        [
+          1
+        ],
+        [
+          2
+        ],
+        [
+          3
+        ],
+        [
+          4
+        ],
+        [
+          5
+        ]
+      ],
+      "active_counts": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "max_shots_per_rank": 1,
+      "ideal_shot_balance_speedup": 6.0,
+      "ideal_parallel_efficiency": 1.0,
+      "runnable_on_current_platform": false,
+      "requires_input_gpus_p_node": 6,
+      "requires_mpirun_np": 6,
+      "requires_cuda_visible_devices_count": 6,
+      "estimated_elapsed_s_ideal": 0.49500000000000005,
+      "estimated_gradient_s_ideal": 0.35931705555555554
+    }
+  ],
+  "protocol": {
+    "one_rank_per_gpu": true,
+    "input_last_line_must_equal_visible_gpu_count": true,
+    "required_metrics": [
+      "elapsed wall-clock from /usr/bin/time -v",
+      "Gradient TIME all",
+      "output comparison vs np=1/current-best baseline",
+      "GPU count",
+      "rank count",
+      "CUDA_VISIBLE_DEVICES",
+      "input gpus_p_node",
+      "shot assignment"
+    ],
+    "acceptance_gate": "3-round repeat, all output comparisons pass, elapsed or Gradient TIME speedup >= 1.05x vs np=1 on same binary/case."
+  },
+  "reopen_conditions": [
+    "Run on a platform with at least 2 visible GPUs.",
+    "Create input variants whose last non-empty line gpus_p_node equals the visible GPU count.",
+    "Use one MPI rank per visible GPU unless a separate model justifies multiple ranks per GPU."
+  ]
+}

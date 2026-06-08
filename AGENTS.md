@@ -767,6 +767,40 @@ Phase 4.20 same-GPU multi-rank scheduling probe 已完成并拒绝：
   - 若继续 application-level scheduling，必须转向 true multi-GPU / multi-job batching，而不是同卡多 rank 抢占。
   - true multi-GPU 调度必须比较 elapsed、`Gradient TIME all`、输出 correctness，并明确 GPU 数、rank 数、shot 分配方式。
 
+Phase 4.21 true multi-GPU / multi-job batching protocol 已完成，当前平台 defer：
+
+- 工具：`tools/multigpu_batching_protocol.py`。
+- 报告：`docs/day_20260608/true_multigpu_batching_protocol.md`。
+- JSON：`reports/day_20260608/true_multigpu_batching_protocol.json`。
+- 当前 RTX 5090 服务器只暴露 `1` 张 GPU：
+  - `nvidia-smi -L` 仅显示 `GPU 0: NVIDIA GeForce RTX 5090`。
+  - 因此当前平台不能验收 true multi-GPU batching。
+- 现有代码要求：
+  - `src/main.cu` 从输入文件读取 `gpus_p_node`。
+  - CUDA 设备映射为 `cudaSetDevice(mytid % gpus_p_node)`。
+  - shot 分配为 `sht_num[is * ntids + mytid]`。
+  - true one-rank-per-GPU run 必须让三者一致：
+    - `mpirun -np N`
+    - `CUDA_VISIBLE_DEVICES` 暴露 `N` 张卡
+    - 输入文件最后一行 `gpus_p_node=N`
+- `perf_1gpu_6shots` shot-balance 上限：
+  - `1` GPU：`[6]`，ideal `1.0000x`。
+  - `2` GPUs：`[3,3]`，ideal `2.0000x`。
+  - `3` GPUs：`[2,2,2]`，ideal `3.0000x`。
+  - `4` GPUs：`[2,2,1,1]`，ideal `3.0000x`，受 6 炮数量限制。
+  - `6` GPUs：`[1,1,1,1,1,1]`，ideal `6.0000x`。
+- 决策：
+  - 当前平台 defer true multi-GPU validation。
+  - 不再做 same-GPU oversubscription。
+  - 不把 `run_benchmark.py --gpus` 当作完整 true multi-GPU 配置；它只设置 `CUDA_VISIBLE_DEVICES`，还必须配套 input override。
+- 未来验收 gate：
+  - 至少 `2` 张 visible GPUs。
+  - current-best binary，同一 case，同一 session。
+  - 为 `N` GPU 创建 input copy，最后一行 `gpus_p_node=N`。
+  - `np=N`、`CUDA_VISIBLE_DEVICES` 数量为 `N`。
+  - 3 轮 repeat，输出对比全部 pass。
+  - 使用 elapsed 和 `Gradient TIME all` 报告 speedup；root-rank printed WP 仅作诊断。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

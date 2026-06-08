@@ -4553,3 +4553,63 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 多 rank scheduling 不能使用 root-rank printed `WP computing time` 作为正式 speedup 证据，必须看 elapsed 和 `Gradient TIME all`。
   - 下一步若继续 application-level scheduling，应转向 true multi-GPU / multi-job batching，确保每个 rank/job 拥有不同 GPU。
   - true multi-GPU 调度结果必须报告 elapsed、`Gradient TIME all`、correctness、GPU 数、rank 数和 shot 分配方式。
+
+## 2026-06-08 19:50:53 +08:00
+
+- 操作目标：
+  - 继续 Phase 4.20 后的 application-level scheduling 路线，检查当前稳定 RTX 5090 平台是否能执行 true multi-GPU / multi-job batching 验证。
+  - 审计现有 MPI shot 分配和 GPU 选择逻辑，固化未来多 GPU 验收协议。
+- 修改文件：
+  - 新增 `tools/multigpu_batching_protocol.py`。
+  - 新增 `docs/day_20260608/true_multigpu_batching_protocol.md`。
+  - 新增 `reports/day_20260608/true_multigpu_batching_protocol.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地：
+    - `git status --short --branch`
+    - `git log --oneline -5`
+    - `Select-String -Path AGENTS.md -Pattern "Phase 4\\.20|true multi-GPU|multi-job|same-GPU" -Context 1,2`
+    - `Get-Content src\main.cu | Select-Object -Skip 555 -First 95`
+    - `Get-Content src\main.cu | Select-Object -Skip 380 -First 60`
+    - `python -m py_compile tools\multigpu_batching_protocol.py`
+    - `python tools\multigpu_batching_protocol.py --root . --available-gpus 1 --json-out reports\day_20260608\true_multigpu_batching_protocol.json --md-out docs\day_20260608\true_multigpu_batching_protocol.md`
+    - `python -c "import json; d=json.load(open('reports/day_20260608/true_multigpu_batching_protocol.json', encoding='utf-8')); ..."`
+  - 远端：
+    - `cd /work/wenzhe/cuda3D`
+    - `git status --short --branch | head -30`
+    - `git log --oneline -3`
+    - `nvidia-smi -L`
+    - `nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu --format=csv,noheader`
+- 测试结果：
+  - 本地工具 Python 编译通过。
+  - 生成 JSON 可读。
+  - 远端当前稳定服务器仅暴露 `1` 张 GPU：`GPU 0: NVIDIA GeForce RTX 5090`。
+  - 因此当前平台不能执行 true multi-GPU validation。
+  - 本轮未修改 CUDA 源码，未运行新的 benchmark。
+- 输出/哈希/误差摘要：
+  - current-best anchor：
+    - mean elapsed：`2.970s`。
+    - mean `Gradient TIME all`：`2.155902s`。
+    - mean WP：`2.031753s`。
+    - WP speedup vs zmem：`1.192835x`。
+  - source audit：
+    - `src/main.cu` 从 input 读取 `gpus_p_node`。
+    - `cudaSetDevice(mytid % gpus_p_node)` 决定 rank 到 GPU 的映射。
+    - shot 分配使用 `sht_num[is * ntids + mytid]`。
+  - true multi-GPU 配置要求：
+    - `mpirun -np N`。
+    - `CUDA_VISIBLE_DEVICES` 暴露 `N` 张卡。
+    - 输入文件最后一行 `gpus_p_node=N`。
+  - `perf_1gpu_6shots` shot-balance ideal upper bound：
+    - `1` GPU：`[6]`，ideal `1.0000x`。
+    - `2` GPUs：`[3,3]`，ideal `2.0000x`。
+    - `3` GPUs：`[2,2,2]`，ideal `3.0000x`。
+    - `4` GPUs：`[2,2,1,1]`，ideal `3.0000x`。
+    - `6` GPUs：`[1,1,1,1,1,1]`，ideal `6.0000x`。
+- 风险与下一步：
+  - 决策：当前平台 defer true multi-GPU validation，不等同于拒绝 true multi-GPU batching。
+  - 禁止把 `run_benchmark.py --gpus` 单独当成完整 true multi-GPU 配置；它只控制 `CUDA_VISIBLE_DEVICES`，还必须配套 input override。
+  - 后续如果有 `>=2` GPU 平台，先生成 `input_perf_1gpu_6shots_gpusN.in`，最后一行改为 `N`，再用 `np=N` 和 `N` 张 visible GPUs 做 3 轮 repeat。
+  - 多 GPU 调度验收必须用 elapsed 和 `Gradient TIME all`，root-rank printed WP 仅作诊断。
