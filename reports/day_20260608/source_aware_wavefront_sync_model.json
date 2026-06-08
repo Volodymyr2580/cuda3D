@@ -1,0 +1,270 @@
+{
+  "candidates": {
+    "cooperative_grid_full_core_k2": {
+      "correctness": "would provide an in-kernel grid barrier if all blocks were resident",
+      "decision": "reject_cuda_prototype",
+      "grid_blocks": 70688,
+      "ordinary_cuda": false,
+      "over_capacity_factor": 51.976470588235294,
+      "reason": "The full p_core grid exceeds conservative resident capacity by about 52x, so a cooperative launch cannot cover the current grid.",
+      "resident_block_capacity": 1360,
+      "sampled_main_speedup_ceiling": 1.12479553628995
+    },
+    "cta_local_diamond_k2": {
+      "correctness": "safe only by duplicating p_mid halo ownership inside each CTA",
+      "decision": "reject_cuda_prototype",
+      "local_pair_byte_ratio_max": 21.301003649635035,
+      "local_pair_byte_ratio_min": 11.286963959854015,
+      "ordinary_cuda": true,
+      "reason": "Concrete CTA-local candidates require 11.29x to 21.30x baseline pair bytes after p_mid halo duplication.",
+      "sampled_main_speedup_ceiling": 0.0885977844491083
+    },
+    "ideal_no_dup_source_aware_wavefront": {
+      "correctness": "source and receiver placement are compatible, but ownership primitive is missing",
+      "decision": "reject_not_ordinary_cuda",
+      "ordinary_cuda": false,
+      "reason": "This is the only meaningful ceiling, but it requires non-duplicating p_mid ownership across CTA boundaries without global reloads.",
+      "sampled_main_speedup_ceiling": 1.12479553628995
+    },
+    "multi_kernel_global_wavefront": {
+      "correctness": "can avoid half-updated reads by launching dependency layers as separate kernels",
+      "decision": "reject_cuda_prototype",
+      "ordinary_cuda": true,
+      "reason": "Layered global wavefronts still need global p_mid materialization between layers and add many small wavefront launches; no p_mid global stencil traffic is removed.",
+      "sampled_main_speedup_ceiling": 1.0
+    },
+    "persistent_wavefront_without_global_barrier": {
+      "correctness": "unsafe for neighboring CTA dependencies without a grid-wide barrier or no-duplication ownership",
+      "decision": "reject_cuda_prototype",
+      "ordinary_cuda": false,
+      "reason": "A persistent kernel cannot let one CTA safely read another CTA's p_mid from shared/register state in ordinary CUDA.",
+      "sampled_main_speedup_ceiling": 1.12479553628995
+    },
+    "safe_global_middle_two_kernel": {
+      "correctness": "safe after a normal kernel boundary",
+      "decision": "reject_cuda_prototype",
+      "ordinary_cuda": true,
+      "reason": "Writes p(t+1) globally and reloads its stencil for step 2, so it keeps the global p_mid traffic that temporal blocking was meant to remove.",
+      "sampled_main_speedup_ceiling": 1.0
+    }
+  },
+  "current_best_rebased_temporal_ceiling": {
+    "ideal_k2_p_core_pair_reduction": 0.3525462437033954,
+    "ideal_sampled_main_speedup_current_best": 1.12479553628995,
+    "p_core_share": 0.31470915419672013,
+    "required_fraction_of_ideal_saving": 0.4291955769943416,
+    "required_p_core_reduction_for_5pct": 0.15131128848346653
+  },
+  "gate": {
+    "decision": "reject_source_aware_wavefront_cuda_prototype",
+    "next_allowed": [
+      "application-level multi-shot batching or scheduling",
+      "precision-relaxation study only with explicit tolerance policy",
+      "future hardware/runtime-specific cross-CTA ownership only after a concrete primitive is identified"
+    ],
+    "prohibited": [
+      "ordinary CUDA K=2 source-aware wavefront prototype",
+      "multi-kernel global-middle wavefront prototype",
+      "CTA-local diamond temporal prototype",
+      "persistent-kernel wavefront relying on cross-CTA shared/register values"
+    ],
+    "reason": "Source and receiver placement are compatible, and the ideal current-best K=2 ceiling is meaningful. However, every ordinary CUDA schedule either materializes p_mid globally, duplicates p_mid halos by 11x or more, or lacks the grid-wide/cross-CTA ownership primitive required to read p_mid safely."
+  },
+  "inputs": {
+    "formal": {
+      "mean_candidate_wp": 2.0317529999999997,
+      "mean_wp_speedup_vs_zmem": 1.1928347521636058
+    },
+    "ncu_current_best": {
+      "p_core_share": 0.31470915419672013,
+      "p_core_us": 93.54666666666667,
+      "pressure_pml_us": 138.45333333333335,
+      "sampled_main_us": 297.248,
+      "v_pml_us": 65.248
+    },
+    "source_aware": {
+      "aggregate_k2_deep_share": 0.7321623231918444,
+      "receiver_overlap_shots": 0,
+      "receivers_per_shot": 441,
+      "shots": 6,
+      "source_overlap_shots": 0
+    },
+    "target_speedup": 1.05,
+    "temporal": {
+      "cooperative_grid_gate": {
+        "assumed_active_blocks_per_sm": 8,
+        "assumed_sm_count": 170,
+        "fits_cooperative_grid": false,
+        "grid_blocks": 70688,
+        "grid_zxy": [
+          1,
+          188,
+          376
+        ],
+        "over_capacity_factor": 51.976470588235294,
+        "resident_block_capacity": 1360
+      },
+      "core_byte_model": {
+        "bytes_per_core_step_current": 1579744260.0,
+        "bytes_per_output_current": 128.4375,
+        "bytes_per_two_core_steps_current": 3159488520.0,
+        "ideal_k2_p_core_pair_reduction": 0.3525462437033954,
+        "ideal_k2_sampled_main_speedup": 1.1026145216982433,
+        "ideal_k2_saved_bytes_per_deep_output": 116.4375,
+        "ideal_k2_saved_bytes_per_pair": 1113865809.75,
+        "p0_cw2_store_floats_per_output": 3.0,
+        "p1_global_floats_per_output": 29.109375,
+        "pblock_x": 2,
+        "pblock_y": 1,
+        "pblock_z": 128
+      },
+      "cta_local_candidates": [
+        {
+          "baseline_pair_bytes_per_final_output": 256.875,
+          "final_outputs": 512,
+          "fits_99kb": true,
+          "local_pair_byte_ratio_vs_baseline": 14.148118156934306,
+          "local_pair_bytes_per_final_output": 3634.2978515625,
+          "name": "T1",
+          "out_x": 4,
+          "out_y": 4,
+          "out_z": 32,
+          "p_mid_elements": 14904,
+          "p_mid_elements_per_final_output": 29.109375,
+          "p_mid_shared_bytes": 59616,
+          "p_mid_x": 18,
+          "p_mid_y": 18,
+          "p_mid_z": 46,
+          "verdict": "fail_halo_duplication"
+        },
+        {
+          "baseline_pair_bytes_per_final_output": 256.875,
+          "final_outputs": 512,
+          "fits_99kb": true,
+          "local_pair_byte_ratio_vs_baseline": 11.286963959854015,
+          "local_pair_bytes_per_final_output": 2899.3388671875,
+          "name": "T2",
+          "out_x": 8,
+          "out_y": 4,
+          "out_z": 16,
+          "p_mid_elements": 11880,
+          "p_mid_elements_per_final_output": 23.203125,
+          "p_mid_shared_bytes": 47520,
+          "p_mid_x": 22,
+          "p_mid_y": 18,
+          "p_mid_z": 30,
+          "verdict": "fail_halo_duplication"
+        },
+        {
+          "baseline_pair_bytes_per_final_output": 256.875,
+          "final_outputs": 512,
+          "fits_99kb": true,
+          "local_pair_byte_ratio_vs_baseline": 11.286963959854015,
+          "local_pair_bytes_per_final_output": 2899.3388671875,
+          "name": "T3",
+          "out_x": 4,
+          "out_y": 8,
+          "out_z": 16,
+          "p_mid_elements": 11880,
+          "p_mid_elements_per_final_output": 23.203125,
+          "p_mid_shared_bytes": 47520,
+          "p_mid_x": 18,
+          "p_mid_y": 22,
+          "p_mid_z": 30,
+          "verdict": "fail_halo_duplication"
+        },
+        {
+          "baseline_pair_bytes_per_final_output": 256.875,
+          "final_outputs": 512,
+          "fits_99kb": true,
+          "local_pair_byte_ratio_vs_baseline": 15.36675790754258,
+          "local_pair_bytes_per_final_output": 3947.3359375,
+          "name": "T4",
+          "out_x": 8,
+          "out_y": 2,
+          "out_z": 32,
+          "p_mid_elements": 16192,
+          "p_mid_elements_per_final_output": 31.625,
+          "p_mid_shared_bytes": 64768,
+          "p_mid_x": 22,
+          "p_mid_y": 16,
+          "p_mid_z": 46,
+          "verdict": "fail_halo_duplication"
+        },
+        {
+          "baseline_pair_bytes_per_final_output": 256.875,
+          "final_outputs": 512,
+          "fits_99kb": true,
+          "local_pair_byte_ratio_vs_baseline": 21.301003649635035,
+          "local_pair_bytes_per_final_output": 5471.6953125,
+          "name": "T5",
+          "out_x": 4,
+          "out_y": 2,
+          "out_z": 64,
+          "p_mid_elements": 22464,
+          "p_mid_elements_per_final_output": 43.875,
+          "p_mid_shared_bytes": 89856,
+          "p_mid_x": 18,
+          "p_mid_y": 16,
+          "p_mid_z": 78,
+          "verdict": "fail_halo_duplication"
+        },
+        {
+          "baseline_pair_bytes_per_final_output": 256.875,
+          "final_outputs": 576,
+          "fits_99kb": true,
+          "local_pair_byte_ratio_vs_baseline": 11.551885644768856,
+          "local_pair_bytes_per_final_output": 2967.390625,
+          "name": "T6",
+          "out_x": 6,
+          "out_y": 4,
+          "out_z": 24,
+          "p_mid_elements": 13680,
+          "p_mid_elements_per_final_output": 23.75,
+          "p_mid_shared_bytes": 54720,
+          "p_mid_x": 20,
+          "p_mid_y": 18,
+          "p_mid_z": 38,
+          "verdict": "fail_halo_duplication"
+        }
+      ],
+      "cta_local_ratio_max": 21.301003649635035,
+      "cta_local_ratio_min": 11.286963959854015,
+      "geometry": {
+        "case_dir": "/work/wenzhe/cuda3D/benchmarks/cases/perf_1gpu_6shots",
+        "core_pml_margin": 4,
+        "core_points": 12299712,
+        "core_x": 376,
+        "core_y": 376,
+        "core_z": 87,
+        "k2_deep_points": 9566212,
+        "k2_deep_share": 0.77775902395113,
+        "k2_deep_x": 362,
+        "k2_deep_y": 362,
+        "k2_deep_z": 73,
+        "n1": 119,
+        "n2": 408,
+        "n3": 408,
+        "npml": 12,
+        "nt": 1501,
+        "nx": 384,
+        "ny": 384,
+        "nz": 95,
+        "radius": 7,
+        "receivers_per_shot": 441,
+        "shots": 6
+      },
+      "safe_global_middle": {
+        "reason": "Using global p(t+1) plus a synchronization point preserves correctness but largely reproduces two normal p_core passes.",
+        "sampled_main_speedup_estimate": 1.0,
+        "verdict": "fails_meaningful_gate"
+      }
+    }
+  },
+  "source_receiver_gate": {
+    "aggregate_k2_deep_share": 0.7321623231918444,
+    "receiver_overlap_shots": 0,
+    "source_overlap_shots": 0,
+    "verdict": "compatible_for_this_case"
+  }
+}

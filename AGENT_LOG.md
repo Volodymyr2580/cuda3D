@@ -4424,3 +4424,57 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - source-aware multi-step / wavefront design 只有先证明 synchronization 和 halo ownership 后才允许重开。
   - precision-relaxation 只有用户明确给出新 tolerance policy 才允许研究。
   - 如果 exact CUDA-core 路线继续被 gate 掐掉，可以转向 application-level multi-shot batching。
+
+## 2026-06-08 19:07:44 +08:00
+
+- 操作目标：
+  - 继续 Phase 4.18 后的最后一条 exact CUDA-core temporal 路线，对 source-aware K=2 wavefront / synchronization 做 current-best rebase gate。
+  - 判断 source/receiver 已兼容后，普通 CUDA 是否仍存在可实现的 no-duplicate wavefront temporal prototype。
+- 修改文件：
+  - 新增 `tools/source_aware_wavefront_sync_model.py`。
+  - 新增 `docs/day_20260608/source_aware_wavefront_sync_model.md`。
+  - 新增 `reports/day_20260608/source_aware_wavefront_sync_model.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - `git status --short`
+  - `Get-ChildItem -Path tools -Filter source_aware_wavefront_sync_model.py`
+  - `Get-Content -Encoding UTF8 tools\source_aware_wavefront_sync_model.py -TotalCount 80`
+  - `python -m py_compile tools\source_aware_wavefront_sync_model.py`
+  - `Test-Path reports\day_20260608\temporal_pipeline_model.json`
+  - `Test-Path reports\day_20260608\source_aware_temporal_model.json`
+  - `Test-Path reports\day_20260608\len16_vs_directfill_ncu_20260608_1600\summary.json`
+  - `Test-Path reports\day_20260608\formal_current_best_table_20260608_182525\summary.json`
+  - `python tools\source_aware_wavefront_sync_model.py --json-out reports\day_20260608\source_aware_wavefront_sync_model.json --md-out docs\day_20260608\source_aware_wavefront_sync_model.md`
+  - `python -c "import json; json.load(open('reports/day_20260608/source_aware_wavefront_sync_model.json', encoding='utf-8')); print('json ok')"`
+- 测试结果：
+  - 模型脚本 Python 编译通过。
+  - 生成 JSON 可被标准 `json.load` 读取。
+  - 本轮未修改 CUDA 源码，未运行远端构建或 benchmark。
+- 输出/哈希/误差摘要：
+  - current-best sampled main：`297.248us`。
+  - current-best `p_core`：`93.547us`，sampled-main share `31.47%`。
+  - formal current-best WP speedup vs zmem：`1.192835x`。
+  - ideal K=2 p_core pair reduction：`35.25%`。
+  - ideal K=2 sampled-main speedup on current best：`1.1248x`。
+  - 达到 `1.05x` sampled-main speedup 所需 p_core reduction：`15.13%`，即 ideal saving 的 `42.92%`。
+  - aggregate K=2 deep-core share：`73.22%`。
+  - source overlap shots：`0`。
+  - receiver overlap shots：`0`。
+  - p_core grid blocks：`70688`。
+  - conservative resident block capacity：`1360`。
+  - cooperative-grid over-capacity factor：`51.98x`。
+  - candidate gate：
+    - `safe_global_middle_two_kernel`：speedup ceiling `1.0000x`，拒绝。
+    - `cooperative_grid_full_core_k2`：ideal `1.1248x`，但 grid 超 resident capacity 约 `52x`，拒绝。
+    - `cta_local_diamond_k2`：需要 `11.29x` 到 `21.30x` baseline pair bytes，拒绝。
+    - `multi_kernel_global_wavefront`：speedup ceiling `1.0000x`，拒绝。
+    - `persistent_wavefront_without_global_barrier`：依赖普通 CUDA 不提供的跨 CTA shared/register ownership，拒绝。
+    - `ideal_no_dup_source_aware_wavefront`：有 meaningful ceiling，但不是 ordinary CUDA implementation。
+- 风险与下一步：
+  - 决策：拒绝 source-aware K=2 wavefront CUDA prototype。
+  - 禁止写 ordinary CUDA K=2 source-aware wavefront、multi-kernel global-middle wavefront、CTA-local diamond temporal、或依赖 cross-CTA shared/register values 的 persistent-kernel wavefront。
+  - 今日 exact CUDA-core 结构性路线基本收口；后续建议转向 application-level multi-shot batching / scheduling。
+  - precision relaxation 只有用户明确放宽 tolerance policy 后才允许研究。
+  - no-duplicate wavefront temporal blocking 只有在发现具体 hardware/runtime cross-CTA ownership primitive 后才允许重开。

@@ -701,6 +701,46 @@ Phase 4.18 PML `vx/vy` round-trip ownership gate 已完成并拒绝 CUDA prototy
   - precision-relaxation 只有用户明确给出新 tolerance policy 才允许研究。
   - 如果 exact CUDA-core 路线继续被 gate 掐掉，可以转向 application-level multi-shot batching。
 
+Phase 4.19 source-aware wavefront synchronization gate 已完成并拒绝 CUDA prototype：
+
+- 工具：`tools/source_aware_wavefront_sync_model.py`。
+- 报告：`docs/day_20260608/source_aware_wavefront_sync_model.md`。
+- JSON：`reports/day_20260608/source_aware_wavefront_sync_model.json`。
+- current-best rebase：
+  - sampled main：`297.248us`。
+  - `p_core`：`93.547us`，sampled-main share `31.47%`。
+  - formal current-best WP speedup vs zmem：`1.192835x`。
+  - ideal K=2 p_core pair reduction：`35.25%`。
+  - ideal K=2 sampled-main speedup on current best：`1.1248x`。
+  - 要达到 `1.05x` sampled-main speedup，需要 `15.13%` p_core reduction，相当于 ideal saving 的 `42.92%`。
+- source / receiver gate：
+  - aggregate K=2 deep-core share：`73.22%`。
+  - source overlap shots：`0`。
+  - receiver overlap shots：`0`。
+  - 结论：source / receiver placement 不阻止 K=2 temporal blocking。
+- synchronization / ownership gate：
+  - p_core grid blocks：`70688`。
+  - conservative resident block capacity：`1360`。
+  - cooperative-grid over-capacity factor：`51.98x`。
+- ordinary CUDA candidate 结果：
+  - `safe_global_middle_two_kernel`：safe，但保留 global `p(t+1)` materialization 和 reload，speedup ceiling `1.0000x`。
+  - `cooperative_grid_full_core_k2`：ideal ceiling `1.1248x`，但 grid 超 resident capacity 约 `52x`。
+  - `cta_local_diamond_k2`：ordinary CUDA 可写，但 halo duplication 后 concrete candidates 需要 `11.29x` 到 `21.30x` baseline pair bytes。
+  - `multi_kernel_global_wavefront`：safe，但仍 materialize global `p_mid`，且增加许多 small launches，speedup ceiling `1.0000x`。
+  - `persistent_wavefront_without_global_barrier`：需要普通 CUDA 不具备的跨 CTA register/shared ownership。
+  - `ideal_no_dup_source_aware_wavefront`：唯一 meaningful ceiling，但不是 ordinary CUDA implementation。
+- 决策：
+  - 拒绝 source-aware K=2 wavefront CUDA prototype。
+  - 不写 ordinary CUDA K=2 source-aware wavefront prototype。
+  - 不写 multi-kernel global-middle wavefront prototype。
+  - 不写 CTA-local diamond temporal prototype。
+  - 不写依赖 cross-CTA shared/register values 的 persistent-kernel wavefront。
+- 当前下一步：
+  - 在 exact CUDA-core 路线下，今日已知结构性方向基本被 gate 收口。
+  - 后续若继续提速，优先转向 application-level multi-shot batching / scheduling。
+  - precision relaxation 只有用户明确放宽 tolerance policy 后才允许研究。
+  - 未来只有在发现具体 hardware/runtime cross-CTA ownership primitive 后，才允许重开 no-duplicate wavefront temporal blocking。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

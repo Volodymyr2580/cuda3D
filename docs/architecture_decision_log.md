@@ -1702,3 +1702,102 @@ Report:
 docs/day_20260608/pml_vxvy_roundtrip_ownership_model.md
 reports/day_20260608/pml_vxvy_roundtrip_ownership_model.json
 ```
+
+## 2026-06-08 - Reject Source-Aware Wavefront Synchronization Prototype
+
+Decision:
+
+```text
+Reject source-aware K=2 wavefront temporal CUDA prototypes under the current
+exact CUDA-core contract.
+```
+
+Evidence:
+
+```text
+sampled main                                      297.248us
+p_core                                             93.547us
+p_core sampled-main share                          31.47%
+formal current-best WP speedup vs zmem              1.192835x
+
+ideal K=2 p_core pair reduction                    35.25%
+ideal K=2 sampled-main speedup on current best       1.1248x
+p_core reduction required for 1.05x sampled-main    15.13%
+fraction of ideal saving required                  42.92%
+
+aggregate K=2 deep-core share                      73.22%
+source overlap shots                                   0
+receiver overlap shots                                 0
+
+p_core grid blocks                                 70688
+conservative resident block capacity                1360
+cooperative-grid over-capacity factor               51.98x
+```
+
+Candidate outcomes:
+
+```text
+safe_global_middle_two_kernel:
+  ordinary CUDA and safe, but materializes p(t+1) globally and reloads its
+  stencil for the second step; speedup ceiling 1.0000x
+
+cooperative_grid_full_core_k2:
+  ideal speedup ceiling 1.1248x, but the full p_core grid exceeds conservative
+  resident capacity by about 52x
+
+cta_local_diamond_k2:
+  ordinary CUDA, but concrete candidates require 11.29x to 21.30x baseline pair
+  bytes after p_mid halo duplication
+
+multi_kernel_global_wavefront:
+  safe, but still materializes global p_mid between layers and adds many small
+  wavefront launches; speedup ceiling 1.0000x
+
+persistent_wavefront_without_global_barrier:
+  requires cross-CTA shared/register ownership that ordinary CUDA does not
+  provide
+
+ideal_no_dup_source_aware_wavefront:
+  meaningful ceiling, but no ordinary CUDA implementation without a concrete
+  cross-CTA ownership primitive
+```
+
+Reason:
+
+```text
+Source and receiver placement are compatible with K=2 deep-core temporal
+blocking for the current case.  The blocker is not physics-side injection or
+extraction; it is synchronization and p_mid ownership.
+
+Every ordinary CUDA schedule either keeps the global p_mid traffic, duplicates
+p_mid halos by an order of magnitude, or requires a grid-wide / cross-CTA
+ownership primitive that the current launch shape cannot use.
+```
+
+Boundary:
+
+```text
+Do not implement ordinary CUDA K=2 source-aware wavefront prototypes.
+Do not implement multi-kernel global-middle wavefront prototypes.
+Do not implement CTA-local diamond temporal prototypes.
+Do not implement persistent-kernel wavefronts that rely on cross-CTA
+shared/register values.
+```
+
+Next:
+
+```text
+Exact CUDA-core structural routes tested today are now mostly gated off.  Future
+speedup work should either move to application-level multi-shot batching /
+scheduling, or reopen precision relaxation only after the user explicitly
+changes the tolerance policy.  No-duplication wavefront temporal blocking may
+reopen only if a concrete hardware/runtime cross-CTA ownership primitive is
+identified first.
+```
+
+Report:
+
+```text
+docs/day_20260608/source_aware_wavefront_sync_model.md
+reports/day_20260608/source_aware_wavefront_sync_model.json
+```
