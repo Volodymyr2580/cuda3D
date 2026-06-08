@@ -3217,3 +3217,96 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - direct-fill 是当前 best combo candidate。
   - 仍只验证 single GPU / single MPI rank。
   - 下一步需要 profile direct-fill combo，确认 p_pml issue/latency 是否改善，以及新的 dominant bottleneck。
+
+## 2026-06-08 12:09:00 +08:00 - Direct-fill combo NCU profile
+
+- 操作目标：
+  - 对已提交的 direct-fill combo 版本重新运行 Nsight Compute short profile。
+  - 确认 direct-fill 相对 zmem 的 kernel-level 收益，并定位下一步瓶颈。
+- 修改文件：
+  - 新增远端测试 worktree：`/work/wenzhe/cuda3D_codex_day_20260608_68de1a7`，固定到 commit `68de1a7`。
+  - 新增远端临时 profile 脚本：`reports/day_20260608/directfill_combo_ncu_20260608_120449/run_profile.sh`。
+  - 拉回本地报告：
+    - `reports/day_20260608/directfill_combo_ncu_20260608_120449_summary.md`
+    - `reports/day_20260608/directfill_combo_ncu_20260608_120449_summary.json`
+    - `reports/day_20260608/directfill_combo_ncu_20260608_120449_zmem_bin.sha256`
+    - `reports/day_20260608/directfill_combo_ncu_20260608_120449_directfill_bin.sha256`
+  - 更新 `docs/day_20260608/pressure_pml_zrecomp_cache_prototype.md`。
+  - 更新 `AGENTS.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - `git fetch origin exp/day-20260608-cpml-compact-temporal`
+  - `git worktree add --detach /work/wenzhe/cuda3D_codex_day_20260608_68de1a7 68de1a7`
+  - 为 perf case 建立只读 velocity symlink，并创建 `d_obs` 输出目录。
+  - 编译 zmem flags 并运行 NCU：
+    - `--section SpeedOfLight`
+    - `--section MemoryWorkloadAnalysis`
+    - `--section SchedulerStats`
+    - `--section WarpStateStats`
+    - `--section Occupancy`
+    - `--launch-skip 10`
+    - `--launch-count 30`
+    - kernel filter：`regex:.*cuda_fd3d_(p_core|v_pml_tile|p_pml_tile).*`
+  - 编译 direct-fill combo flags 并运行同口径 NCU。
+  - 使用 `tools/ncu_csv_summary.py` 生成 markdown/json summary。
+- 测试结果：
+  - zmem NCU run 通过，WP computing time：`2.436104s`。
+  - direct-fill NCU run 通过，WP computing time：`2.222122s`。
+  - 同轮 NCU WP speedup 约 `1.0963x`。
+  - summary 生成成功。
+- 输出/哈希/误差摘要：
+  - `cuda_fd3d_p_core_ns` duration：zmem `75.942us`，direct-fill `75.270us`，speedup `1.009x`。
+  - `cuda_fd3d_p_pml_tile_ns` duration：zmem `158.438us`，direct-fill `134.099us`，speedup `1.181x`。
+  - `cuda_fd3d_v_pml_tile_ns` duration：zmem `58.794us`，direct-fill `53.590us`，speedup `1.097x`。
+  - direct-fill `p_pml_tile`：
+    - No Eligible：`59.885%`。
+    - eligible warps/scheduler：`0.820`。
+    - achieved occupancy：`74.662%`。
+- 风险与下一步：
+  - direct-fill 的主要收益确认来自 `p_pml_tile`，`p_core` 仍基本不动。
+  - direct-fill 后 `p_pml_tile` 仍有明显 issue/latency 问题。
+  - 下一步允许实现并测试 `CUDA3D_PML_PRESSURE_ZCACHE_WARP_RANGE`：每条 32-thread z-line 只计算一次 active z range，通过 warp broadcast 供 central/halo z-cache fill 复用。
+  - 不得改变 `mem_dz_next` ownership，不得重开 shared `vx/vy` cache。
+
+## 2026-06-08 12:20:00 +08:00 - Reject z-cache warp-range candidate
+
+- 操作目标：
+  - 测试 `CUDA3D_PML_PRESSURE_ZCACHE_WARP_RANGE` 是否能降低 direct-fill z-cache 的 active-range branch/control overhead。
+  - 候选设计：每条 32-thread z-line 由 `threadIdx.x == 0` 计算 active z range，再用 `__shfl_sync` 广播给 central/halo z-cache fill。
+- 修改文件：
+  - 临时修改 `src/single_solver.cu` 实现 warp-range 候选。
+  - 测试后已将 `src/single_solver.cu` 恢复到 commit `68de1a7` 的 direct-fill best 形态；本地和远端均无 warp-range 源码残留。
+  - 拉回报告：
+    - `reports/day_20260608/zcache_warp_range_correctness_comparison.md`
+    - `reports/day_20260608/zcache_warp_range_perf6_repeat_summary.md`
+    - `reports/day_20260608/zcache_warp_range_perf6_repeat_summary.json`
+  - 更新 `docs/day_20260608/pressure_pml_zrecomp_cache_prototype.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 更新 `AGENTS.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 上传临时 `src/single_solver.cu` 到 `/work/wenzhe/cuda3D_codex_day_20260608_68de1a7`。
+  - 编译 flags：
+    - zmem reference flags
+    - `CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL`
+    - `CUDA3D_CPML_VMEM_DISABLE_MPI`
+    - `CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE`
+    - `CUDA3D_PML_PRESSURE_ZCACHE_WARP_RANGE`
+  - 运行 `correctness`，并用 `tools/compare_outputs.py` 对比 zmem baseline outputs。
+  - 运行 `perf_1gpu_6shots` direct-fill vs warp-range 3 轮 A/B，每轮输出对比。
+  - 用 `apply_patch` 恢复本地源码到 direct-fill best，并重新上传到远端 worktree。
+- 测试结果：
+  - 编译通过。
+  - correctness 通过，6 个输出 rel L2 全部 `0`。
+  - `perf_1gpu_6shots` repeat 3 轮输出对比全部通过。
+  - mean WP speedup vs direct-fill：`0.997223x`。
+  - mean Gradient speedup vs direct-fill：`0.997502x`。
+- 输出/哈希/误差摘要：
+  - round 1：direct WP `2.196203s`，warp WP `2.207274s`，speedup `0.994984x`；Gradient `0.997417x`。
+  - round 2：direct WP `2.182848s`，warp WP `2.187369s`，speedup `0.997933x`；Gradient `0.997221x`。
+  - round 3：direct WP `2.180586s`，warp WP `2.183309s`，speedup `0.998753x`；Gradient `0.997869x`。
+- 风险与下一步：
+  - 决策：拒绝 `CUDA3D_PML_PRESSURE_ZCACHE_WARP_RANGE`，不进入主线。
+  - 原因：shuffle/control overhead 未抵消减少 active-range 重复计算的收益，未达到 `>=2%` small-candidate gate。
+  - 当前 best 仍是 direct-fill z-cache combo：mean WP speedup `1.100929x`，mean Gradient speedup `1.097530x`。
+  - 下一步需要离开这个微控制逻辑点，转向更大粒度的 pressure PML 数据流或 source-level profiling。

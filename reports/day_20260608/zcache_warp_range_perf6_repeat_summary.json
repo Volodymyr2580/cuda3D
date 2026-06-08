@@ -1,0 +1,58 @@
+{
+  "rows": [
+    {
+      "round": 1,
+      "direct_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_zcache_warp_range_directfill_r1_20260608_121845",
+      "warp_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_zcache_warp_range_candidate_r1_20260608_121857",
+      "compare_dir": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/reports/day_20260608/zcache_warp_range_perf6_repeat_20260608_121839/compare_r1",
+      "direct": {
+        "wp": 2.196203,
+        "gradient": 2.30898
+      },
+      "warp": {
+        "wp": 2.207274,
+        "gradient": 2.314959
+      },
+      "wp_speedup_vs_direct": 0.9949843109645654,
+      "gradient_speedup_vs_direct": 0.9974172328753986,
+      "compare_pass": true
+    },
+    {
+      "round": 2,
+      "direct_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_zcache_warp_range_directfill_r2_20260608_121910",
+      "warp_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_zcache_warp_range_candidate_r2_20260608_121921",
+      "compare_dir": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/reports/day_20260608/zcache_warp_range_perf6_repeat_20260608_121839/compare_r2",
+      "direct": {
+        "wp": 2.182848,
+        "gradient": 2.298789
+      },
+      "warp": {
+        "wp": 2.187369,
+        "gradient": 2.305196
+      },
+      "wp_speedup_vs_direct": 0.9979331333670725,
+      "gradient_speedup_vs_direct": 0.9972206267926893,
+      "compare_pass": true
+    },
+    {
+      "round": 3,
+      "direct_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_zcache_warp_range_directfill_r3_20260608_121934",
+      "warp_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_zcache_warp_range_candidate_r3_20260608_121946",
+      "compare_dir": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/reports/day_20260608/zcache_warp_range_perf6_repeat_20260608_121839/compare_r3",
+      "direct": {
+        "wp": 2.180586,
+        "gradient": 2.298663
+      },
+      "warp": {
+        "wp": 2.183309,
+        "gradient": 2.303571
+      },
+      "wp_speedup_vs_direct": 0.9987528105275066,
+      "gradient_speedup_vs_direct": 0.9978693949524456,
+      "compare_pass": true
+    }
+  ],
+  "mean_wp_speedup_vs_direct": 0.9972234182863815,
+  "mean_gradient_speedup_vs_direct": 0.9975024182068445,
+  "all_compare_pass": true
+}

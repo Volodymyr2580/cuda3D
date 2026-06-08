@@ -161,3 +161,76 @@ warps/scheduler (0.798) and high No Eligible (60.879%), so the next
 pressure-PML work should target issue/latency overhead rather than raw
 DRAM bandwidth.
 ```
+
+## Direct-Fill NCU Follow-Up
+
+Short Nsight Compute profile of the accepted direct-fill implementation:
+
+```text
+profile                       reports/day_20260608/directfill_combo_ncu_20260608_120449_summary.md
+sections                      SpeedOfLight, MemoryWorkloadAnalysis,
+                              SchedulerStats, WarpStateStats, Occupancy
+launch skip/count             10 / 30
+kernel filter                 cuda_fd3d_(p_core|v_pml_tile|p_pml_tile)
+```
+
+Kernel duration summary:
+
+| kernel | zmem | direct-fill combo | speedup |
+| --- | ---: | ---: | ---: |
+| `cuda_fd3d_p_core_ns` | 75.942 us | 75.270 us | 1.009x |
+| `cuda_fd3d_p_pml_tile_ns` | 158.438 us | 134.099 us | 1.181x |
+| `cuda_fd3d_v_pml_tile_ns` | 58.794 us | 53.590 us | 1.097x |
+
+Profile read:
+
+```text
+direct-fill improves p_pml_tile beyond the first linear-loop combo
+(134.099 us vs 142.902 us in the previous short profile).  p_core remains
+unchanged and should not be the next local target.  direct-fill p_pml_tile
+still has high No Eligible (59.885%) and low eligible warps/scheduler
+(0.820), so the remaining opportunity is control/latency in the pressure
+PML z-cache path rather than shared vx/vy caching.
+
+Next allowed micro-structure candidate:
+  CUDA3D_PML_PRESSURE_ZCACHE_WARP_RANGE
+
+Candidate intent:
+  compute the active z range once per 32-thread z-line with warp broadcast,
+  then reuse it for central and halo z-cache fills.  This targets repeated
+  active-range branch/control work inside fill_pml_pressure_vz_cache_entry
+  without changing memory_dz_next ownership or pressure math.
+```
+
+## Rejected Warp-Range Candidate
+
+Tested:
+
+```text
+CUDA3D_PML_PRESSURE_ZCACHE_WARP_RANGE
+```
+
+Result:
+
+```text
+correctness                    pass, rel L2 = 0 for 6 outputs
+perf6 repeat compares          pass
+mean WP speedup vs direct-fill 0.997223x
+mean Gradient speedup          0.997502x
+```
+
+Perf repeat table:
+
+| round | direct WP | warp WP | WP speedup | direct Gradient | warp Gradient | Gradient speedup |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 2.196203 | 2.207274 | 0.994984 | 2.308980 | 2.314959 | 0.997417 |
+| 2 | 2.182848 | 2.187369 | 0.997933 | 2.298789 | 2.305196 | 0.997221 |
+| 3 | 2.180586 | 2.183309 | 0.998753 | 2.298663 | 2.303571 | 0.997869 |
+
+Decision:
+
+```text
+Do not keep or retry warp-broadcast active-range caching.  It is
+correctness-safe, but the shuffle/control overhead is not repaid.  The
+accepted source was restored to direct-fill z-cache after this test.
+```

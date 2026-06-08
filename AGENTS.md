@@ -271,6 +271,29 @@ Phase 4.6 direct-fill z-cache 已完成：
   - `CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE`
 - 当前 best implementation 是 direct-fill z-cache，不是 linear-loop z-cache。
 
+Phase 4.7 direct-fill NCU profile 已完成：
+
+- 报告：
+  - `reports/day_20260608/directfill_combo_ncu_20260608_120449_summary.md`
+  - `reports/day_20260608/directfill_combo_ncu_20260608_120449_summary.json`
+- short-profile kernel duration：
+  - `cuda_fd3d_p_core_ns`：zmem `75.942us`，direct-fill `75.270us`，基本不变。
+  - `cuda_fd3d_p_pml_tile_ns`：zmem `158.438us`，direct-fill `134.099us`，kernel speedup `1.181x`。
+  - `cuda_fd3d_v_pml_tile_ns`：zmem `58.794us`，direct-fill `53.590us`，kernel speedup `1.097x`。
+- direct-fill `p_pml_tile` 剩余特征：
+  - No Eligible：`59.885%`。
+  - eligible warps/scheduler：`0.820`。
+  - achieved occupancy：`74.662%`。
+- 结论：
+  - direct-fill 后 `p_pml_tile` 继续显著优于 zmem 和 linear-loop combo。
+  - `p_core` 仍不应作为下一步小修目标。
+  - `CUDA3D_PML_PRESSURE_ZCACHE_WARP_RANGE` 已测试并拒绝：
+    - correctness pass，6 个输出 rel L2 全部 `0`。
+    - `perf_1gpu_6shots` repeat mean WP speedup vs direct-fill：`0.997223x`。
+    - mean Gradient speedup vs direct-fill：`0.997502x`。
+  - 禁止继续重复 warp-broadcast active-range caching；shuffle/control overhead 没有换来收益。
+  - 当前源码已恢复到 direct-fill z-cache best，不保留 warp-range 候选代码。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

@@ -1,0 +1,394 @@
+{
+  "profiles": [
+    {
+      "label": "zmem",
+      "path": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/profiles/day_20260608/zmem_vs_directfill68_zmem_ncu.csv",
+      "kernels": {
+        "cuda_fd3d_p_core_ns": {
+          "launches": 10,
+          "metrics": {
+            "achieved_active_warps_per_sm": 31.85,
+            "achieved_occupancy_pct": 66.356,
+            "active_warps_per_scheduler": 7.945,
+            "avg_active_threads_per_warp": 29.22,
+            "avg_not_predicated_off_threads_per_warp": 28.95,
+            "block_limit_registers": 5.0,
+            "block_limit_shared_mem": 7.0,
+            "duration_ns": 75942.4,
+            "eligible_warps_per_scheduler": 1.1629999999999998,
+            "issued_warp_per_scheduler": 0.438,
+            "l1tex_hit_rate_pct": 35.955,
+            "l2_hit_rate_pct": 86.15599999999999,
+            "mem_busy_pct": 95.163,
+            "mem_pipes_busy_pct": 56.864,
+            "memory_throughput_bytes_per_s": 731365189053.18,
+            "no_eligible_pct": 56.330999999999996,
+            "one_or_more_eligible_pct": 43.669000000000004,
+            "sol_compute_throughput_pct": 56.864,
+            "sol_dram_throughput_pct": 40.868,
+            "sol_l1tex_throughput_pct": 59.303,
+            "sol_l2_throughput_pct": 95.163,
+            "sol_memory_throughput_pct": 95.163,
+            "theoretical_occupancy_pct": 83.33,
+            "warp_cycles_per_issued_instruction": 18.196
+          },
+          "rules": [
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "INF",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload is utilizing greater than 80.0% of the available compute or memory performance of the device. To further improve performance, work will likely need to be shifted from the most utilized to another unit. Start by analyzing L2 in the Memory Workload Analysis section."
+            },
+            {
+              "section": "SchedulerStats",
+              "rule": "IssueSlotUtilization",
+              "type": "OPT",
+              "estimated_speedup_type": "local",
+              "estimated_speedup": "4.701",
+              "description": "Every scheduler is capable of issuing one instruction per cycle, but for this workload each scheduler only issues an instruction every 2.3 cycles. This might leave hardware resources underutilized and may lead to less optimal performance. Out of the maximum of 12 warps per scheduler, this workload allocates an average of 7.95 active warps per scheduler, but only an average of 1.15 warps were eligible per cycle. Eligible warps are the subset of active warps that are ready to issue their next instruction. Every cycle with no eligible warp results in no instruction being issued and the issue slot remains unused. To increase the number of eligible warps, reduce the time the active warps are stalled by inspecting the top stall reasons on the Warp State Statistics and Source Counters sections."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "WRN",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "The optional metric smsp__pcsamp_sample_count could not be found. Collecting it as an additional metric could enable the rule to provide more guidance."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "OPT",
+              "estimated_speedup_type": "global",
+              "estimated_speedup": "4.701",
+              "description": "On average, each warp of this workload spends 8.7 cycles being stalled waiting for a scoreboard dependency on a L1TEX (local, global, surface, texture) operation. Find the instruction producing the data being waited upon to identify the culprit. To reduce the number of cycles waiting on L1TEX data accesses verify the memory access patterns are optimal for the target architecture, attempt to increase cache hit rates by increasing data locality (coalescing), or by changing the cache configuration. Consider moving frequently used data to shared memory. This stall type represents about 47.3% of the total average of 18.5 cycles between issuing two instructions."
+            }
+          ]
+        },
+        "cuda_fd3d_p_pml_tile_ns": {
+          "launches": 10,
+          "metrics": {
+            "achieved_active_warps_per_sm": 35.534,
+            "achieved_occupancy_pct": 74.031,
+            "active_warps_per_scheduler": 8.897,
+            "avg_active_threads_per_warp": 19.07,
+            "avg_not_predicated_off_threads_per_warp": 18.26,
+            "block_limit_registers": 5.0,
+            "block_limit_shared_mem": 16.0,
+            "duration_ns": 158438.4,
+            "eligible_warps_per_scheduler": 1.1589999999999998,
+            "issued_warp_per_scheduler": 0.53,
+            "l1tex_hit_rate_pct": 85.961,
+            "l2_hit_rate_pct": 56.924,
+            "mem_busy_pct": 34.191,
+            "mem_pipes_busy_pct": 55.555,
+            "memory_throughput_bytes_per_s": 705340757264.758,
+            "no_eligible_pct": 47.116,
+            "one_or_more_eligible_pct": 52.884,
+            "sol_compute_throughput_pct": 55.555,
+            "sol_dram_throughput_pct": 39.406,
+            "sol_l1tex_throughput_pct": 57.701,
+            "sol_l2_throughput_pct": 34.191,
+            "sol_memory_throughput_pct": 55.555,
+            "theoretical_occupancy_pct": 83.33,
+            "warp_cycles_per_issued_instruction": 16.823
+          },
+          "rules": [
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload exhibits low compute throughput and memory bandwidth utilization relative to the peak performance of this device. Achieved compute throughput and/or memory bandwidth below 60.0% of peak typically indicate latency issues. Look at Scheduler Statistics and Warp State Statistics for potential reasons."
+            },
+            {
+              "section": "SchedulerStats",
+              "rule": "IssueSlotUtilization",
+              "type": "OPT",
+              "estimated_speedup_type": "local",
+              "estimated_speedup": "44.91",
+              "description": "Every scheduler is capable of issuing one instruction per cycle, but for this workload each scheduler only issues an instruction every 1.9 cycles. This might leave hardware resources underutilized and may lead to less optimal performance. Out of the maximum of 12 warps per scheduler, this workload allocates an average of 8.88 active warps per scheduler, but only an average of 1.15 warps were eligible per cycle. Eligible warps are the subset of active warps that are ready to issue their next instruction. Every cycle with no eligible warp results in no instruction being issued and the issue slot remains unused. To increase the number of eligible warps, avoid possible load imbalances due to highly different execution durations per warp. Reducing stalls indicated on the Warp State Statistics and Source Counters sections can help, too."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "WRN",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "The optional metric smsp__pcsamp_sample_count could not be found. Collecting it as an additional metric could enable the rule to provide more guidance."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "OPT",
+              "estimated_speedup_type": "global",
+              "estimated_speedup": "44.91",
+              "description": "On average, each warp of this workload spends 8.6 cycles being stalled waiting for a scoreboard dependency on a L1TEX (local, global, surface, texture) operation. Find the instruction producing the data being waited upon to identify the culprit. To reduce the number of cycles waiting on L1TEX data accesses verify the memory access patterns are optimal for the target architecture, attempt to increase cache hit rates by increasing data locality (coalescing), or by changing the cache configuration. Consider moving frequently used data to shared memory. This stall type represents about 50.7% of the total average of 17.0 cycles between issuing two instructions."
+            }
+          ]
+        },
+        "cuda_fd3d_v_pml_tile_ns": {
+          "launches": 10,
+          "metrics": {
+            "achieved_active_warps_per_sm": 40.281,
+            "achieved_occupancy_pct": 83.919,
+            "active_warps_per_scheduler": 10.077,
+            "avg_active_threads_per_warp": 23.69,
+            "avg_not_predicated_off_threads_per_warp": 21.81,
+            "block_limit_registers": 6.0,
+            "block_limit_shared_mem": 16.0,
+            "duration_ns": 58793.6,
+            "eligible_warps_per_scheduler": 1.296,
+            "issued_warp_per_scheduler": 0.491,
+            "l1tex_hit_rate_pct": 56.677,
+            "l2_hit_rate_pct": 68.336,
+            "mem_busy_pct": 52.313,
+            "mem_pipes_busy_pct": 44.43,
+            "memory_throughput_bytes_per_s": 759046359985.399,
+            "no_eligible_pct": 50.956,
+            "one_or_more_eligible_pct": 49.044,
+            "sol_compute_throughput_pct": 45.379,
+            "sol_dram_throughput_pct": 42.425,
+            "sol_l1tex_throughput_pct": 47.852000000000004,
+            "sol_l2_throughput_pct": 57.285,
+            "sol_memory_throughput_pct": 57.285,
+            "theoretical_occupancy_pct": 100.0,
+            "warp_cycles_per_issued_instruction": 20.548000000000002
+          },
+          "rules": [
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload exhibits low compute throughput and memory bandwidth utilization relative to the peak performance of this device. Achieved compute throughput and/or memory bandwidth below 60.0% of peak typically indicate latency issues. Look at Scheduler Statistics and Warp State Statistics for potential reasons."
+            },
+            {
+              "section": "SchedulerStats",
+              "rule": "IssueSlotUtilization",
+              "type": "OPT",
+              "estimated_speedup_type": "local",
+              "estimated_speedup": "42.33",
+              "description": "Every scheduler is capable of issuing one instruction per cycle, but for this workload each scheduler only issues an instruction every 2.0 cycles. This might leave hardware resources underutilized and may lead to less optimal performance. Out of the maximum of 12 warps per scheduler, this workload allocates an average of 10.05 active warps per scheduler, but only an average of 1.31 warps were eligible per cycle. Eligible warps are the subset of active warps that are ready to issue their next instruction. Every cycle with no eligible warp results in no instruction being issued and the issue slot remains unused. To increase the number of eligible warps, avoid possible load imbalances due to highly different execution durations per warp. Reducing stalls indicated on the Warp State Statistics and Source Counters sections can help, too."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "WRN",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "The optional metric smsp__pcsamp_sample_count could not be found. Collecting it as an additional metric could enable the rule to provide more guidance."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "OPT",
+              "estimated_speedup_type": "global",
+              "estimated_speedup": "42.33",
+              "description": "On average, each warp of this workload spends 14.3 cycles being stalled waiting for a scoreboard dependency on a L1TEX (local, global, surface, texture) operation. Find the instruction producing the data being waited upon to identify the culprit. To reduce the number of cycles waiting on L1TEX data accesses verify the memory access patterns are optimal for the target architecture, attempt to increase cache hit rates by increasing data locality (coalescing), or by changing the cache configuration. Consider moving frequently used data to shared memory. This stall type represents about 71.2% of the total average of 20.1 cycles between issuing two instructions."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "label": "directfill",
+      "path": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/profiles/day_20260608/zmem_vs_directfill68_directfill_ncu.csv",
+      "kernels": {
+        "cuda_fd3d_p_core_ns": {
+          "launches": 10,
+          "metrics": {
+            "achieved_active_warps_per_sm": 31.853,
+            "achieved_occupancy_pct": 66.361,
+            "active_warps_per_scheduler": 7.946,
+            "avg_active_threads_per_warp": 29.22,
+            "avg_not_predicated_off_threads_per_warp": 28.95,
+            "block_limit_registers": 5.0,
+            "block_limit_shared_mem": 7.0,
+            "duration_ns": 75270.4,
+            "eligible_warps_per_scheduler": 1.164,
+            "issued_warp_per_scheduler": 0.438,
+            "l1tex_hit_rate_pct": 35.942,
+            "l2_hit_rate_pct": 86.23100000000001,
+            "mem_busy_pct": 95.892,
+            "mem_pipes_busy_pct": 57.384,
+            "memory_throughput_bytes_per_s": 735294207563.141,
+            "no_eligible_pct": 56.315,
+            "one_or_more_eligible_pct": 43.685,
+            "sol_compute_throughput_pct": 57.384,
+            "sol_dram_throughput_pct": 41.092,
+            "sol_l1tex_throughput_pct": 59.425,
+            "sol_l2_throughput_pct": 95.892,
+            "sol_memory_throughput_pct": 95.892,
+            "theoretical_occupancy_pct": 83.33,
+            "warp_cycles_per_issued_instruction": 18.194
+          },
+          "rules": [
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "INF",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload is utilizing greater than 80.0% of the available compute or memory performance of the device. To further improve performance, work will likely need to be shifted from the most utilized to another unit. Start by analyzing L2 in the Memory Workload Analysis section."
+            },
+            {
+              "section": "SchedulerStats",
+              "rule": "IssueSlotUtilization",
+              "type": "OPT",
+              "estimated_speedup_type": "local",
+              "estimated_speedup": "4.177",
+              "description": "Every scheduler is capable of issuing one instruction per cycle, but for this workload each scheduler only issues an instruction every 2.3 cycles. This might leave hardware resources underutilized and may lead to less optimal performance. Out of the maximum of 12 warps per scheduler, this workload allocates an average of 7.95 active warps per scheduler, but only an average of 1.16 warps were eligible per cycle. Eligible warps are the subset of active warps that are ready to issue their next instruction. Every cycle with no eligible warp results in no instruction being issued and the issue slot remains unused. To increase the number of eligible warps, reduce the time the active warps are stalled by inspecting the top stall reasons on the Warp State Statistics and Source Counters sections."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "WRN",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "The optional metric smsp__pcsamp_sample_count could not be found. Collecting it as an additional metric could enable the rule to provide more guidance."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "OPT",
+              "estimated_speedup_type": "global",
+              "estimated_speedup": "4.177",
+              "description": "On average, each warp of this workload spends 8.8 cycles being stalled waiting for a scoreboard dependency on a L1TEX (local, global, surface, texture) operation. Find the instruction producing the data being waited upon to identify the culprit. To reduce the number of cycles waiting on L1TEX data accesses verify the memory access patterns are optimal for the target architecture, attempt to increase cache hit rates by increasing data locality (coalescing), or by changing the cache configuration. Consider moving frequently used data to shared memory. This stall type represents about 48.5% of the total average of 18.1 cycles between issuing two instructions."
+            }
+          ]
+        },
+        "cuda_fd3d_p_pml_tile_ns": {
+          "launches": 10,
+          "metrics": {
+            "achieved_active_warps_per_sm": 35.838,
+            "achieved_occupancy_pct": 74.662,
+            "active_warps_per_scheduler": 8.961,
+            "avg_active_threads_per_warp": 19.84,
+            "avg_not_predicated_off_threads_per_warp": 18.69,
+            "block_limit_registers": 5.0,
+            "block_limit_shared_mem": 7.0,
+            "duration_ns": 134099.2,
+            "eligible_warps_per_scheduler": 0.82,
+            "issued_warp_per_scheduler": 0.401,
+            "l1tex_hit_rate_pct": 63.588,
+            "l2_hit_rate_pct": 56.504,
+            "mem_busy_pct": 38.151,
+            "mem_pipes_busy_pct": 36.155,
+            "memory_throughput_bytes_per_s": 831983867311.962,
+            "no_eligible_pct": 59.885,
+            "one_or_more_eligible_pct": 40.115,
+            "sol_compute_throughput_pct": 38.083,
+            "sol_dram_throughput_pct": 46.485,
+            "sol_l1tex_throughput_pct": 37.967,
+            "sol_l2_throughput_pct": 38.151,
+            "sol_memory_throughput_pct": 46.485,
+            "theoretical_occupancy_pct": 83.33,
+            "warp_cycles_per_issued_instruction": 22.342
+          },
+          "rules": [
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This workload exhibits low compute throughput and memory bandwidth utilization relative to the peak performance of this device. Achieved compute throughput and/or memory bandwidth below 60.0% of peak typically indicate latency issues. Look at Scheduler Statistics and Warp State Statistics for potential reasons."
+            },
+            {
+              "section": "SchedulerStats",
+              "rule": "IssueSlotUtilization",
+              "type": "OPT",
+              "estimated_speedup_type": "local",
+              "estimated_speedup": "53.62",
+              "description": "Every scheduler is capable of issuing one instruction per cycle, but for this workload each scheduler only issues an instruction every 2.4 cycles. This might leave hardware resources underutilized and may lead to less optimal performance. Out of the maximum of 12 warps per scheduler, this workload allocates an average of 8.98 active warps per scheduler, but only an average of 0.84 warps were eligible per cycle. Eligible warps are the subset of active warps that are ready to issue their next instruction. Every cycle with no eligible warp results in no instruction being issued and the issue slot remains unused. To increase the number of eligible warps, avoid possible load imbalances due to highly different execution durations per warp. Reducing stalls indicated on the Warp State Statistics and Source Counters sections can help, too."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "WRN",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "The optional metric smsp__pcsamp_sample_count could not be found. Collecting it as an additional metric could enable the rule to provide more guidance."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "OPT",
+              "estimated_speedup_type": "global",
+              "estimated_speedup": "53.62",
+              "description": "On average, each warp of this workload spends 14.1 cycles being stalled waiting for a scoreboard dependency on a L1TEX (local, global, surface, texture) operation. Find the instruction producing the data being waited upon to identify the culprit. To reduce the number of cycles waiting on L1TEX data accesses verify the memory access patterns are optimal for the target architecture, attempt to increase cache hit rates by increasing data locality (coalescing), or by changing the cache configuration. Consider moving frequently used data to shared memory. This stall type represents about 64.4% of the total average of 21.9 cycles between issuing two instructions."
+            }
+          ]
+        },
+        "cuda_fd3d_v_pml_tile_ns": {
+          "launches": 10,
+          "metrics": {
+            "achieved_active_warps_per_sm": 40.609,
+            "achieved_occupancy_pct": 84.602,
+            "active_warps_per_scheduler": 10.169,
+            "avg_active_threads_per_warp": 23.7,
+            "avg_not_predicated_off_threads_per_warp": 21.67,
+            "block_limit_registers": 6.0,
+            "block_limit_shared_mem": 16.0,
+            "duration_ns": 53590.4,
+            "eligible_warps_per_scheduler": 1.63,
+            "issued_warp_per_scheduler": 0.549,
+            "l1tex_hit_rate_pct": 55.005,
+            "l2_hit_rate_pct": 66.174,
+            "mem_busy_pct": 57.449,
+            "mem_pipes_busy_pct": 49.077,
+            "memory_throughput_bytes_per_s": 841283077340.151,
+            "no_eligible_pct": 45.02,
+            "one_or_more_eligible_pct": 54.98,
+            "sol_compute_throughput_pct": 50.688,
+            "sol_dram_throughput_pct": 47.024,
+            "sol_l1tex_throughput_pct": 53.128,
+            "sol_l2_throughput_pct": 62.744,
+            "sol_memory_throughput_pct": 62.744,
+            "theoretical_occupancy_pct": 100.0,
+            "warp_cycles_per_issued_instruction": 18.495
+          },
+          "rules": [
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "Memory is more heavily utilized than Compute: Look at the Memory Workload Analysis section to identify the L2 bottleneck. Check memory replay (coalescing) metrics to make sure you're efficiently utilizing the bytes transferred. Also consider whether it is possible to do more work per memory access (kernel fusion) or whether there are values you can (re)compute."
+            },
+            {
+              "section": "SchedulerStats",
+              "rule": "IssueSlotUtilization",
+              "type": "OPT",
+              "estimated_speedup_type": "local",
+              "estimated_speedup": "36.75",
+              "description": "Every scheduler is capable of issuing one instruction per cycle, but for this workload each scheduler only issues an instruction every 1.8 cycles. This might leave hardware resources underutilized and may lead to less optimal performance. Out of the maximum of 12 warps per scheduler, this workload allocates an average of 10.16 active warps per scheduler, but only an average of 1.62 warps were eligible per cycle. Eligible warps are the subset of active warps that are ready to issue their next instruction. Every cycle with no eligible warp results in no instruction being issued and the issue slot remains unused. To increase the number of eligible warps, avoid possible load imbalances due to highly different execution durations per warp. Reducing stalls indicated on the Warp State Statistics and Source Counters sections can help, too."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "WRN",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "The optional metric smsp__pcsamp_sample_count could not be found. Collecting it as an additional metric could enable the rule to provide more guidance."
+            },
+            {
+              "section": "WarpStateStats",
+              "rule": "CPIStall",
+              "type": "OPT",
+              "estimated_speedup_type": "global",
+              "estimated_speedup": "36.75",
+              "description": "On average, each warp of this workload spends 11.6 cycles being stalled waiting for a scoreboard dependency on a L1TEX (local, global, surface, texture) operation. Find the instruction producing the data being waited upon to identify the culprit. To reduce the number of cycles waiting on L1TEX data accesses verify the memory access patterns are optimal for the target architecture, attempt to increase cache hit rates by increasing data locality (coalescing), or by changing the cache configuration. Consider moving frequently used data to shared memory. This stall type represents about 62.5% of the total average of 18.5 cycles between issuing two instructions."
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

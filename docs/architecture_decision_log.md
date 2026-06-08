@@ -597,3 +597,38 @@ Rejected boundary:
 Do not use shared vx/vy pressure-neighbor cache.  It remained removed after
 direct-fill testing.
 ```
+
+## 2026-06-08 - Reject Warp-Range Pressure Z-Cache
+
+Decision:
+
+```text
+Reject CUDA3D_PML_PRESSURE_ZCACHE_WARP_RANGE and restore source to the
+accepted direct-fill pressure z-cache implementation.
+```
+
+Evidence:
+
+```text
+correctness rel L2                         0 for 6 outputs
+perf6 output compares                      pass
+mean WP speedup vs direct-fill             0.997223x
+mean Gradient speedup vs direct-fill       0.997502x
+```
+
+Reason:
+
+```text
+The candidate computed active z range once per 32-thread z-line and used
+warp shuffle broadcast.  The reduced repeated branch work did not offset
+shuffle/control overhead.  It is correctness-safe but performance-neutral
+to slightly slower, so it fails the >=2% small-candidate gate.
+```
+
+Rejected boundary:
+
+```text
+Do not retry warp-broadcast active-range caching for pressure z-cache
+without new profiler evidence.  Keep the direct-fill z-cache implementation
+as current best.
+```
