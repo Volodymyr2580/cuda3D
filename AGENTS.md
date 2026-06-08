@@ -52,6 +52,7 @@ NVFLAGS="-O3 -arch=sm_120 --use_fast_math \
 - PML tile block shape sweep
 - `p_core` simple block shape sweep
 - `-maxrregcount` / register cap sweep
+- inject/extract small-kernel block-size reduction (`CUDA3D_INJECT_EXTRACT_BS512`)
 
 Profiler gate：
 
@@ -333,7 +334,14 @@ Phase 4.8 direct-fill SourceCounters profile 已完成：
   - `perf_1gpu_6shots` repeat mean WP speedup vs direct-fill：`0.999319x`。
   - mean Gradient speedup vs direct-fill：`0.999254x`。
   - 结论：对 `cuda_fd3d_p_core_ns` 的 `p1/cw2` 显式使用 `__ldg` 不能改善 p_core memory path。
-- 下一步不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load、z-safe shared `p1` direct second derivative、ptxas `dlcm` cache-policy sweep 或 p_core 显式 `__ldg`，应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构。
+- `CUDA3D_INJECT_EXTRACT_BS512` 已测试并拒绝：
+  - NCU 显示 `lint3d_inject_bell_extract_gpu_zz` 平均 duration 约 `5.109us`，SOL compute `0.040%`，SOL memory `6.699%`。
+  - Nsight Compute 规则提示 grid 太小，只有 `0.0` full waves，属于小 kernel / launch 调度问题。
+  - correctness pass，6 个输出 rel L2 全部 `0`。
+  - `perf_1gpu_6shots` repeat mean WP speedup vs direct-fill：`0.999684x`。
+  - mean Gradient speedup vs direct-fill：`0.998963x`。
+  - 结论：把 inject/extract block size 从 `1024` 改到 `512` 不能解决 launch/small-grid 开销，不满足 `>=2%` gate。
+- 下一步不要继续抠 z-cache fill、`new_mem` 表达式、final `p0` read-only load、z-safe shared `p1` direct second derivative、ptxas `dlcm` cache-policy sweep、p_core 显式 `__ldg` 或 inject/extract block-size 微调，应转向更大粒度的 pressure-PML divergence / CPML memory traffic 结构，或单独设计 CUDA Graph / wave-step scheduling 级优化。
 
 ## 速度阈值存档规则
 

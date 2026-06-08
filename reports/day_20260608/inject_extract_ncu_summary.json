@@ -1,0 +1,55 @@
+{
+  "profiles": [
+    {
+      "label": "inject_extract",
+      "path": "reports/day_20260608/inject_extract_ncu_20260608_133859/inject_extract_ncu.csv",
+      "kernels": {
+        "lint3d_inject_bell_extract_gpu_zz": {
+          "launches": 30,
+          "metrics": {
+            "duration_ns": 5109.333333333333,
+            "sol_compute_throughput_pct": 0.04,
+            "sol_dram_throughput_pct": 1.4143333333333332,
+            "sol_l1tex_throughput_pct": 41.26833333333333,
+            "sol_l2_throughput_pct": 1.1196666666666666,
+            "sol_memory_throughput_pct": 6.699333333333334
+          },
+          "rules": [
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This kernel grid is too small to fill the available resources on this device, resulting in only 0.0 full waves across all SMs. Look at Launch Statistics for more details."
+            },
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This kernel grid is too small to fill the available resources on this device, resulting in only 0.0 full waves across all SMs. Look at Launch Statistics for more details."
+            },
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This kernel grid is too small to fill the available resources on this device, resulting in only 0.0 full waves across all SMs. Look at Launch Statistics for more details."
+            },
+            {
+              "section": "SpeedOfLight",
+              "rule": "SOLBottleneck",
+              "type": "OPT",
+              "estimated_speedup_type": "",
+              "estimated_speedup": "",
+              "description": "This kernel grid is too small to fill the available resources on this device, resulting in only 0.0 full waves across all SMs. Look at Launch Statistics for more details."
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -3519,3 +3519,49 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 决策：拒绝 `CUDA3D_P_CORE_READONLY_LDG`。
   - p_core 的 read-only load syntax 不是有效优化点。
   - 后续 p_core work 需要数据复用、temporal ownership 或更大结构变化，而不是 load 包装。
+
+## 2026-06-08 13:49:00 +08:00 - Reject inject/extract BS512 small-kernel candidate
+
+- 操作目标：
+  - 根据 NCU 提示 `lint3d_inject_bell_extract_gpu_zz` grid 太小、kernel duration 约 `5.109us`，测试 inject/extract helper 的 block size 从 `1024` 改为 `512` 是否能降低小 kernel 调度开销。
+  - 候选宏：`CUDA3D_INJECT_EXTRACT_BS512`。
+- 修改文件：
+  - 临时修改 `src/rem_fd.cu`：用宏把 `BS=1024` 切换为 `BS=512`。
+  - 测试后已恢复本地与远端 `src/rem_fd.cu` 到 direct-fill best；本地 `git diff -- src/rem_fd.cu` 为空。
+  - 远端 `/work/wenzhe/cuda3D_codex_day_20260608_68de1a7` 已重新编译 direct-fill best binary。
+  - 新增报告：
+    - `reports/day_20260608/inject_extract_ncu_summary.md`
+    - `reports/day_20260608/inject_extract_ncu_summary.json`
+    - `reports/day_20260608/inject_extract_bs512_correctness_comparison.md`
+    - `reports/day_20260608/inject_extract_bs512_correctness_comparison.json`
+    - `reports/day_20260608/inject_extract_bs512_perf6_repeat_summary.md`
+    - `reports/day_20260608/inject_extract_bs512_perf6_repeat_summary.json`
+    - `docs/day_20260608/inject_extract_launch_overhead.md`
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 更新 `docs/day_20260608/pressure_pml_zrecomp_cache_prototype.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 对 `perf_1gpu_6shots` 运行 Nsight Compute，采样 `lint3d_inject_bell_extract_gpu_zz`。
+  - 上传临时 `src/rem_fd.cu` 到 `/work/wenzhe/cuda3D_codex_day_20260608_68de1a7`。
+  - 编译 direct-fill flags + `CUDA3D_INJECT_EXTRACT_BS512`。
+  - 运行 correctness，对比 zmem correctness baseline outputs。
+  - 运行 `perf_1gpu_6shots` direct-fill vs candidate 3 轮 A/B，每轮输出对比。
+  - 恢复本地和远端源码到 direct-fill best，并在远端重编译 direct-fill best。
+- 测试结果：
+  - NCU 成功生成 inject/extract profile。
+  - 编译通过。
+  - correctness 通过，6 个输出 rel L2 全部 `0`。
+  - `perf_1gpu_6shots` repeat 3 轮输出对比全部通过。
+  - mean WP speedup vs direct-fill：`0.999684x`。
+  - mean Gradient speedup vs direct-fill：`0.998963x`。
+- 输出/哈希/误差摘要：
+  - NCU：duration `5.109us`，SOL compute `0.040%`，SOL memory `6.699%`，SOL DRAM `1.414%`。
+  - Nsight Compute rule：grid 太小，只有 `0.0` full waves。
+  - round 1：direct WP `2.210482s`，candidate WP `2.207253s`，WP speedup `1.001463x`；Gradient speedup `0.998848x`。
+  - round 2：direct WP `2.188303s`，candidate WP `2.191148s`，WP speedup `0.998702x`；Gradient speedup `0.998355x`。
+  - round 3：direct WP `2.189624s`，candidate WP `2.192060s`，WP speedup `0.998889x`；Gradient speedup `0.999687x`。
+- 风险与下一步：
+  - 决策：拒绝 `CUDA3D_INJECT_EXTRACT_BS512`。
+  - inject/extract 小 kernel 确实存在 launch/small-grid 信号，但 block-size-only 调整没有收益。
+  - 后续若重开此方向，必须改成 CUDA Graph、launch aggregation 或 wave-step scheduling 设计，并以 `perf_1gpu_6shots repeat` 证明至少 `>=2%` speedup。

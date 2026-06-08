@@ -451,3 +451,56 @@ Decision:
 Reject p_core explicit __ldg.  It is numerically safe, but it does not move
 the p_core memory path in a measurable positive direction.
 ```
+
+## Rejected Inject/Extract BS512 Candidate
+
+Profiled:
+
+```text
+lint3d_inject_bell_extract_gpu_zz
+```
+
+NCU result:
+
+```text
+mean duration       5.109us
+SOL compute         0.040%
+SOL memory          6.699%
+rule                grid too small, 0.0 full waves
+```
+
+Tested:
+
+```text
+CUDA3D_INJECT_EXTRACT_BS512
+```
+
+The candidate changed the inject/extract helper block size from `1024` to
+`512`.  It was intended as a low-risk probe of launch/small-grid overhead
+after NCU showed that the kernel is extremely small.
+
+Result:
+
+```text
+correctness                    pass, rel L2 = 0 for 6 outputs
+perf6 repeat compares          pass
+mean WP speedup vs direct-fill 0.999684x
+mean Gradient speedup          0.998963x
+```
+
+Perf repeat table:
+
+| round | direct WP | candidate WP | WP speedup | direct Gradient | candidate Gradient | Gradient speedup |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 2.210482 | 2.207253 | 1.001463 | 2.317219 | 2.319892 | 0.998848 |
+| 2 | 2.188303 | 2.191148 | 0.998702 | 2.305490 | 2.309288 | 0.998355 |
+| 3 | 2.189624 | 2.192060 | 0.998889 | 2.308208 | 2.308930 | 0.999687 |
+
+Decision:
+
+```text
+Reject inject/extract BS512 and restore source/binary to direct-fill best.
+The small kernel is real, but block-size-only tuning is measurement-neutral
+to slightly slower.  Any future work here needs CUDA Graph or wave-step
+scheduling aggregation, not another launch-geometry micro change.
+```

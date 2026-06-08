@@ -822,3 +822,42 @@ Do not retry explicit __ldg wrapping for p_core p1/cw2 loads.  Future p_core
 work needs a real data-reuse or temporal-ownership change, not only load
 syntax changes.
 ```
+
+## 2026-06-08 - Reject Inject/Extract BS512 Small-Kernel Candidate
+
+Decision:
+
+```text
+Reject CUDA3D_INJECT_EXTRACT_BS512, which changes the
+lint3d_inject_bell_extract_gpu_zz block size from 1024 to 512.
+```
+
+Evidence:
+
+```text
+NCU inject/extract duration                about 5.109us
+NCU SOL compute                            0.040%
+NCU SOL memory                             6.699%
+NCU rule                                   grid too small, 0.0 full waves
+correctness rel L2                         0 for 6 outputs
+perf6 output compares                      pass
+mean WP speedup vs direct-fill             0.999684x
+mean Gradient speedup vs direct-fill       0.998963x
+```
+
+Reason:
+
+```text
+The inject/extract kernel is visibly small and launch/scheduling dominated,
+but changing only its CUDA block size does not improve end-to-end repeat
+performance.  This is not a math-kernel throughput problem in the current
+form; it would require a broader CUDA Graph or wave-step scheduling design.
+```
+
+Rejected boundary:
+
+```text
+Do not retry inject/extract block-size-only changes.  Future scheduling work
+must be framed as CUDA Graph / launch aggregation / wave-step orchestration
+and must show a >=2% repeat gain before entering the main line.
+```

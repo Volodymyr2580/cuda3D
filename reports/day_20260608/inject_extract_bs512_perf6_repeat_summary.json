@@ -1,0 +1,58 @@
+{
+  "rows": [
+    {
+      "round": 1,
+      "direct_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_inject_bs512_directfill_r1_20260608_134233",
+      "candidate_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_inject_bs512_candidate_r1_20260608_134245",
+      "compare_dir": "reports/day_20260608/inject_extract_bs512_perf6_repeat_20260608_134227/compare_r1",
+      "direct": {
+        "wp": 2.210482,
+        "gradient": 2.317219
+      },
+      "candidate": {
+        "wp": 2.207253,
+        "gradient": 2.319892
+      },
+      "wp_speedup_vs_direct": 1.0014629043430905,
+      "gradient_speedup_vs_direct": 0.9988477911902797,
+      "compare_pass": true
+    },
+    {
+      "round": 2,
+      "direct_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_inject_bs512_directfill_r2_20260608_134257",
+      "candidate_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_inject_bs512_candidate_r2_20260608_134309",
+      "compare_dir": "reports/day_20260608/inject_extract_bs512_perf6_repeat_20260608_134227/compare_r2",
+      "direct": {
+        "wp": 2.188303,
+        "gradient": 2.30549
+      },
+      "candidate": {
+        "wp": 2.191148,
+        "gradient": 2.309288
+      },
+      "wp_speedup_vs_direct": 0.9987015938676893,
+      "gradient_speedup_vs_direct": 0.9983553372294837,
+      "compare_pass": true
+    },
+    {
+      "round": 3,
+      "direct_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_inject_bs512_directfill_r3_20260608_134322",
+      "candidate_run": "/work/wenzhe/cuda3D_codex_day_20260608_68de1a7/benchmarks/runs/perf_1gpu_6shots_inject_bs512_candidate_r3_20260608_134334",
+      "compare_dir": "reports/day_20260608/inject_extract_bs512_perf6_repeat_20260608_134227/compare_r3",
+      "direct": {
+        "wp": 2.189624,
+        "gradient": 2.308208
+      },
+      "candidate": {
+        "wp": 2.19206,
+        "gradient": 2.30893
+      },
+      "wp_speedup_vs_direct": 0.9988887165497293,
+      "gradient_speedup_vs_direct": 0.9996873010442066,
+      "compare_pass": true
+    }
+  ],
+  "mean_wp_speedup_vs_direct": 0.9996844049201697,
+  "mean_gradient_speedup_vs_direct": 0.9989634764879899,
+  "all_compare_pass": true
+}
