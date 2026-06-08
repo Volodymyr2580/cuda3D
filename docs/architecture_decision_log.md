@@ -2683,3 +2683,63 @@ Report:
 docs/day_20260608/post_vlen16_pressure_next_gate.md
 reports/day_20260608/post_vlen16_pressure_next_gate.json
 ```
+
+## 2026-06-09 - Accept Current Best V-PML Len16 Formal Table
+
+Decision:
+
+```text
+Accept current_best_v_pml_len16 as the formal RTX 5090 single-GPU current-best
+after a same-session zmem/directfill/pressure-len16/current-best table.
+```
+
+Evidence:
+
+```text
+report:
+  reports/day_20260608/formal_vpmlen16_table_20260608_2359/summary.md
+  reports/day_20260608/formal_vpmlen16_table_20260608_2359/summary.json
+
+remote worktree:
+  /work/wenzhe/cuda3D/.codex_worktrees/formal_vpmlen16_table_20260608_2359
+
+commit:
+  33553596ab66a9090e39c04be2928d4029a99db5
+
+case:
+  perf_1gpu_6shots, 3 rounds, zmem rebuilt and rerun in every round
+
+same-session mean speedup vs zmem:
+  directfill                    WP 1.101172x  Gradient 1.100029x  elapsed 1.081287x
+  pressure_len16                WP 1.194495x  Gradient 1.179869x  elapsed 1.098568x
+  current_best_v_pml_len16      WP 1.222023x  Gradient 1.206588x  elapsed 1.118261x
+
+correctness:
+  all compare pass
+  directfill max rel L2                    0
+  pressure_len16 max rel L2                6.384336e-07
+  current_best_v_pml_len16 max rel L2      6.384336e-07
+```
+
+Reason:
+
+```text
+The formal table confirms that the v-PML len16 minor candidate adds a real,
+repeat-stable increment on top of pressure len16.  The official same-session
+current-best speedup is 1.222023x WP and 1.206588x Gradient versus zmem.
+```
+
+Boundary:
+
+```text
+This is a current-best candidate, not a 1.5x threshold archive.  Do not claim a
+1.5x milestone from this table.
+
+Do not continue v-PML micro packing after this acceptance.  The next CUDA-core
+phase must be design-level pressure/wave-step ownership work with a >=5%
+modeled repeat-speedup ceiling, or a written handoff/report for external
+review.
+
+For future isolated worktrees, create a case-local d_obs/ directory for
+perf_1gpu_6shots.  Do not symlink d_obs from the root checkout.
+```

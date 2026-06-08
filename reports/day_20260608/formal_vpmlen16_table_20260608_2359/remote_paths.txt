@@ -1,0 +1,3 @@
+WORKTREE=/work/wenzhe/cuda3D/.codex_worktrees/formal_vpmlen16_table_20260608_2359
+REPORT=/work/wenzhe/cuda3D/.codex_worktrees/formal_vpmlen16_table_20260608_2359/reports/day_20260608/formal_vpmlen16_table_20260608_2359
+HEAD=33553596ab66a9090e39c04be2928d4029a99db5

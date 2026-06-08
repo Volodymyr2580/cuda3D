@@ -5144,3 +5144,64 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 禁止继续重复 `p0 __ldg`、local `new_mem`、ptxas cache-policy、z-cache fill、shared-z-cache、pressure length-23/exact descriptor、v-PML descriptor expansion、direct z-face VP fusion/shared-VP retry，以及 rejected p-core shared-plane/block/register sweep。
   - 下一步优先同 session 正式重跑 `zmem`、direct-fill、pressure-len16、current-best，给出当前 RTX 5090 平台正式总提速表。
   - 然后只允许开启 design-level pressure/wave-step ownership model，并且必须先证明扣除 extra storage/control cost 后仍有 `>=5%` repeat-speedup ceiling。
+
+## 2026-06-09 00:02:19 +08:00
+
+- 操作目标：
+  - 按 Phase 4.30 gate，正式同 session 重跑 `zmem`、`directfill`、`pressure_len16`、`current_best_v_pml_len16`。
+  - 给出当前 RTX 5090 single-GPU 的正式 current-best 总提速表。
+- 修改文件：
+  - 新增 `reports/day_20260608/formal_vpmlen16_table_20260608_2359/summary.md`。
+  - 新增 `reports/day_20260608/formal_vpmlen16_table_20260608_2359/summary.json`。
+  - 新增 `reports/day_20260608/formal_vpmlen16_table_20260608_2359/records.jsonl`。
+  - 新增 `reports/day_20260608/formal_vpmlen16_table_20260608_2359/remote_paths.txt`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 远端探测：
+    - `git status --short` 显示根目录仍有旧实验脏状态，因此继续使用 isolated worktree。
+    - `nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu --format=csv,noheader` 显示 RTX 5090 空闲：`481 MiB`，`0%`。
+  - 第一次尝试：
+    - `git worktree add --detach /work/wenzhe/cuda3D/.codex_worktrees/formal_vpmlen16_table_20260608_2352 FETCH_HEAD`
+    - 构建 `zmem` 成功。
+    - `perf_1gpu_6shots` 运行在第 1 炮后 segfault，returncode `255`，outputs `0`。
+    - 检查发现 worktree case 下没有 case-local `d_obs/` 目录。
+  - 正式 rerun：
+    - `git worktree add --detach /work/wenzhe/cuda3D/.codex_worktrees/formal_vpmlen16_table_20260608_2359 FETCH_HEAD`
+    - 创建 `benchmarks/cases/perf_1gpu_6shots/d_obs/`。
+    - 只对缺失的大输入文件建立指向根目录 case 的 symlink；不 symlink `d_obs`。
+    - 每个配置每轮运行前执行 `make -B -f makefile.rtx5090 test NVFLAGS="<flags>"`。
+    - 运行 4 个配置 x 3 rounds 的 `python3 tools/run_benchmark.py --case perf_1gpu_6shots --np 1 --gpus 0 --timeout 2400`。
+    - 每轮候选输出用 `tools/compare_outputs.py` 对同轮 `zmem` 输出比较。
+    - 使用 `tools/remote_get.py` 拉回 summary/records/remote_paths。
+- 测试结果：
+  - 正式 rerun 全部 build 通过。
+  - 12 个 perf run 全部 `ALL DONE`，每次输出 `6` 个 `.dir`。
+  - 9 个 candidate-vs-zmem 输出比较全部通过。
+- 输出/哈希/误差摘要：
+  - remote worktree：`/work/wenzhe/cuda3D/.codex_worktrees/formal_vpmlen16_table_20260608_2359`。
+  - commit：`33553596ab66a9090e39c04be2928d4029a99db5`。
+  - mean speedup vs zmem：
+    - `directfill`：WP `1.101172x`，Gradient `1.100029x`，elapsed `1.081287x`，max rel L2 `0`。
+    - `pressure_len16`：WP `1.194495x`，Gradient `1.179869x`，elapsed `1.098568x`，max rel L2 `6.384336e-07`。
+    - `current_best_v_pml_len16`：WP `1.222023x`，Gradient `1.206588x`，elapsed `1.118261x`，max rel L2 `6.384336e-07`。
+  - current best flags：
+    - `-O3 -arch=sm_120 --use_fast_math`
+    - `-DCUDA3D_PML_RECOMPUTE_Z`
+    - `-DCUDA3D_PML_TILE_LIST`
+    - `-DCUDA3D_PML_ZMEM_IN_P`
+    - `-DPmlTileBlockSize1=32`
+    - `-DPmlTileBlockSize2=4`
+    - `-DPmlTileBlockSize3=2`
+    - `-DCUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL`
+    - `-DCUDA3D_CPML_VMEM_DISABLE_MPI`
+    - `-DCUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE`
+    - `-DCUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK`
+    - `-DCUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK`
+- 风险与下一步：
+  - 决策：接受 `current_best_v_pml_len16` 为当前 RTX 5090 single-GPU formal current-best。
+  - 该版本未达到 `1.5x` 阈值存档线，不做 speedup archive。
+  - 后续不继续 v-PML micro packing。
+  - 下一步应转入 design-level pressure/wave-step ownership model，或先整理给 Pro/后续 agent 的正式反馈报告。
+  - 环境经验：isolated worktree 运行 `perf_1gpu_6shots` 前必须创建 case-local `d_obs/`；缺失时可能在写输出阶段 segfault。

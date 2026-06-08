@@ -1103,6 +1103,31 @@ Phase 4.30 post-vlen16 pressure next-route gate 已完成：
   - direct z-face VP fusion/shared-VP retry，除非有 materially new ownership proof。
   - rejected p-core block/register/shared-plane family sweep。
 
+Phase 4.31 formal same-session speed table 已完成：
+
+- 报告目录：`reports/day_20260608/formal_vpmlen16_table_20260608_2359/`。
+- remote worktree：`/work/wenzhe/cuda3D/.codex_worktrees/formal_vpmlen16_table_20260608_2359`。
+- commit：`33553596ab66a9090e39c04be2928d4029a99db5`。
+- case：`perf_1gpu_6shots`。
+- rounds：`3`。
+- baseline：每轮都重新构建并运行 `zmem`。
+- 测试配置：
+  - `zmem`。
+  - `directfill`。
+  - `pressure_len16`。
+  - `current_best_v_pml_len16` = `pressure_len16` + `CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK`。
+- 正式同 session mean speedup vs zmem：
+  - `directfill`：WP `1.101172x`，Gradient `1.100029x`，elapsed `1.081287x`，max rel L2 `0`。
+  - `pressure_len16`：WP `1.194495x`，Gradient `1.179869x`，elapsed `1.098568x`，max rel L2 `6.384336e-07`。
+  - `current_best_v_pml_len16`：WP `1.222023x`，Gradient `1.206588x`，elapsed `1.118261x`，max rel L2 `6.384336e-07`。
+- 决策：
+  - `current_best_v_pml_len16` 是当前 RTX 5090 single-GPU 正式 current-best。
+  - 该版本通过 correctness/perf repeat gate，但没有达到 `1.5x` 阈值存档线。
+  - 下一步不继续做 v-PML micro packing；转入 design-level pressure/wave-step ownership model，或先给 Pro/后续 agent 输出正式汇报。
+- 环境经验：
+  - isolated worktree 的 `perf_1gpu_6shots` case 必须有 case-local `d_obs/` 目录；缺失时程序可在第 1 炮后写输出阶段 segfault。
+  - 不要把根目录 `d_obs` symlink 进 worktree；只创建本 worktree 自己的 `d_obs/` 目录。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：
