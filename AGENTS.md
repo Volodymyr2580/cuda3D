@@ -141,6 +141,28 @@ Phase 4 已开启 global temporal pipeline 设计门：
 - 普通 CUDA kernel 没有 grid-wide barrier，不能写会跨 CTA 读取半更新 `p(t+1)` 的 fused two-step kernel。
 - 下一步必须先做 K=2 deep-core byte/synchronization model；未证明依赖锥安全前，不写 temporal CUDA kernel。
 
+Phase 4.1 K=2 temporal byte/synchronization model 已完成：
+
+- 工具：`tools/temporal_pipeline_model.py`。
+- 报告：`docs/day_20260608/temporal_pipeline_model.md`。
+- gate：`docs/day_20260608/phase4_1_temporal_model_gate_decision.md`。
+- K=2 deep-core coverage：`77.78%`。
+- current p_core bytes/output estimate：`128.438`。
+- ideal K=2 local-reuse upper bound：
+  - p_core pair reduction：`35.25%`。
+  - sampled-main speedup upper bound：`1.103x`。
+- 但 direct K=2 CUDA prototype 已停止：
+  - safe global-middle design 保留 global `p(t+1)` stencil traffic，无法达到 meaningful speedup。
+  - cooperative grid-sync 需要 `70688` blocks 同时 resident，按保守 RTX 5090 假设超容量约 `51.98x`。
+  - no-duplication CTA-local p_mid reuse 是唯一有 `>5%` 上界的路线，但 concrete CTA-local candidates 计入 halo duplication 后，local pair bytes 约为 baseline 的 `11.29x` 到 `21.30x`。
+  - 因此当前 CTA-local p_mid 形态不仅属于已禁止的 CTA-local two-step 家族，在 byte model 上也失败；除非重做成 source-aware swept/wavefront ownership 设计。
+- 下一步只允许做 `Phase 4.2 source-aware swept/wavefront temporal design`，必须先解决：
+  - p_mid halo ownership。
+  - source injection between substeps。
+  - intermediate receiver extraction。
+  - shell/PML reconciliation。
+  - 不读取 half-updated values 的依赖锥证明。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

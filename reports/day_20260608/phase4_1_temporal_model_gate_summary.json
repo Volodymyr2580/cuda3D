@@ -1,0 +1,33 @@
+{
+  "date": "2026-06-08",
+  "phase": "phase4_1_temporal_model_gate",
+  "decision": "stop_direct_k2_temporal_cuda_prototype",
+  "case": "perf_1gpu_6shots",
+  "geometry": {
+    "pressure_core_zxy": [87, 376, 376],
+    "pressure_core_points": 12299712,
+    "k2_deep_core_zxy": [73, 362, 362],
+    "k2_deep_core_share": 0.77775902395113
+  },
+  "byte_model": {
+    "p1_global_floats_per_output": 29.109375,
+    "p0_cw2_store_floats_per_output": 3.0,
+    "bytes_per_output_current": 128.4375,
+    "bytes_per_core_step_mib": 1506.561767578125,
+    "bytes_per_two_core_steps_mib": 3013.12353515625,
+    "ideal_k2_saved_bytes_per_pair_mib": 1062.2649955749512,
+    "ideal_k2_p_core_pair_reduction": 0.3525462437033954,
+    "ideal_k2_sampled_main_speedup": 1.1026145216982433
+  },
+  "sync_gates": {
+    "safe_global_middle_speedup_estimate": 1.0,
+    "cooperative_grid_blocks": 70688,
+    "cooperative_resident_block_capacity_assumption": 1360,
+    "cooperative_over_capacity_factor": 51.976470588235294,
+    "cta_local_shared_candidates_fit": true,
+    "cta_local_pair_byte_ratio_range_vs_baseline": [11.286963959854015, 21.301003649635035],
+    "cta_local_status": "no_duplication_upper_bound_has_upside_but_concrete_cta_local_candidates_fail_halo_duplication"
+  },
+  "next_allowed_work": "phase4_2_source_aware_swept_wavefront_temporal_design",
+  "no_cuda_source_modified": true
+}

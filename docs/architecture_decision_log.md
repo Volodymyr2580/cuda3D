@@ -301,3 +301,66 @@ Keep CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL as ownership scaffold.
 Move to global-region temporal pipeline design/prototype with a >=5%
 meaningful-case gate.
 ```
+
+## 2026-06-08 - Stop Direct K=2 Temporal CUDA Prototype
+
+Decision:
+
+```text
+Do not implement a direct CUDA3D_WAVESTEP_ENGINE_V2_TEMPORAL_PIPELINE
+K=2 fused kernel from the current model.
+```
+
+Evidence:
+
+```text
+K=2 deep-core share of pressure core              77.78%
+current p_core bytes/output estimate             128.438
+ideal K=2 local-reuse p_core pair reduction       35.25%
+ideal K=2 sampled-main speedup upper bound        1.103x
+
+safe global-middle design speedup estimate        ~1.0x
+cooperative grid p_core blocks                    70688
+conservative resident block capacity              1360
+cooperative over-capacity factor                  51.98x
+CTA-local candidate pair-byte ratio vs baseline   11.29x - 21.30x
+```
+
+Reason:
+
+```text
+The byte model confirms there is real upside if p(t+1) stencil values can
+be reused locally for the second step.  However, the implementable safe
+versions do not capture that upside:
+
+1. Global p(t+1) middle state preserves correctness but keeps the second
+   step global stencil traffic.
+2. Simple cooperative grid-wide sync cannot cover the current p_core grid.
+3. CTA-local p_mid reuse is the only no-duplication route with >5%
+   upper-bound upside, but concrete local tiles fail after p_mid halo
+   duplication is included.  The modeled candidates require 11.29x to
+   21.30x baseline pair bytes per final output.
+4. CTA-local p_mid reuse is also the already forbidden CTA-local two-step
+   family unless it is redesigned as a source-aware swept/wavefront
+   ownership algorithm.
+
+Unresolved correctness hazards are source injection between substeps,
+intermediate receiver extraction, p_mid halo ownership, shell/PML
+reconciliation, and avoiding reads of half-updated values.
+```
+
+Stop rule:
+
+```text
+Do not write a direct K=2 temporal CUDA kernel until Phase 4.2 provides
+a source-aware swept/wavefront design with an ownership proof and a byte
+model predicting >=5% WP speedup after halo duplication.
+```
+
+Reports:
+
+```text
+docs/day_20260608/temporal_pipeline_model.md
+docs/day_20260608/phase4_1_temporal_model_gate_decision.md
+reports/day_20260608/phase4_1_temporal_model_gate_summary.json
+```

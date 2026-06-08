@@ -2931,3 +2931,43 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
 - 风险与下一步：
   - 普通 CUDA kernel 没有 grid-wide barrier；不能实现会跨 CTA 读取半更新 `p(t+1)` 的 fused two-step kernel。
   - 下一步应先写 K=2 deep-core temporal byte/synchronization model，再决定是否进入 `CUDA3D_WAVESTEP_ENGINE_V2_TEMPORAL_PIPELINE` prototype。
+
+## 2026-06-08 10:45:00 +08:00 - Day sprint Phase 4.1 temporal byte/sync model
+
+- 操作目标：
+  - 按 Pro 指示继续推进 Phase 4：先完成 K=2 deep-core temporal pipeline 的 byte/synchronization model。
+  - 判断是否可以进入直接 CUDA prototype。
+- 修改文件：
+  - 新增 `tools/temporal_pipeline_model.py`。
+  - 新增 `docs/day_20260608/temporal_pipeline_model.md`。
+  - 新增 `docs/day_20260608/phase4_1_temporal_model_gate_decision.md`。
+  - 新增 `reports/day_20260608/temporal_pipeline_model.json`。
+  - 新增 `reports/day_20260608/phase4_1_temporal_model_gate_summary.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地运行：`python -m py_compile tools/temporal_pipeline_model.py`。
+  - 本地运行：`python tools/temporal_pipeline_model.py --case benchmarks/cases/perf_1gpu_6shots --json-out reports/day_20260608/temporal_pipeline_model.json --md-out docs/day_20260608/temporal_pipeline_model.md`。
+  - 上传 `tools/temporal_pipeline_model.py` 到 `/work/wenzhe/cuda3D/tools/`。
+  - 远端运行同一模型，生成正式远端路径报告。
+  - 拉回远端 `docs/day_20260608/temporal_pipeline_model.md` 与 `reports/day_20260608/temporal_pipeline_model.json`。
+- 测试结果：
+  - 模型工具本地 `py_compile` 通过。
+  - 远端模型运行通过。
+  - Gate 结果：`stop_cuda_prototype`。
+- 输出/哈希/误差摘要：
+  - pressure core：`87 x 376 x 376`，`12299712` points。
+  - K=2 deep core：`73 x 362 x 362`，coverage `77.78%`。
+  - current p_core bytes/output estimate：`128.438`。
+  - current p_core bytes/core step estimate：`1506.562 MiB`。
+  - ideal K=2 saved bytes/pair：`1062.265 MiB`。
+  - ideal K=2 p_core pair reduction upper bound：`35.25%`。
+  - ideal K=2 sampled-main speedup upper bound：`1.103x`。
+  - cooperative grid blocks required：`70688`。
+  - conservative resident block capacity assumption：`1360`。
+  - cooperative over-capacity factor：`51.98x`。
+  - CTA-local candidate local pair bytes / baseline：`11.29x` 到 `21.30x`，计入 p_mid halo duplication 后全部失败。
+- 风险与下一步：
+  - 不写 direct K=2 fused CUDA kernel；safe global-middle 设计无 meaningful speedup，cooperative grid-sync 不可行，CTA-local p_mid reuse 计入 halo duplication 后字节模型失败，且仍属于禁止的 two-step 家族。
+  - 下一步只能进入 `Phase 4.2 source-aware swept/wavefront temporal design`，先解决 p_mid ownership、source injection、intermediate receiver extraction、shell/PML reconciliation 和 half-updated value 依赖证明。
