@@ -1,0 +1,79 @@
+{
+  "decision": "profile_before_host_setup_prototype",
+  "formal_current_best": {
+    "label": "len16_current_best",
+    "mean_elapsed_s": 2.97,
+    "mean_gradient_s": 2.155902333333333,
+    "mean_wp_s": 2.0317529999999997,
+    "elapsed_minus_gradient_s": 0.814097666666667,
+    "elapsed_minus_wp_s": 0.9382470000000005,
+    "elapsed_minus_gradient_share": 0.27410695847362526,
+    "elapsed_minus_wp_share": 0.31590808080808097,
+    "perfect_remove_elapsed_minus_gradient_speedup": 1.3776134262111752,
+    "perfect_remove_elapsed_minus_wp_speedup": 1.4617918615107253
+  },
+  "zmem": {
+    "mean_elapsed_s": 3.433333333333333,
+    "mean_gradient_s": 2.5422633333333335,
+    "mean_wp_s": 2.4235493333333333,
+    "elapsed_minus_gradient_s": 0.8910699999999996,
+    "elapsed_minus_wp_s": 1.0097839999999998,
+    "elapsed_minus_gradient_share": 0.25953495145631056,
+    "elapsed_minus_wp_share": 0.29411184466019413,
+    "perfect_remove_elapsed_minus_gradient_speedup": 1.3505026361024755,
+    "perfect_remove_elapsed_minus_wp_speedup": 1.4166550216706955
+  },
+  "current_speedups_vs_zmem": {
+    "elapsed": 1.1560044893378225,
+    "gradient": 1.179210808405514,
+    "wp": 1.192836596443236
+  },
+  "required_for_5pct_elapsed_speedup": {
+    "required_saved_s": 0.14142857142857146,
+    "required_fraction_of_elapsed_minus_gradient": 0.1737243296712205
+  },
+  "scenarios": [
+    {
+      "removable_fraction_of_elapsed_minus_gradient": 0.1,
+      "saved_s": 0.08140976666666672,
+      "candidate_elapsed_s": 2.8885902333333333,
+      "elapsed_speedup_vs_current_best": 1.0281832174488532,
+      "elapsed_speedup_vs_zmem": 1.1885844152326808
+    },
+    {
+      "removable_fraction_of_elapsed_minus_gradient": 0.25,
+      "saved_s": 0.20352441666666676,
+      "candidate_elapsed_s": 2.7664755833333334,
+      "elapsed_speedup_vs_current_best": 1.0735681232441747,
+      "elapsed_speedup_vs_zmem": 1.2410495700802466
+    },
+    {
+      "removable_fraction_of_elapsed_minus_gradient": 0.5,
+      "saved_s": 0.4070488333333335,
+      "candidate_elapsed_s": 2.5629511666666667,
+      "elapsed_speedup_vs_current_best": 1.1588203624896742,
+      "elapsed_speedup_vs_zmem": 1.3396015413741462
+    },
+    {
+      "removable_fraction_of_elapsed_minus_gradient": 1.0,
+      "saved_s": 0.814097666666667,
+      "candidate_elapsed_s": 2.155902333333333,
+      "elapsed_speedup_vs_current_best": 1.3776134262111752,
+      "elapsed_speedup_vs_zmem": 1.5925273052721776
+    }
+  ],
+  "measurement_boundary": {
+    "gradient_time_all": "Inside cal_fwi_grad_3d after early allocation/setup and before final MPI finalize.",
+    "elapsed": "Whole MPI program execution measured by /usr/bin/time in run_benchmark.py.",
+    "not_in_elapsed": "run_benchmark.py output copy occurs after the timed command and is not part of elapsed."
+  },
+  "gate": {
+    "no_blind_code_change": true,
+    "reopen_condition": "Use Nsight Systems / CPU sampling / targeted timers to show a single host/setup hotspot with >=5% elapsed-speedup ceiling.",
+    "forbidden_shortcuts": [
+      "Do not relabel timing by moving t3 earlier/later and call it a speedup.",
+      "Do not optimize output copy for this elapsed metric; it is outside /usr/bin/time.",
+      "Do not change input semantics or skip correctness/output generation."
+    ]
+  }
+}

@@ -801,6 +801,36 @@ Phase 4.21 true multi-GPU / multi-job batching protocol 已完成，当前平台
   - 3 轮 repeat，输出对比全部 pass。
   - 使用 elapsed 和 `Gradient TIME all` 报告 speedup；root-rank printed WP 仅作诊断。
 
+Phase 4.22 host / setup overhead gate 已完成：
+
+- 工具：`tools/host_setup_overhead_gate.py`。
+- 报告：`docs/day_20260608/host_setup_overhead_gate.md`。
+- JSON：`reports/day_20260608/host_setup_overhead_gate.json`。
+- current-best timing anchor：
+  - mean elapsed：`2.970s`。
+  - mean `Gradient TIME all`：`2.155902s`。
+  - mean WP：`2.031753s`。
+  - elapsed - Gradient：`0.814098s`，占 elapsed `27.41%`。
+  - elapsed - WP：`0.938247s`，占 elapsed `31.59%`。
+- current-best speedup vs zmem：
+  - elapsed：`1.1560x`。
+  - Gradient：`1.1792x`。
+  - WP：`1.1928x`。
+- 5% elapsed gate：
+  - 要让 current-best elapsed 再提升 `1.05x`，需要节省 `0.141429s`。
+  - 这相当于 `elapsed - Gradient` 的 `17.37%`。
+  - 若能移除 `25%` 的 `elapsed - Gradient`，理论 elapsed speedup vs current best 为 `1.0736x`。
+  - 若能移除 `50%`，理论 elapsed speedup vs current best 为 `1.1588x`。
+- 决策：
+  - 不盲目修改 host/setup 路径。
+  - host/setup 路线只有在 Nsight Systems、CPU sampling 或 targeted timers 证明某个具体热点有 `>=5%` elapsed-speedup ceiling 后才允许写 prototype。
+- 禁止：
+  - 不移动计时点后声称加速。
+  - 不跳过输出生成或 correctness 工作。
+  - 不优化 `run_benchmark.py` output copy 来解释该 elapsed 指标，因为 output copy 在 `/usr/bin/time` 之后。
+- 当前下一步：
+  - 做 current-best host/setup profiling 或 targeted timer，分解 `0.814s` 的来源。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：

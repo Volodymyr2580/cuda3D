@@ -4613,3 +4613,54 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 禁止把 `run_benchmark.py --gpus` 单独当成完整 true multi-GPU 配置；它只控制 `CUDA_VISIBLE_DEVICES`，还必须配套 input override。
   - 后续如果有 `>=2` GPU 平台，先生成 `input_perf_1gpu_6shots_gpusN.in`，最后一行改为 `N`，再用 `np=N` 和 `N` 张 visible GPUs 做 3 轮 repeat。
   - 多 GPU 调度验收必须用 elapsed 和 `Gradient TIME all`，root-rank printed WP 仅作诊断。
+
+## 2026-06-08 20:10:58 +08:00
+
+- 操作目标：
+  - 继续 current-best 后的可提升空间审计，检查 formal elapsed 与 `Gradient TIME all` 之间的 host/setup overhead 是否值得进入 prototype。
+  - 建立 host/setup route gate，明确何时可以优化，何时只能先 profile。
+- 修改文件：
+  - 新增 `tools/host_setup_overhead_gate.py`。
+  - 新增 `docs/day_20260608/host_setup_overhead_gate.md`。
+  - 新增 `reports/day_20260608/host_setup_overhead_gate.json`。
+  - 更新 `AGENTS.md`。
+  - 更新 `docs/architecture_decision_log.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - `git status --short --branch`
+  - `git log --oneline -5`
+  - `Get-Content -Encoding UTF8 reports\day_20260608\formal_current_best_table_20260608_182525\summary.json`
+  - `Get-Content -Encoding UTF8 reports\day_20260608\multirank_samegpu_sched_20260608_193042\summary.json`
+  - `python -m py_compile tools\host_setup_overhead_gate.py`
+  - `python tools\host_setup_overhead_gate.py --root . --json-out reports\day_20260608\host_setup_overhead_gate.json --md-out docs\day_20260608\host_setup_overhead_gate.md`
+  - `python -c "import json; d=json.load(open('reports/day_20260608/host_setup_overhead_gate.json', encoding='utf-8')); ..."`
+- 测试结果：
+  - 模型脚本 Python 编译通过。
+  - 生成 JSON 可被标准 `json.load` 读取。
+  - 本轮未修改 CUDA 源码，未运行远端 benchmark。
+- 输出/哈希/误差摘要：
+  - current best：`len16_current_best`。
+  - mean elapsed：`2.970s`。
+  - mean `Gradient TIME all`：`2.155902s`。
+  - mean WP：`2.031753s`。
+  - elapsed - Gradient：`0.814098s`，占 elapsed `27.41%`。
+  - elapsed - WP：`0.938247s`，占 elapsed `31.59%`。
+  - current-best speedup vs zmem：
+    - elapsed：`1.1560x`。
+    - Gradient：`1.1792x`。
+    - WP：`1.1928x`。
+  - 若要让 current-best elapsed 再提升 `1.05x`：
+    - 需要节省 `0.141429s`。
+    - 相当于 `elapsed - Gradient` 的 `17.37%`。
+  - scenario：
+    - 移除 `10%` elapsed-Gradient：speedup `1.0282x`。
+    - 移除 `25%` elapsed-Gradient：speedup `1.0736x`。
+    - 移除 `50%` elapsed-Gradient：speedup `1.1588x`。
+    - 移除 `100%` elapsed-Gradient：speedup `1.3776x`。
+- 风险与下一步：
+  - 决策：host/setup overhead 有潜力，但不允许盲改 prototype。
+  - 只有 Nsight Systems、CPU sampling 或 targeted timers 证明某个具体 host/setup hotspot 具备 `>=5%` elapsed-speedup ceiling 后，才允许写 host/setup optimization。
+  - 禁止移动计时点后声称加速。
+  - 禁止跳过输出生成或 correctness 工作。
+  - 禁止优化 `run_benchmark.py` output copy 来解释当前 elapsed metric，因为 output copy 在 `/usr/bin/time` 之后。
+  - 下一步建议做 current-best host/setup profile 或 targeted timers，分解 `0.814s` 来源。

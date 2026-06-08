@@ -1951,3 +1951,82 @@ Report:
 docs/day_20260608/true_multigpu_batching_protocol.md
 reports/day_20260608/true_multigpu_batching_protocol.json
 ```
+
+## 2026-06-08 - Gate Host / Setup Overhead Optimization
+
+Decision:
+
+```text
+Do not make blind host/setup optimization prototypes.  Profile or add targeted
+timers first.
+```
+
+Evidence:
+
+```text
+current best                      len16_current_best
+mean elapsed                      2.970s
+mean Gradient TIME all            2.155902s
+mean WP                           2.031753s
+
+elapsed - Gradient                0.814098s / 27.41%
+elapsed - WP                      0.938247s / 31.59%
+
+current-best speedup vs zmem:
+  elapsed                         1.1560x
+  Gradient                        1.1792x
+  WP                              1.1928x
+
+time required for 1.05x elapsed speedup vs current best:
+  saved time                      0.141429s
+  fraction of elapsed-Gradient    17.37%
+```
+
+Scenario model:
+
+```text
+remove 10% of elapsed-Gradient:
+  elapsed speedup vs current best 1.0282x
+
+remove 25% of elapsed-Gradient:
+  elapsed speedup vs current best 1.0736x
+
+remove 50% of elapsed-Gradient:
+  elapsed speedup vs current best 1.1588x
+
+remove 100% of elapsed-Gradient:
+  elapsed speedup vs current best 1.3776x
+```
+
+Reason:
+
+```text
+The elapsed-vs-Gradient gap is large enough to be worth profiling, but it is
+not yet localized.  It may include MPI process startup, input parsing, velocity
+model read, acquisition setup, broadcasts, allocations, CUDA context setup, and
+finalization.  Those require different fixes and some are outside the CUDA
+solver.
+```
+
+Boundary:
+
+```text
+Do not move timing markers and call it a speedup.
+Do not skip output generation or correctness work.
+Do not optimize run_benchmark.py output copying for this elapsed metric, because
+copy_outputs runs after the timed command.
+```
+
+Next:
+
+```text
+Reopen host/setup optimization only after Nsight Systems, CPU sampling, or
+targeted timers identify a concrete hotspot with >=5% elapsed-speedup ceiling.
+```
+
+Report:
+
+```text
+docs/day_20260608/host_setup_overhead_gate.md
+reports/day_20260608/host_setup_overhead_gate.json
+```
