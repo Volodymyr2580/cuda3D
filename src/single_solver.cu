@@ -1564,6 +1564,136 @@ __device__ __forceinline__ void pml_fused_zface_pressure_update(float *p0,
   p0[base]=2*__ldg(p1+base)-p0[base]
     +__ldg(cw2+base)*dt*(c1+c2+c3);
 }
+
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
+__device__ __forceinline__ int cuda3d_pml_z_state_index(
+  int gtid3, int gtid2, int gtid1, int n3, int n2, int n1, int npml,
+  size_t *pind) {
+  if (gtid1 < 0 || gtid1 >= n1 || gtid2 < 0 || gtid2 >= n2 ||
+      gtid3 < 0 || gtid3 >= n3)
+    return 0;
+  if (gtid1 < npml) {
+    *pind = (size_t)gtid3 * npml * n2 + (size_t)gtid2 * npml + gtid1;
+    return 1;
+  }
+  if (gtid1 >= n1 - npml) {
+    const size_t ic = (size_t)(gtid1 - n1 + npml);
+    *pind = (size_t)n3 * n2 * npml + (size_t)gtid3 * npml * n2 +
+	    (size_t)gtid2 * npml + ic;
+    return 1;
+  }
+  return 0;
+}
+
+__global__ void cuda3d_pml_len16_compact_state_gather_ns(
+				   const float *__restrict__ mem_dzz,
+				   const float *__restrict__ mem_dz,
+				   const float *__restrict__ mem_dz_next,
+				   float *__restrict__ compact_dzz16,
+				   float *__restrict__ compact_dz_old23,
+				   float *__restrict__ compact_dz_next23,
+				   const PmlTile *__restrict__ tiles,
+				   int ntile, int n3, int n2, int n1, int npml) {
+  const size_t total = (size_t)ntile * PmlTileBlockSize2 * PmlTileBlockSize3 * 23u;
+  for (size_t idx = (size_t)blockIdx.x * blockDim.x + threadIdx.x;
+       idx < total;
+       idx += (size_t)blockDim.x * gridDim.x) {
+    const int window_z = (int)(idx % 23u);
+    const size_t line = idx / 23u;
+    const int local_line = (int)(line % (PmlTileBlockSize2 * PmlTileBlockSize3));
+    const int tile_id = (int)(line / (PmlTileBlockSize2 * PmlTileBlockSize3));
+    const PmlTile tile = tiles[tile_id];
+    const int local_x = local_line & (PmlTileBlockSize2 - 1);
+    const int local_y = local_line >> 2;
+    const int gtid2 = tile.x0 + local_x;
+    const int gtid3 = tile.y0 + local_y;
+    const int core1_lo = npml + CorePmlMargin;
+    const int core1_hi = n1 - npml - CorePmlMargin;
+    const int active_z0 = (tile.z0 < core1_lo) ? tile.z0 : core1_hi;
+    const int gtid1 = active_z0 + window_z - 4;
+    size_t pind = 0;
+    const int valid = cuda3d_pml_z_state_index(gtid3, gtid2, gtid1,
+					       n3, n2, n1, npml, &pind);
+    compact_dz_old23[idx] = valid ? mem_dz[pind] : 0.0f;
+    compact_dz_next23[idx] = valid ? mem_dz_next[pind] : 0.0f;
+    if (window_z >= 4 && window_z < 20) {
+      const size_t z16 = line * 16u + (size_t)(window_z - 4);
+      compact_dzz16[z16] = valid ? mem_dzz[pind] : 0.0f;
+    }
+  }
+}
+
+__device__ __forceinline__ void cuda3d_atomic_max_float(float *addr, float value) {
+  int *addr_i = (int*)addr;
+  int old = *addr_i;
+  int assumed;
+  const int value_i = __float_as_int(value);
+  do {
+    assumed = old;
+    if (__int_as_float(assumed) >= value)
+      break;
+    old = atomicCAS(addr_i, assumed, value_i);
+  } while (assumed != old);
+}
+
+__global__ void cuda3d_pml_len16_compact_state_compare_ns(
+				   const float *__restrict__ mem_dzz,
+				   const float *__restrict__ mem_dz,
+				   const float *__restrict__ mem_dz_next,
+				   const float *__restrict__ compact_dzz16,
+				   const float *__restrict__ compact_dz_old23,
+				   const float *__restrict__ compact_dz_next23,
+				   const PmlTile *__restrict__ tiles,
+				   int ntile, int n3, int n2, int n1, int npml,
+				   float *__restrict__ err_sum,
+				   float *__restrict__ ref_sum,
+				   float *__restrict__ max_abs,
+				   int *__restrict__ bad_count) {
+  const size_t total = (size_t)ntile * PmlTileBlockSize2 * PmlTileBlockSize3 * 23u;
+  for (size_t idx = (size_t)blockIdx.x * blockDim.x + threadIdx.x;
+       idx < total;
+       idx += (size_t)blockDim.x * gridDim.x) {
+    const int window_z = (int)(idx % 23u);
+    const size_t line = idx / 23u;
+    const int local_line = (int)(line % (PmlTileBlockSize2 * PmlTileBlockSize3));
+    const int tile_id = (int)(line / (PmlTileBlockSize2 * PmlTileBlockSize3));
+    const PmlTile tile = tiles[tile_id];
+    const int local_x = local_line & (PmlTileBlockSize2 - 1);
+    const int local_y = local_line >> 2;
+    const int gtid2 = tile.x0 + local_x;
+    const int gtid3 = tile.y0 + local_y;
+    const int core1_lo = npml + CorePmlMargin;
+    const int core1_hi = n1 - npml - CorePmlMargin;
+    const int active_z0 = (tile.z0 < core1_lo) ? tile.z0 : core1_hi;
+    const int gtid1 = active_z0 + window_z - 4;
+    size_t pind = 0;
+    const int valid = cuda3d_pml_z_state_index(gtid3, gtid2, gtid1,
+					       n3, n2, n1, npml, &pind);
+    const float full_old = valid ? mem_dz[pind] : 0.0f;
+    const float full_next = valid ? mem_dz_next[pind] : 0.0f;
+    const float diff_old = compact_dz_old23[idx] - full_old;
+    const float diff_next = compact_dz_next23[idx] - full_next;
+    float local_err = diff_old * diff_old + diff_next * diff_next;
+    float local_ref = full_old * full_old + full_next * full_next;
+    float local_max = fmaxf(fabsf(diff_old), fabsf(diff_next));
+    if (window_z >= 4 && window_z < 20) {
+      const size_t z16 = line * 16u + (size_t)(window_z - 4);
+      const float full_dzz = valid ? mem_dzz[pind] : 0.0f;
+      const float diff_dzz = compact_dzz16[z16] - full_dzz;
+      local_err += diff_dzz * diff_dzz;
+      local_ref += full_dzz * full_dzz;
+      local_max = fmaxf(local_max, fabsf(diff_dzz));
+    }
+    if (!isfinite(local_err) || !isfinite(local_ref) || !isfinite(local_max))
+      atomicAdd(bad_count, 1);
+    if (local_max > 0.0f)
+      atomicAdd(bad_count, 1);
+    atomicAdd(err_sum, local_err);
+    atomicAdd(ref_sum, local_ref);
+    cuda3d_atomic_max_float(max_abs, local_max);
+  }
+}
+#endif
 #endif
 
 __global__ void cuda_fd3d_p_pml_ns(float *p0, const float *__restrict__ p1, const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,

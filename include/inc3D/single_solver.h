@@ -141,6 +141,32 @@ __global__ void cuda_fd3d_p_pml_len16_halfwarp_ns(float *p0, const float *__rest
 				const float *__restrict__ mem_dz_v,
 				float *mem_dz_next_v,
 				const PmlTile *__restrict__ tiles, int ntile);
+
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
+__global__ void cuda3d_pml_len16_compact_state_gather_ns(
+				const float *__restrict__ mem_dzz,
+				const float *__restrict__ mem_dz,
+				const float *__restrict__ mem_dz_next,
+				float *__restrict__ compact_dzz16,
+				float *__restrict__ compact_dz_old23,
+				float *__restrict__ compact_dz_next23,
+				const PmlTile *__restrict__ tiles,
+				int ntile, int n3, int n2, int n1, int npml);
+
+__global__ void cuda3d_pml_len16_compact_state_compare_ns(
+				const float *__restrict__ mem_dzz,
+				const float *__restrict__ mem_dz,
+				const float *__restrict__ mem_dz_next,
+				const float *__restrict__ compact_dzz16,
+				const float *__restrict__ compact_dz_old23,
+				const float *__restrict__ compact_dz_next23,
+				const PmlTile *__restrict__ tiles,
+				int ntile, int n3, int n2, int n1, int npml,
+				float *__restrict__ err_sum,
+				float *__restrict__ ref_sum,
+				float *__restrict__ max_abs,
+				int *__restrict__ bad_count);
+#endif
 #endif
 
 __global__ void cuda_fd3d_p_pml_zface_ns(float *p0, const float *__restrict__ p1, const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,

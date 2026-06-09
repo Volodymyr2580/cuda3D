@@ -604,6 +604,15 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   PmlTile *h_p_len16_tiles = NULL, *d_p_len16_tiles = NULL;
   int n_p_len16_tiles = 0;
 #endif
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
+  float *d_p_len16_compact_dzz16 = NULL;
+  float *d_p_len16_compact_dz_old23 = NULL;
+  float *d_p_len16_compact_dz_next23 = NULL;
+  float *d_p_len16_compact_err_sum = NULL;
+  float *d_p_len16_compact_ref_sum = NULL;
+  float *d_p_len16_compact_max_abs = NULL;
+  int *d_p_len16_compact_bad_count = NULL;
+#endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
   PmlTile *h_zface_p_pml_tiles = NULL, *d_zface_p_pml_tiles = NULL;
   int n_zface_p_pml_tiles = 0;
@@ -856,6 +865,16 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   if (n_p_len16_tiles > 0) {
     cudaMalloc((void**)&d_p_len16_tiles, (size_t)n_p_len16_tiles * sizeof(PmlTile));
     cudaMemcpy(d_p_len16_tiles, h_p_len16_tiles, (size_t)n_p_len16_tiles * sizeof(PmlTile), cudaMemcpyHostToDevice);
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
+    const size_t compact_lines = (size_t)n_p_len16_tiles * PmlTileBlockSize2 * PmlTileBlockSize3;
+    cudaMalloc((void**)&d_p_len16_compact_dzz16, compact_lines * 16u * sizeof(float));
+    cudaMalloc((void**)&d_p_len16_compact_dz_old23, compact_lines * 23u * sizeof(float));
+    cudaMalloc((void**)&d_p_len16_compact_dz_next23, compact_lines * 23u * sizeof(float));
+    cudaMalloc((void**)&d_p_len16_compact_err_sum, sizeof(float));
+    cudaMalloc((void**)&d_p_len16_compact_ref_sum, sizeof(float));
+    cudaMalloc((void**)&d_p_len16_compact_max_abs, sizeof(float));
+    cudaMalloc((void**)&d_p_len16_compact_bad_count, sizeof(int));
+#endif
   }
 #endif
 #ifdef CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK
@@ -1092,6 +1111,46 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 					     d_memory_dz_next,
 					     d_p_len16_tiles, n_p_len16_tiles);
       check_gpu_error_loop("compute P pml len16 halfwarp");
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
+      if (it < 3 || it == nt - 1) {
+	const size_t mirror_items = (size_t)n_p_len16_tiles * PmlTileBlockSize2 * PmlTileBlockSize3 * 23u;
+	const int mirror_threads = 256;
+	int mirror_blocks = (int)((mirror_items + mirror_threads - 1u) / mirror_threads);
+	if (mirror_blocks > 65535) mirror_blocks = 65535;
+	cudaMemset(d_p_len16_compact_err_sum, 0, sizeof(float));
+	cudaMemset(d_p_len16_compact_ref_sum, 0, sizeof(float));
+	cudaMemset(d_p_len16_compact_max_abs, 0, sizeof(float));
+	cudaMemset(d_p_len16_compact_bad_count, 0, sizeof(int));
+	cuda3d_pml_len16_compact_state_gather_ns<<<mirror_blocks, mirror_threads>>>(
+	  d_memory_dzz, d_memory_dz, d_memory_dz_next,
+	  d_p_len16_compact_dzz16, d_p_len16_compact_dz_old23, d_p_len16_compact_dz_next23,
+	  d_p_len16_tiles, n_p_len16_tiles, nby, nbx, nbz, nbd);
+	check_gpu_error_loop("gather P len16 compact mirror");
+	cuda3d_pml_len16_compact_state_compare_ns<<<mirror_blocks, mirror_threads>>>(
+	  d_memory_dzz, d_memory_dz, d_memory_dz_next,
+	  d_p_len16_compact_dzz16, d_p_len16_compact_dz_old23, d_p_len16_compact_dz_next23,
+	  d_p_len16_tiles, n_p_len16_tiles, nby, nbx, nbz, nbd,
+	  d_p_len16_compact_err_sum, d_p_len16_compact_ref_sum,
+	  d_p_len16_compact_max_abs, d_p_len16_compact_bad_count);
+	check_gpu_error_loop("compare P len16 compact mirror");
+	float h_compact_err = 0.0f, h_compact_ref = 0.0f, h_compact_max = 0.0f;
+	int h_compact_bad = 0;
+	cudaMemcpy(&h_compact_err, d_p_len16_compact_err_sum, sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(&h_compact_ref, d_p_len16_compact_ref_sum, sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(&h_compact_max, d_p_len16_compact_max_abs, sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(&h_compact_bad, d_p_len16_compact_bad_count, sizeof(int), cudaMemcpyDeviceToHost);
+	check_gpu_error_loop("copy P len16 compact mirror stats");
+	const double rel_l2 = sqrt((double)h_compact_err / ((double)h_compact_ref + 1.0e-30));
+	if (mytid == 0)
+	  printf("PML len16 compact-state mirror it=%d rel_l2=%e max_abs=%e bad=%d\n",
+		 it, rel_l2, (double)h_compact_max, h_compact_bad);
+	if (!isfinite(rel_l2) || rel_l2 > 1.0e-6 || h_compact_bad != 0) {
+	  printf("ERROR PML len16 compact-state mirror mismatch it=%d rel_l2=%e max_abs=%e bad=%d\n",
+		 it, rel_l2, (double)h_compact_max, h_compact_bad);
+	  exit(1);
+	}
+      }
+#endif
     }
 #endif
 #ifdef CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK
@@ -1255,6 +1314,15 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 #if defined(CUDA3D_PML_TILE_LIST_P) && defined(CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK)
   if (d_p_len16_tiles) cudaFree(d_p_len16_tiles);
   if (h_p_len16_tiles) free(h_p_len16_tiles);
+#endif
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
+  if (d_p_len16_compact_dzz16) cudaFree(d_p_len16_compact_dzz16);
+  if (d_p_len16_compact_dz_old23) cudaFree(d_p_len16_compact_dz_old23);
+  if (d_p_len16_compact_dz_next23) cudaFree(d_p_len16_compact_dz_next23);
+  if (d_p_len16_compact_err_sum) cudaFree(d_p_len16_compact_err_sum);
+  if (d_p_len16_compact_ref_sum) cudaFree(d_p_len16_compact_ref_sum);
+  if (d_p_len16_compact_max_abs) cudaFree(d_p_len16_compact_max_abs);
+  if (d_p_len16_compact_bad_count) cudaFree(d_p_len16_compact_bad_count);
 #endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
   if (d_zface_p_pml_tiles) cudaFree(d_zface_p_pml_tiles);
