@@ -5999,3 +5999,39 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 决策：拒绝作为性能候选，宏保持默认关闭；归档为 exact-FP32 negative result。
   - 后续不要继续做 narrow `dz16 old/next` compact-state 微调，除非新的 profiler 证据证明 `memory_dz` old/next traffic 已成为主瓶颈。
   - 下一步应转向更大粒度的 pressure-PML memory ownership，或其他有 `>=5%` repeat speedup ceiling 的 profiler-supported 路线。
+
+## 2026-06-09 19:16:00 +08:00
+
+- 操作目标：
+  - 响应 `cuda3d-exact-fp32-20min-sprint` 心跳，继续 high-precision 线但不盲目开新 CUDA micro-prototype。
+  - 将刚完成的 compact-state negative result 接入已有 ordinary/cluster frontier gate，形成 exact-FP32 closeout 纪律。
+- 修改文件：
+  - 新增 `docs/day_20260609/exact_fp32_frontier_closeout.md`
+  - 更新 `AGENTS.md`
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地检查：`git status --short --branch`。
+  - 远端检查：`git status --short --branch` 与 `nvidia-smi --query-gpu=...`，确认远端 worktree 仍在 `/work/wenzhe/cuda3D/.codex_worktrees/compact_state_20260609`，GPU0 空闲。
+  - 读取既有 gate artifacts：
+    - `docs/day_20260608/ownership_frontier_gate.md`
+    - `docs/day_20260608/pml_vxvy_roundtrip_ownership_model.md`
+    - `docs/day_20260609/cluster_local_ownership_model.md`
+    - `docs/day_20260609/pro_handoff_current_best_frontier.md`
+    - `docs/day_20260609/application_level_frontier_gate.md`
+  - 编写 exact-FP32 frontier closeout 文档。
+- 测试结果：
+  - 本轮未修改 CUDA 源码行为，未运行新的 GPU benchmark。
+  - 采用既有已验证 gate 结论作为本轮 closeout 输入。
+- 输出/哈希/误差摘要：
+  - 当前正式 best：`current_best_v_pml_len16`。
+  - formal WP speedup vs zmem：`1.222023x`。
+  - formal Gradient speedup vs zmem：`1.206588x`。
+  - max rel L2：`6.384336e-07`。
+  - compact dzz16-only：WP speedup `1.011842x`，拒绝。
+  - compact dz old/next：WP speedup `1.017787x`，拒绝。
+  - ordinary exact-CUDA frontier：allowed prototype count `0`。
+  - cluster-local temporal prototype：拒绝，best DSM estimate `0.9498x` sampled-main。
+- 风险与下一步：
+  - 当前 exact-FP32 CUDA-core 普通微调路线已关闭。
+  - 下一步不得写普通 CUDA micro-prototype。
+  - 只允许 design/model-first 的新 ownership representation；任何实现前必须先证明 correctness、byte/synchronization model 与 `>=5%` repeat speedup ceiling。

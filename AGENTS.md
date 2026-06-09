@@ -1707,6 +1707,37 @@ docs/compact_state/pml_len16_compact_dz_old_next_prototype_result.md
 reports/compact_state/compact_dz_old_next_perf6_repeat_summary.json
 ```
 
+### 2026-06-09 exact-FP32 frontier closeout
+
+当前 high-precision single-GPU CUDA-core sprint 已进入 closeout 状态：
+
+- 当前正式 best 仍是 `current_best_v_pml_len16`。
+- formal WP speedup vs zmem：`1.222023x`。
+- formal Gradient speedup vs zmem：`1.206588x`。
+- max rel L2：`6.384336e-07`。
+- `CUDA3D_PML_LEN16_COMPACT_STATE` dzz16-only：数值通过，但 WP `1.011842x`，拒绝。
+- `CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT`：数值通过，但 WP `1.017787x`，拒绝。
+- ordinary exact-CUDA micro routes：`ordinary_exact_cuda_frontier_exhausted_for_micro_routes`，允许 prototype 数量 `0`。
+- cluster-local temporal route：`reject_cluster_local_temporal_cuda_prototype`。
+
+后续 exact-FP32 工作纪律：
+
+- 不得继续普通 CUDA 微原型，包括 pressure writeback syntax、residual pressure split、length-23/32 descriptor、v-PML descriptor、z-face VP fusion、p-core sweep、K=2 ordinary temporal、CUDA Graph/stream scheduling。
+- 不得继续 narrow len16 compact `dzz16`/`dz16`/old-next state 微调，除非新 profiler 证明这些 state array 已成为主瓶颈。
+- 只允许 design/model-first 的新 ownership representation；任何 CUDA prototype 前必须给出：
+  - 新 ownership primitive。
+  - correctness proof。
+  - byte/synchronization model。
+  - `>=5%` `perf_1gpu_6shots` repeat speedup ceiling。
+
+当前 closeout 报告：
+
+```text
+docs/day_20260609/exact_fp32_frontier_closeout.md
+docs/day_20260609/pro_handoff_current_best_frontier.md
+docs/day_20260609/cluster_local_ownership_model.md
+```
+
 ### 原 RTX 4090 服务器
 
 服务器项目目录：
