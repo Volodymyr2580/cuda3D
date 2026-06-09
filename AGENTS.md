@@ -1607,6 +1607,31 @@ ssh -p 26537 shengwz@162.105.91.194
 docs/freeosc_cluster_survey_20260609.md
 ```
 
+## 精度版本纪律
+
+从 2026-06-09 起，项目允许探索 relaxed precision，但必须维护高精度和低精度两条独立轨道。
+
+- 高精度轨道：
+  - 名称：exact-FP32。
+  - 当前金标准：`current_best_v_pml_len16`。
+  - 默认容差：相对 L2 `<= 1e-5`，禁止 NaN/Inf。
+  - 所有“CUDA 代码优化 speedup”默认只指 exact-FP32 轨道。
+- 低精度轨道：
+  - 名称：relaxed precision。
+  - branch 建议：`exp/relaxed-precision-*`。
+  - macro 必须以 `CUDA3D_RELAXED_` 开头。
+  - 不能覆盖 exact-FP32 current-best tag。
+  - 报告必须同时给出速度和相对 exact-FP32 current-best 的误差表。
+  - 低精度获得的加速必须表述为 relaxed-precision speedup，不能混作 exact CUDA-code speedup。
+
+详细规则：
+
+```text
+docs/precision_tracks_policy.md
+```
+
+当前单卡冲刺仍优先执行 exact-FP32 的 `PML len16 compact-state ownership prototype`。如果该路线 gate 失败，再切到 relaxed precision 设计/实验线。
+
 ### 原 RTX 4090 服务器
 
 服务器项目目录：

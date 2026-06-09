@@ -5641,3 +5641,48 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 当前 RTX 5090 节点 `gpu5/gpu6` 都处于 `power_cut`，不能立即开展 `sm_120` formal multi-GPU batching。
   - 若只验证流程，可等待 `gpu1/gpu3` 资源释放后按 V100S/A40/A100 架构重编，但不能用作 RTX 5090 current-best 正式续跑。
   - 下一步建议先请管理员恢复 `gpu5` 或 `gpu6`，随后提交极短 `sbatch` GPU probe，再上传/构建项目并运行 multi-GPU batching gate。
+
+## 2026-06-09 16:35:00 +08:00
+
+- 操作目标：
+  - 启动 single-GPU exact-FP32 next optimization：`PML len16 compact-state ownership`。
+  - 根据用户新的精度偏好，建立 high-precision / relaxed-precision 双轨纪律。
+  - 不把 Multi-GPU batching 计入 CUDA code optimization speedup。
+- 修改文件：
+  - 新增 `tools/pml_len16_state_traffic_audit.py`。
+  - 新增 `docs/precision_tracks_policy.md`。
+  - 更新 `AGENTS.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 远端创建隔离 worktree：
+    - `/work/wenzhe/cuda3D/.codex_worktrees/compact_state_20260609`
+    - branch：`exp/pml-len16-compact-state`
+  - current-best build：
+    - `make -B -f makefile.rtx5090 test` with current-best flags。
+  - current-best verification：
+    - `python tools/run_benchmark.py --case smoke_1gpu --tag compact_current_best_smoke_data_dir`
+    - `python tools/run_benchmark.py --case correctness --tag compact_current_best_correctness`
+    - `python tools/run_benchmark.py --case perf_1gpu_6shots --tag compact_current_best_perf6_a2`
+    - `python tools/run_benchmark.py --case perf_1gpu_6shots --tag compact_current_best_perf6_b2`
+    - `python tools/run_benchmark.py --case perf_1gpu_6shots --tag compact_current_best_perf6_c2`
+  - NCU：
+    - `ncu --target-processes all --section SpeedOfLight --section MemoryWorkloadAnalysis --section SourceCounters --section WarpStateStats --kernel-name regex:".*(p_pml|v_pml).*" --launch-skip 10 --launch-count 20 ...`
+- 测试结果：
+  - current-best build 通过。
+  - 初次 `smoke_1gpu` 失败，原因为新 worktree 缺少 `bench_smoke/d_obs` 目录；补目录后 smoke 通过。
+  - `correctness` 通过，输出 6 个 `.dir`。
+  - 初次 `perf_1gpu_6shots` 失败，原因为新 worktree 缺少大速度模型 symlink；补充指向主目录数据的 symlink 后 3 轮 perf 均通过。
+  - NCU PML short profile 通过并导出 CSV。
+- 输出/哈希/误差摘要：
+  - remote worktree：`/work/wenzhe/cuda3D/.codex_worktrees/compact_state_20260609`。
+  - build binary SHA256：`05eeb26793e444c96de7117e4f086dce3c7682cda654a9a7e771b5af69c6f8f9`。
+  - smoke：returncode `0`，outputs `3`，WP `0.002238s`，Gradient `0.003071s`。
+  - correctness：returncode `0`，outputs `6`，WP `0.012079s`，Gradient `0.013798s`。
+  - perf repeat mean WP：`2.004982s`。
+  - perf repeat mean Gradient：`2.118638s`。
+  - NCU profile output：`benchmarks/profiles/compact_state/current_best_pml_state_ncu.ncu-rep`。
+  - NCU CSV：`benchmarks/profiles/compact_state/current_best_pml_state_ncu.csv`。
+- 风险与下一步：
+  - 新 worktree 中大测试数据是未跟踪 symlink/目录，后续迁移环境时必须重建这些链接。
+  - 继续 Phase 1：运行 `tools/pml_len16_state_traffic_audit.py` 生成 compact-state traffic gate。
+  - 如果 estimated whole-job speedup ceiling `<3%`，停止 compact-state CUDA 实现；`3%..5%` 只允许 mirror；`>=5%` 才进入 design + mirror + prototype。
