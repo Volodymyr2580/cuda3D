@@ -66,10 +66,37 @@ Accepted current-best stack:
 4. `CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK`
    - Adds a smaller but repeat-stable v-PML improvement.
 
+## 2026-06-09 Compact-State Addendum
+
+After this handoff was first written, the exact-FP32 compact-state follow-up
+was completed and rejected as a performance route.
+
+Reports:
+
+```text
+docs/day_20260609/exact_fp32_frontier_closeout.md
+docs/compact_state/pml_len16_compact_dzz16_commit_result.md
+docs/compact_state/pml_len16_compact_dz_old_next_prototype_result.md
+reports/compact_state/compact_dzz16_commit_perf6_summary.json
+reports/compact_state/compact_dz_old_next_perf6_repeat_summary.json
+```
+
+Results:
+
+| candidate | correctness | repeat WP speedup vs current-best | repeat Gradient speedup vs current-best | decision |
+| --- | --- | ---: | ---: | --- |
+| `CUDA3D_PML_LEN16_COMPACT_STATE` dzz16-only | pass, max rel L2 `0` | `1.011842x` | `1.011798x` | reject below `>=1.02x` gate |
+| `CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT` | pass, max rel L2 `0` | `1.017787x` | `1.014733x` | reject below `>=1.02x` gate |
+
+Do not continue narrow len16 compact `dzz16`, `dz16`, or old/next state
+micro-tuning unless a new profiler profile proves that those exact arrays have
+become a dominant bottleneck.
+
 ## Closed Routes
 
 Do not reopen these without new profiler evidence and a new model:
 
+- narrow len16 compact-state `dzz16` / `dz16` / old-next tuning.
 - residual pressure branch-only split.
 - pressure length-32 branch/control specialization.
 - pressure length-23 or exact active-point descriptors.
@@ -125,7 +152,7 @@ exact length-23 descriptor calibrated speedup         1.0153x sampled-main
 
 1. Handoff/reporting
    - Use this document as the starting point for Pro or another agent.
-   - The next agent should read `AGENTS.md`, `AGENT_LOG.md`, and the three reports above before making changes.
+   - The next agent should read `AGENTS.md`, `AGENT_LOG.md`, `docs/day_20260609/exact_fp32_frontier_closeout.md`, and the reports above before making changes.
 
 2. Concrete cross-CTA or cluster-level primitive study
    - Only a concrete synchronization/ownership primitive can reopen temporal or producer-consumer fusion.

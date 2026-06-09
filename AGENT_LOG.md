@@ -6035,3 +6035,30 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 当前 exact-FP32 CUDA-core 普通微调路线已关闭。
   - 下一步不得写普通 CUDA micro-prototype。
   - 只允许 design/model-first 的新 ownership representation；任何实现前必须先证明 correctness、byte/synchronization model 与 `>=5%` repeat speedup ceiling。
+
+## 2026-06-09 19:48:00 +08:00
+
+- 操作目标：
+  - 响应 frontier-aware heartbeat。
+  - 确认本地与远端 worktree 状态稳定。
+  - 将 compact-state closeout 结果补入给 Pro/下一位 agent 的 handoff 文档，避免交接文档仍停留在 compact-state 之前的状态。
+- 修改文件：
+  - 更新 `docs/day_20260609/pro_handoff_current_best_frontier.md`
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地检查：`git status --short --branch`、`git log -1 --oneline --decorate`。
+  - 远端检查：`git status --short --branch`、`git log -1 --oneline --decorate`、`nvidia-smi --query-gpu=...`。
+  - 读取 `docs/day_20260609/exact_fp32_frontier_closeout.md` 与 `docs/day_20260609/pro_handoff_current_best_frontier.md`。
+  - 使用 `apply_patch` 给 Pro handoff 增加 `2026-06-09 Compact-State Addendum`。
+- 测试结果：
+  - 本轮未修改 CUDA 源码行为，未运行 GPU benchmark。
+  - 本地分支与远端 worktree 均处于 `1049819 docs(frontier): close exact fp32 compact sprint`。
+  - GPU0 空闲：RTX 5090，约 `481 MiB / 32607 MiB`，util `0%`。
+- 输出/哈希/误差摘要：
+  - compact dzz16-only：correctness/pass，max rel L2 `0`，repeat WP speedup `1.011842x`，拒绝。
+  - compact dz old/next：correctness/pass，max rel L2 `0`，repeat WP speedup `1.017787x`，拒绝。
+  - Pro handoff 现已显式引用 `docs/day_20260609/exact_fp32_frontier_closeout.md`。
+- 风险与下一步：
+  - 该轮是文档同步，不产生新性能结果。
+  - 后续 heartbeat 仍不得启动普通 CUDA micro-prototype。
+  - 如继续 exact-FP32，只能先写新的 ownership model 并证明 `>=5%` repeat speedup ceiling。
