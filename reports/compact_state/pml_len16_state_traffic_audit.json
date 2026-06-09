@@ -1,0 +1,168 @@
+{
+  "case": {
+    "case_dir": "benchmarks/cases/perf_1gpu_6shots",
+    "ny": 384,
+    "nx": 384,
+    "nz": 95,
+    "nt": 1501,
+    "shots": 6,
+    "npml": 12,
+    "input": "input_perf_1gpu_6shots.in"
+  },
+  "state_arrays": {
+    "memory_dy": {
+      "formula": "2*npml*n2*n1",
+      "elements": 1165248,
+      "bytes": 4660992
+    },
+    "memory_dx": {
+      "formula": "n3*2*npml*n1",
+      "elements": 1165248,
+      "bytes": 4660992
+    },
+    "memory_dz": {
+      "formula": "n3*n2*2*npml",
+      "elements": 3995136,
+      "bytes": 15980544
+    },
+    "memory_dy_next": {
+      "formula": "2*npml*n2*n1",
+      "elements": 1165248,
+      "bytes": 4660992
+    },
+    "memory_dx_next": {
+      "formula": "n3*2*npml*n1",
+      "elements": 1165248,
+      "bytes": 4660992
+    },
+    "memory_dz_next": {
+      "formula": "n3*n2*2*npml",
+      "elements": 3995136,
+      "bytes": 15980544
+    },
+    "memory_dyy": {
+      "formula": "2*npml*n2*n1",
+      "elements": 1165248,
+      "bytes": 4660992
+    },
+    "memory_dxx": {
+      "formula": "n3*2*npml*n1",
+      "elements": 1165248,
+      "bytes": 4660992
+    },
+    "memory_dzz": {
+      "formula": "n3*n2*2*npml",
+      "elements": 3995136,
+      "bytes": 15980544
+    }
+  },
+  "tile_counts": [
+    {
+      "shot_index": 0,
+      "v_residual_tiles": 8800,
+      "v_len16_tiles": 10000,
+      "p_residual_tiles": 7168,
+      "p_len16_tiles": 10816
+    },
+    {
+      "shot_index": 1,
+      "v_residual_tiles": 9760,
+      "v_len16_tiles": 11200,
+      "p_residual_tiles": 8032,
+      "p_len16_tiles": 12064
+    },
+    {
+      "shot_index": 2,
+      "v_residual_tiles": 9280,
+      "v_len16_tiles": 10000,
+      "p_residual_tiles": 7648,
+      "p_len16_tiles": 10816
+    },
+    {
+      "shot_index": 3,
+      "v_residual_tiles": 9040,
+      "v_len16_tiles": 10000,
+      "p_residual_tiles": 7408,
+      "p_len16_tiles": 10816
+    },
+    {
+      "shot_index": 4,
+      "v_residual_tiles": 10028,
+      "v_len16_tiles": 11200,
+      "p_residual_tiles": 8300,
+      "p_len16_tiles": 12064
+    },
+    {
+      "shot_index": 5,
+      "v_residual_tiles": 9524,
+      "v_len16_tiles": 10000,
+      "p_residual_tiles": 7892,
+      "p_len16_tiles": 10816
+    }
+  ],
+  "aggregate": {
+    "shots_seen_in_log": 6,
+    "p_len16_tiles": 67392,
+    "p_residual_tiles": 46448,
+    "v_len16_tiles": 62400,
+    "v_residual_tiles": 56432,
+    "p_len16_active_points": 8626176,
+    "v_len16_active_points": 7987200,
+    "p_residual_launched_lane_points": 11890688,
+    "v_residual_launched_lane_points": 14446592,
+    "p_len16_lines": 539136,
+    "compact_pressure_state_elements": 33426432,
+    "compact_pressure_state_bytes": 133705728,
+    "compact_pressure_state_mib": 127.51171875,
+    "full_pressure_related_state_bytes_x_shots": 287649792,
+    "full_pressure_related_state_mib_x_shots": 274.32421875,
+    "compact_to_full_pressure_state_ratio": 0.46482122260668973
+  },
+  "ncu_kernels": {
+    "cuda_fd3d_p_pml_len16_halfwarp_ns": {
+      "kernel": "cuda_fd3d_p_pml_len16_halfwarp_ns",
+      "duration_us": 67.04,
+      "dram_throughput_pct": 57.74,
+      "memory_throughput_tb_s": 1.03,
+      "l1_hit_rate_pct": 61.53,
+      "l2_hit_rate_pct": 54.31
+    },
+    "cuda_fd3d_p_pml_tile_ns": {
+      "kernel": "cuda_fd3d_p_pml_tile_ns",
+      "duration_us": 72.99,
+      "dram_throughput_pct": 41.66,
+      "memory_throughput_tb_s": null,
+      "l1_hit_rate_pct": 64.33,
+      "l2_hit_rate_pct": 59.93
+    },
+    "cuda_fd3d_v_pml_len16_halfwarp_ns": {
+      "kernel": "cuda_fd3d_v_pml_len16_halfwarp_ns",
+      "duration_us": 20.16,
+      "dram_throughput_pct": 49.57,
+      "memory_throughput_tb_s": null,
+      "l1_hit_rate_pct": 55.34,
+      "l2_hit_rate_pct": 65.17
+    },
+    "cuda_fd3d_v_pml_tile_ns": {
+      "kernel": "cuda_fd3d_v_pml_tile_ns",
+      "duration_us": 31.52,
+      "dram_throughput_pct": 38.18,
+      "memory_throughput_tb_s": null,
+      "l1_hit_rate_pct": 53.53,
+      "l2_hit_rate_pct": 69.21
+    }
+  },
+  "model": {
+    "p_core_us_assumed": 75.0,
+    "sampled_main_kernel_us": 266.71,
+    "p_len16_us": 67.04,
+    "p_residual_us": 72.99,
+    "v_len16_us": 20.16,
+    "v_residual_us": 31.52,
+    "p_len16_share_of_sampled_main": 0.2513591541374527,
+    "p_len16_state_fraction_assumed": 0.35,
+    "p_len16_speedup_ceiling": 1.5384615384615383,
+    "whole_job_speedup_ceiling": 1.0964620178749085
+  },
+  "decision": "allow_commit_prototype_after_design"
+}

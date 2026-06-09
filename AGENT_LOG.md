@@ -5686,3 +5686,40 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 新 worktree 中大测试数据是未跟踪 symlink/目录，后续迁移环境时必须重建这些链接。
   - 继续 Phase 1：运行 `tools/pml_len16_state_traffic_audit.py` 生成 compact-state traffic gate。
   - 如果 estimated whole-job speedup ceiling `<3%`，停止 compact-state CUDA 实现；`3%..5%` 只允许 mirror；`>=5%` 才进入 design + mirror + prototype。
+
+## 2026-06-09 16:43:00 +08:00
+
+- 操作目标：
+  - 完成 Phase 1 `PML len16 state traffic audit`。
+  - 根据 gate 结果写 Phase 2 compact-state ownership design。
+- 修改文件：
+  - 新增 `docs/compact_state/pml_len16_state_traffic_audit.md`。
+  - 新增 `reports/compact_state/pml_len16_state_traffic_audit.json`。
+  - 新增 `reports/compact_state/current_best_phase0_summary.json`。
+  - 新增 `docs/compact_state/pml_len16_compact_state_design.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - `python3 tools/pml_len16_state_traffic_audit.py --case-dir benchmarks/cases/perf_1gpu_6shots --perf-log ... --ncu-csv ... --json-out ... --md-out ... --p-core-us 75.0 --p-len16-state-fraction 0.35`
+  - `remote_get.py` 同步 audit/report artifacts 回本地分支。
+- 测试结果：
+  - audit tool 运行通过。
+  - Phase 1 gate：`allow_commit_prototype_after_design`。
+  - 本轮仍未修改 CUDA kernel；不需要重新 build。
+- 输出/哈希/误差摘要：
+  - sampled main kernel us：`266.710`。
+  - `cuda_fd3d_p_pml_len16_halfwarp_ns` duration：`67.04 us`。
+  - `cuda_fd3d_p_pml_tile_ns` duration：`72.99 us`。
+  - `cuda_fd3d_v_pml_len16_halfwarp_ns` duration：`20.16 us`。
+  - `cuda_fd3d_v_pml_tile_ns` duration：`31.52 us`。
+  - pressure len16 tiles：`67392`。
+  - pressure len16 active points：`8626176`。
+  - pressure len16 compact lines：`539136`。
+  - compact pressure-state bytes：`127.512 MiB`。
+  - full pressure-related state bytes x shots：`274.324 MiB`。
+  - compact/full ratio：`0.464821`。
+  - assumed removable p_len16 state fraction：`0.35`。
+  - modeled whole sampled-main speedup ceiling：`1.096462x`。
+- 风险与下一步：
+  - 该 gate 是 optimistic ceiling，不代表实际能达到 `1.096x`。
+  - `v_len16` 当前不更新 CPML state，compact-state 首版只瞄准 pressure len16 的 `memory_dzz` 与 z-recompute `memory_dz` old/next。
+  - 下一步先实现 `CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR`，full-array path 仍权威；mirror 失败则停止 commit prototype。

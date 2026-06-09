@@ -1,0 +1,51 @@
+{
+  "rows": [
+    {
+      "run": "smoke_1gpu_compact_current_best_smoke_data_dir_20260609_162852",
+      "returncode": 0,
+      "outputs": 3,
+      "gradient_s": 0.003071,
+      "wp_s": 0.002238,
+      "elapsed": "0:00.97",
+      "binary_sha256": "05eeb26793e444c96de7117e4f086dce3c7682cda654a9a7e771b5af69c6f8f9"
+    },
+    {
+      "run": "correctness_compact_current_best_correctness_20260609_162921",
+      "returncode": 0,
+      "outputs": 6,
+      "gradient_s": 0.013798,
+      "wp_s": 0.012079,
+      "elapsed": "0:00.77",
+      "binary_sha256": "05eeb26793e444c96de7117e4f086dce3c7682cda654a9a7e771b5af69c6f8f9"
+    },
+    {
+      "run": "perf_1gpu_6shots_compact_current_best_perf6_a2_20260609_163148",
+      "returncode": 0,
+      "outputs": 6,
+      "gradient_s": 2.11604,
+      "wp_s": 2.002595,
+      "elapsed": "0:03.40",
+      "binary_sha256": "05eeb26793e444c96de7117e4f086dce3c7682cda654a9a7e771b5af69c6f8f9"
+    },
+    {
+      "run": "perf_1gpu_6shots_compact_current_best_perf6_b2_20260609_163151",
+      "returncode": 0,
+      "outputs": 6,
+      "gradient_s": 2.119912,
+      "wp_s": 2.004484,
+      "elapsed": "0:02.84",
+      "binary_sha256": "05eeb26793e444c96de7117e4f086dce3c7682cda654a9a7e771b5af69c6f8f9"
+    },
+    {
+      "run": "perf_1gpu_6shots_compact_current_best_perf6_c2_20260609_163154",
+      "returncode": 0,
+      "outputs": 6,
+      "gradient_s": 2.119963,
+      "wp_s": 2.007866,
+      "elapsed": "0:02.85",
+      "binary_sha256": "05eeb26793e444c96de7117e4f086dce3c7682cda654a9a7e771b5af69c6f8f9"
+    }
+  ],
+  "perf_mean_wp_s": 2.0049816666666667,
+  "perf_mean_gradient_s": 2.118638333333333
+}
