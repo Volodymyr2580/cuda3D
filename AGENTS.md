@@ -1669,6 +1669,21 @@ reports/compact_state/compact_dzz16_commit_perf6_summary.json
 - correctness case 不覆盖 len16 的测试缺口。
 - debug dump 或 perf/profile case 对 compact path 的 step `0/1/2` 覆盖。
 
+`CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT` 设计门已写入：
+
+```text
+docs/compact_state/pml_len16_compact_dz_old_next_design.md
+```
+
+关键设计约束：
+
+- 新增 compact `dz_old16/dz_next16` 只覆盖 accepted pressure len16 central z positions。
+- halo z-cache 仍允许走 full-array helper with `write_owned=false`；audit 显示当前 perf topology 下这些 halo 不触碰有效 PML z-state。
+- compact old/next buffer 必须与 full `d_memory_dz/d_memory_dz_next` 同步 swap。
+- 正常性能构建不得重复写 accepted len16 central full `memory_dz_next`，否则会抹掉收益。
+- debug 构建可以 mirror compact state 回 full arrays 以服务 debug dump。
+- 下一步只允许写 macro-default-off prototype；没有 debug coverage 与 `perf_1gpu_6shots` repeat，不得 promotion。
+
 ### 原 RTX 4090 服务器
 
 服务器项目目录：

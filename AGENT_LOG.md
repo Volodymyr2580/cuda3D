@@ -5869,6 +5869,30 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 允许进入 design-only 阶段：`CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT`。
   - 在写 CUDA commit prototype 前必须先明确 compact old/next buffer swap、full-array fallback 同步规则，以及 correctness case 不覆盖 len16 的测试缺口。
 
+## 2026-06-09 18:21:51 +08:00
+
+- 操作目标：
+  - 继续 exact-FP32 高精度线。
+  - 将 `CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT` 从 ownership audit 推进到 design gate。
+- 修改文件：
+  - 新增 `docs/compact_state/pml_len16_compact_dz_old_next_design.md`
+  - 更新 `AGENTS.md`
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 读取 `docs/compact_state/pml_len16_dz_halo_ownership_audit.md`。
+  - 编写 compact `dz_old16/dz_next16` old/next buffer swap 设计。
+  - 更新 `AGENTS.md` 的 exact-FP32 compact-state commit gate。
+- 测试结果：
+  - 本轮未修改 CUDA 源码行为，未运行 GPU benchmark。
+  - 设计约束已落文档，下一轮才允许写 macro-default-off CUDA prototype。
+- 输出/哈希/误差摘要：
+  - 设计文档：`docs/compact_state/pml_len16_compact_dz_old_next_design.md`。
+  - 依赖 audit：`perf_1gpu_6shots` len16 halo reads outside writes `0`，residual overlap with len16-written z-state `0`。
+- 风险与下一步：
+  - correctness case 无 pressure len16 tiles，不能作为 compact old/next 的唯一 correctness gate。
+  - 下一步只允许实现默认关闭宏 `CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT`。
+  - prototype 必须增加 compact next debug fill/check、compact old/next swap、debug-only mirror-back，并用 perf/profile debug dump step `0/1/2` 覆盖 len16 path。
+
 ## 2026-06-09 18:09:57 +08:00
 
 - 操作目标：
