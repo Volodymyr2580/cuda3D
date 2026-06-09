@@ -604,8 +604,13 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   PmlTile *h_p_len16_tiles = NULL, *d_p_len16_tiles = NULL;
   int n_p_len16_tiles = 0;
 #endif
-#ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
+#if defined(CUDA3D_PML_LEN16_COMPACT_STATE) && defined(CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR)
+#error CUDA3D_PML_LEN16_COMPACT_STATE and CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR are mutually exclusive
+#endif
+#if defined(CUDA3D_PML_LEN16_COMPACT_STATE) || defined(CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR)
   float *d_p_len16_compact_dzz16 = NULL;
+#endif
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
   float *d_p_len16_compact_dz_old23 = NULL;
   float *d_p_len16_compact_dz_next23 = NULL;
   float *d_p_len16_compact_err_sum = NULL;
@@ -865,9 +870,14 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   if (n_p_len16_tiles > 0) {
     cudaMalloc((void**)&d_p_len16_tiles, (size_t)n_p_len16_tiles * sizeof(PmlTile));
     cudaMemcpy(d_p_len16_tiles, h_p_len16_tiles, (size_t)n_p_len16_tiles * sizeof(PmlTile), cudaMemcpyHostToDevice);
-#ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
+#if defined(CUDA3D_PML_LEN16_COMPACT_STATE) || defined(CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR)
     const size_t compact_lines = (size_t)n_p_len16_tiles * PmlTileBlockSize2 * PmlTileBlockSize3;
     cudaMalloc((void**)&d_p_len16_compact_dzz16, compact_lines * 16u * sizeof(float));
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE
+    cudaMemset(d_p_len16_compact_dzz16, 0, compact_lines * 16u * sizeof(float));
+#endif
+#endif
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
     cudaMalloc((void**)&d_p_len16_compact_dz_old23, compact_lines * 23u * sizeof(float));
     cudaMalloc((void**)&d_p_len16_compact_dz_next23, compact_lines * 23u * sizeof(float));
     cudaMalloc((void**)&d_p_len16_compact_err_sum, sizeof(float));
@@ -1107,6 +1117,9 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 					     d_cw2, tdy, tdx, tdz,
 					     nby, nbx, nbz, nbd, dt2,
 					     d_memory_dzz,
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE
+					     d_p_len16_compact_dzz16,
+#endif
 					     d_memory_dz,
 					     d_memory_dz_next,
 					     d_p_len16_tiles, n_p_len16_tiles);
@@ -1315,8 +1328,10 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
   if (d_p_len16_tiles) cudaFree(d_p_len16_tiles);
   if (h_p_len16_tiles) free(h_p_len16_tiles);
 #endif
-#ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
+#if defined(CUDA3D_PML_LEN16_COMPACT_STATE) || defined(CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR)
   if (d_p_len16_compact_dzz16) cudaFree(d_p_len16_compact_dzz16);
+#endif
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
   if (d_p_len16_compact_dz_old23) cudaFree(d_p_len16_compact_dz_old23);
   if (d_p_len16_compact_dz_next23) cudaFree(d_p_len16_compact_dz_next23);
   if (d_p_len16_compact_err_sum) cudaFree(d_p_len16_compact_err_sum);

@@ -1924,6 +1924,9 @@ __device__ __forceinline__ void fill_pml_pressure_vz_cache_entry(
 #if !defined(CUDA3D_PML_RECOMPUTE_Z) || !defined(CUDA3D_PML_ZMEM_IN_P) || !defined(CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE)
 #error CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK requires CUDA3D_PML_RECOMPUTE_Z, CUDA3D_PML_ZMEM_IN_P, and CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE
 #endif
+#if defined(CUDA3D_PML_LEN16_COMPACT_STATE) && defined(CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR)
+#error CUDA3D_PML_LEN16_COMPACT_STATE and CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR are mutually exclusive
+#endif
 #if PmlTileBlockSize1 != 32 || PmlTileBlockSize2 != 4 || PmlTileBlockSize3 != 2
 #error CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK currently requires PmlTileBlockSize=32x4x2
 #endif
@@ -1932,6 +1935,9 @@ __global__ void cuda_fd3d_p_pml_len16_halfwarp_ns(float *p0, const float *__rest
 				   float *cw2, float _dy2, float _dx2, float _dz2,
 				   int n3, int n2, int n1, int npml, float dt,
 				   float *mem_dzz,
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE
+				   float *compact_dzz16,
+#endif
 				   const float *__restrict__ mem_dz_v,
 				   float *mem_dz_next_v,
 				   const PmlTile *__restrict__ tiles, int ntile) {
@@ -1999,17 +2005,45 @@ __global__ void cuda_fd3d_p_pml_len16_halfwarp_ns(float *p0, const float *__rest
   c1*=_dz2;
   c2*=_dx2;
   c3*=_dy2;
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE
+  const size_t compact_line = ((size_t)blockIdx.x * PmlTileBlockSize2 * PmlTileBlockSize3) +
+    (size_t)local_line;
+  const size_t compact_z16 = compact_line * 16u + (size_t)local_z;
+#endif
   if(gtid1<npml) {
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE
+    const float coef = c_bz_pml[gtid1];
+    float new_dzz = compact_dzz16[compact_z16] * coef + c1 * (coef - 1);
+    compact_dzz16[compact_z16] = new_dzz;
+#ifdef CUDA3D_PML_DEBUG_DUMP
+    const size_t pind=(size_t)gtid3*npml*n2 + (size_t)gtid2*npml + gtid1;
+    mem_dzz[pind]=new_dzz;
+#endif
+    c1 += new_dzz;
+#else
     const size_t pind=(size_t)gtid3*npml*n2 + (size_t)gtid2*npml + gtid1;
     const float coef = c_bz_pml[gtid1];
     mem_dzz[pind]=mem_dzz[pind]*coef+c1*(coef-1);
     c1+=mem_dzz[pind];
+#endif
   } else if (gtid1>=n1-npml) {
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE
+    const size_t ic=gtid1-n1+npml;
+    const float coef = c_az_pml[ic];
+    float new_dzz = compact_dzz16[compact_z16] * coef + c1 * (coef - 1);
+    compact_dzz16[compact_z16] = new_dzz;
+#ifdef CUDA3D_PML_DEBUG_DUMP
+    const size_t pind=(size_t)n3*n2*npml+(size_t)gtid3*npml*n2 + (size_t)gtid2*npml + ic;
+    mem_dzz[pind]=new_dzz;
+#endif
+    c1 += new_dzz;
+#else
     const size_t ic=gtid1-n1+npml;
     const size_t pind=(size_t)n3*n2*npml+(size_t)gtid3*npml*n2 + (size_t)gtid2*npml + ic;
     const float coef = c_az_pml[ic];
     mem_dzz[pind]=mem_dzz[pind]*coef+c1*(coef-1);
     c1+=mem_dzz[pind];
+#endif
   }
   p0[base]=2*__ldg(p1+base)-p0[base]
     +__ldg(cw2+base)*dt*(c1+c2+c3);

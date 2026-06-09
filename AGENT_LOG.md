@@ -5764,3 +5764,76 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - mirror 有额外 gather/compare 开销，不能作为性能数据。
   - mirror 当前证明 compact line mapping 和 23-slot z-window 映射与 full arrays 对齐。
   - 下一步才是 commit prototype：`CUDA3D_PML_LEN16_COMPACT_STATE`，让 accepted pressure len16 kernel 真正从 compact state 读写，并保留 residual full-array fallback。
+
+## 2026-06-09 17:44:46 +08:00
+
+- 操作目标：
+  - 按 exact-FP32 高精度线推进 `CUDA3D_PML_LEN16_COMPACT_STATE` commit prototype。
+  - 先测试最低风险的 dzz16-only compact path：只将 accepted pressure len16 的 `memory_dzz` 改为 compact authoritative state，`memory_dz` / `memory_dz_next` 仍保持 full-array old/next authoritative path。
+- 修改文件：
+  - `include/inc3D/single_solver.h`
+  - `src/single_solver.cu`
+  - `src/rem_fd.cu`
+  - 新增 `docs/compact_state/pml_len16_compact_dzz16_commit_result.md`
+  - 新增 `reports/compact_state/compact_dzz16_commit_perf6_summary.json`
+  - 新增 `reports/compact_state/compare_commit_dzz16_correctness_vs_current_best/comparison.md`
+  - 新增 `reports/compact_state/compare_commit_dzz16_correctness_vs_current_best/comparison.json`
+  - 新增 `reports/compact_state/compare_commit_dzz16_perf6_probe_vs_current_best/comparison.md`
+  - 新增 `reports/compact_state/compare_commit_dzz16_perf6_probe_vs_current_best/comparison.json`
+  - 新增 `reports/compact_state/compare_commit_dzz16_perf6_a_vs_current_best/comparison.md`
+  - 新增 `reports/compact_state/compare_commit_dzz16_perf6_a_vs_current_best/comparison.json`
+  - 新增 `reports/compact_state/compare_commit_dzz16_perf6_b_vs_current_best/comparison.md`
+  - 新增 `reports/compact_state/compare_commit_dzz16_perf6_b_vs_current_best/comparison.json`
+  - 新增 `reports/compact_state/compare_commit_dzz16_perf6_c_vs_current_best/comparison.md`
+  - 新增 `reports/compact_state/compare_commit_dzz16_perf6_c_vs_current_best/comparison.json`
+  - 新增 `reports/compact_state/compare_commit_dzz16_final_correctness_vs_current_best/comparison.md`
+  - 新增 `reports/compact_state/compare_commit_dzz16_final_correctness_vs_current_best/comparison.json`
+  - 新增 `reports/compact_state/compare_commit_dzz16_final_perf6_a_vs_current_best/comparison.md`
+  - 新增 `reports/compact_state/compare_commit_dzz16_final_perf6_a_vs_current_best/comparison.json`
+  - 新增 `reports/compact_state/compare_commit_dzz16_final_perf6_b_vs_current_best/comparison.md`
+  - 新增 `reports/compact_state/compare_commit_dzz16_final_perf6_b_vs_current_best/comparison.json`
+  - 新增 `reports/compact_state/compare_commit_dzz16_final_perf6_c_vs_current_best/comparison.md`
+  - 新增 `reports/compact_state/compare_commit_dzz16_final_perf6_c_vs_current_best/comparison.json`
+  - 更新 `AGENTS.md`
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地编辑后用 `remote_put.py` 同步三处源码到 `/work/wenzhe/cuda3D/.codex_worktrees/compact_state_20260609`。
+  - Build exact-FP32 commit binary with current-best flags plus `-DCUDA3D_PML_LEN16_COMPACT_STATE`。
+  - `python3 tools/run_benchmark.py --case smoke_1gpu --tag compact_dzz16_commit_smoke`
+  - `python3 tools/run_benchmark.py --case correctness --tag compact_dzz16_commit_correctness`
+  - `python3 tools/compare_outputs.py --baseline ...current_best_correctness... --candidate ...compact_dzz16_commit_correctness...`
+  - `python3 tools/run_benchmark.py --case perf_1gpu_6shots --tag compact_dzz16_commit_perf6_probe`
+  - `python3 tools/compare_outputs.py --baseline ...current_best_perf6_a2... --candidate ...compact_dzz16_commit_perf6_probe...`
+  - `python3 tools/run_benchmark.py --case perf_1gpu_6shots --tag compact_dzz16_commit_perf6_a`
+  - `python3 tools/run_benchmark.py --case perf_1gpu_6shots --tag compact_dzz16_commit_perf6_b`
+  - `python3 tools/run_benchmark.py --case perf_1gpu_6shots --tag compact_dzz16_commit_perf6_c`
+  - 三轮 repeat 输出分别用 `tools/compare_outputs.py` 对比 current-best `a2/b2/c2`。
+  - 增加 debug-only mirror-back 后重新 build final compact binary，并重新运行 correctness + `perf_1gpu_6shots` 三轮 repeat。
+  - 关闭 `CUDA3D_PML_LEN16_COMPACT_STATE` 后，用 current-best flags 重新 build，验证默认路径仍可编译。
+- 测试结果：
+  - Build 通过。
+  - 默认关闭宏 build 通过，binary SHA256：`e456aa2d9f4742f626b6ed8c4130c3c8af4e555d763d8b90fbca0a4832f5ad2c`。
+  - `smoke_1gpu` 通过，outputs `3`。
+  - `correctness` 通过，outputs `6`。
+  - correctness vs current-best：pass，6 个输出 rel L2 全部 `0`。
+  - `perf_1gpu_6shots` probe 通过，outputs `6`。
+  - perf probe vs current-best：pass，6 个输出 rel L2 全部 `0`。
+  - `perf_1gpu_6shots` repeat `a/b/c` 均通过，所有输出对比 pass。
+- 输出/哈希/误差摘要：
+  - final commit binary SHA256：`3bba4756a8bac7493be1c50455e39f7eb3c8a4c92dba44f393d66ed1eb41e094`。
+  - baseline mean WP：`2.004982s`。
+  - final candidate mean WP：`1.981516s`。
+  - final WP speedup vs current-best：`1.011842x`。
+  - baseline mean Gradient：`2.118638s`。
+  - final candidate mean Gradient：`2.093934s`。
+  - final Gradient speedup vs current-best：`1.011798x`。
+  - max rel L2：`0.000000e+00`。
+  - final repeat runs：
+    - `a`：WP `1.976281s`，Gradient `2.092469s`。
+    - `b`：WP `1.984154s`，Gradient `2.094078s`。
+    - `c`：WP `1.984113s`，Gradient `2.095256s`。
+- 风险与下一步：
+  - 该 dzz16-only route 精度完全通过，但 speedup 低于 `>=1.02x` disabled-candidate keep gate。
+  - 决策：拒绝作为性能候选，宏保持默认关闭；记录为 exact-FP32 negative result。
+  - 后续不要继续扩展 dzz16-only compact path。
+  - 如果 compact-state 继续推进，必须先证明 `memory_dz` old/next halo ownership 安全，再写 commit prototype；不能直接 compact `memory_dz` 后只看性能。

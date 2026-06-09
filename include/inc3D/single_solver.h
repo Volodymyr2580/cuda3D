@@ -133,11 +133,17 @@ __global__ void cuda_fd3d_p_pml_tile_ns(float *p0, const float *__restrict__ p1,
 				const PmlTile *__restrict__ tiles, int ntile);
 
 #ifdef CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK
+#if defined(CUDA3D_PML_LEN16_COMPACT_STATE) && defined(CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR)
+#error CUDA3D_PML_LEN16_COMPACT_STATE and CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR are mutually exclusive
+#endif
 __global__ void cuda_fd3d_p_pml_len16_halfwarp_ns(float *p0, const float *__restrict__ p1,
 				const float *__restrict__ vy, const float *__restrict__ vx,
 				float *cw2, float _dy2, float _dx2, float _dz2,
 				int n3, int n2, int n1, int npml, float dt,
 				float *mem_dzz,
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE
+				float *compact_dzz16,
+#endif
 				const float *__restrict__ mem_dz_v,
 				float *mem_dz_next_v,
 				const PmlTile *__restrict__ tiles, int ntile);

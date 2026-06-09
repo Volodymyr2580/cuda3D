@@ -1632,6 +1632,25 @@ docs/precision_tracks_policy.md
 
 当前单卡冲刺仍优先执行 exact-FP32 的 `PML len16 compact-state ownership prototype`。如果该路线 gate 失败，再切到 relaxed precision 设计/实验线。
 
+### 2026-06-09 exact-FP32 compact-state commit gate
+
+`CUDA3D_PML_LEN16_COMPACT_STATE` 的首个 commit prototype 已测试完成。
+
+- 范围：只将 accepted pressure len16 kernel 的 `memory_dzz` 改为 compact `dzz16` authoritative state。
+- 保留：`memory_dz` / `memory_dz_next` 仍走 full-array old/next authoritative path。
+- 数值：correctness 与 `perf_1gpu_6shots` repeat 均对比 current-best 通过，max rel L2 `0`。
+- 性能：最终三轮 `perf_1gpu_6shots` mean WP speedup `1.011842x`，mean Gradient speedup `1.011798x`。
+- 结论：低于 `>=1.02x` disabled-candidate keep gate，拒绝作为性能候选。
+
+后续禁止继续扩展 dzz16-only compact path。若 compact-state 路线继续，必须先证明 `memory_dz` old/next halo ownership 安全，再写 commit prototype；不得直接把 `memory_dz` compact 化后跑性能。
+
+详细报告：
+
+```text
+docs/compact_state/pml_len16_compact_dzz16_commit_result.md
+reports/compact_state/compact_dzz16_commit_perf6_summary.json
+```
+
 ### 原 RTX 4090 服务器
 
 服务器项目目录：

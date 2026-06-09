@@ -1,0 +1,40 @@
+{
+  "candidate": "CUDA3D_PML_LEN16_COMPACT_STATE dzz16-only final",
+  "binary_sha256": "3bba4756a8bac7493be1c50455e39f7eb3c8a4c92dba44f393d66ed1eb41e094",
+  "baseline_mean_wp_s": 2.0049816666666667,
+  "baseline_mean_gradient_s": 2.118638333333333,
+  "candidate_mean_wp_s": 1.981516,
+  "candidate_mean_gradient_s": 2.0939343333333333,
+  "wp_speedup_vs_current_best": 1.0118422796821558,
+  "gradient_speedup_vs_current_best": 1.0117978866895379,
+  "correctness_compare_pass": true,
+  "all_perf_compare_pass": true,
+  "max_rel_l2": 0.0,
+  "runs": [
+    {
+      "tag": "a",
+      "run": "perf_1gpu_6shots_compact_dzz16_commit_final_perf6_a_20260609_175049",
+      "gradient_s": 2.092469,
+      "wp_s": 1.976281,
+      "compare_pass": true,
+      "max_rel_l2": 0.0
+    },
+    {
+      "tag": "b",
+      "run": "perf_1gpu_6shots_compact_dzz16_commit_final_perf6_b_20260609_175052",
+      "gradient_s": 2.094078,
+      "wp_s": 1.984154,
+      "compare_pass": true,
+      "max_rel_l2": 0.0
+    },
+    {
+      "tag": "c",
+      "run": "perf_1gpu_6shots_compact_dzz16_commit_final_perf6_c_20260609_175055",
+      "gradient_s": 2.095256,
+      "wp_s": 1.984113,
+      "compare_pass": true,
+      "max_rel_l2": 0.0
+    }
+  ],
+  "decision": "reject_for_speed_gate_wp_lt_1.02_keep_macro_default_off"
+}
