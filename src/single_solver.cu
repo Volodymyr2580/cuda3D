@@ -1564,6 +1564,7 @@ __device__ __forceinline__ void pml_fused_zface_pressure_update(float *p0,
   p0[base]=2*__ldg(p1+base)-p0[base]
     +__ldg(cw2+base)*dt*(c1+c2+c3);
 }
+#endif
 
 #ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
 __device__ __forceinline__ int cuda3d_pml_z_state_index(
@@ -1693,7 +1694,6 @@ __global__ void cuda3d_pml_len16_compact_state_compare_ns(
     cuda3d_atomic_max_float(max_abs, local_max);
   }
 }
-#endif
 #endif
 
 __global__ void cuda_fd3d_p_pml_ns(float *p0, const float *__restrict__ p1, const float *__restrict__ vy, const float *__restrict__ vx, const float *__restrict__ vz,
