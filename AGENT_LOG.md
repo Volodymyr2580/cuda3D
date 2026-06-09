@@ -5591,3 +5591,53 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
     - 用户批准 Tier 1/2 tolerance：启动 precision-relaxation feasibility。
     - 新 ownership idea：先过 byte/synchronization model。
     - 否则使用 current-best package 收口。
+
+## 2026-06-09 14:58:00 +08:00
+
+- 操作目标：
+  - 根据用户提供的 freeosc 集群指南和登录信息，进行只读集群巡检。
+  - 判断 Multi-GPU Batching 阶段是否可立即在 RTX 5090 节点上开展。
+  - 固化 Slurm/GRES 使用约束，避免后续错误占卡或在登录节点运行 benchmark。
+- 修改文件：
+  - 新增 `docs/freeosc_cluster_survey_20260609.md`。
+  - 更新 `docs/multigpu_shot_batching_plan.md`。
+  - 更新 `AGENTS.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地：
+    - `git status --short`
+    - `Get-Content -Encoding UTF8 reports/freeosc_202603_extracted.txt -TotalCount 80`
+  - 远程只读：
+    - `hostname; whoami; id; pwd; date`
+    - `sbatch --version`
+    - `sinfo -p gpu -eN -O "NodeHost:8,StateLong:14,CPUsState:18,Gres:90,GresUsed:90,Reason:40"`
+    - `squeue -p gpu`
+    - `squeue -u shengwz`
+    - `scontrol show partition gpu`
+    - `sinfo -R`
+    - `scontrol show node gpu1..gpu6`
+    - `module avail cuda`
+    - `module avail oneapi`
+    - `module show cuda/12.3`
+    - `module show cuda/12.8-gpu6`
+    - `module show cuda/13.1-gpu6`
+    - `df -h . /home/scratch`
+    - `beegfs-ctl --getquota --uid $(id -u)`
+- 测试结果：
+  - SSH 登录成功，登录节点为 `mu01`。
+  - Slurm 可用，版本 `24.05.3`。
+  - 本轮未提交 GPU 作业，未编译，未运行 CUDA benchmark。
+- 输出/哈希/误差摘要：
+  - `gpu` partition：`Nodes=gpu[1-6]`，`OverSubscribe=NO`，`ExclusiveUser=NO`。
+  - `gpu1`：mixed，`4x V100S + 4x A40`，8 个 GPU GRES 全部已分配。
+  - `gpu2`：down/not responding，`4x A100`，原因 `power_cut`。
+  - `gpu3`：mixed，`3x A100 + 4x 10gb`，7 个 GPU GRES 全部已分配。
+  - `gpu4`：down/not responding，`8x RTX4090`，原因 `power_cut`。
+  - `gpu5`：down/not responding，`6x RTX5090`，原因 `power_cut`。
+  - `gpu6`：down/not responding，`8x RTX5090`，原因 `power_cut`。
+  - 可用 CUDA modules：`cuda/10.1`、`cuda/11.5`、`cuda/12.3`、`cuda/12.6-gpu5`、`cuda/12.8-gpu6`、`cuda/13.1-gpu6`。
+  - oneAPI modules 包括 `oneapi/compiler-2021.4.0`、`oneapi/mpi-2021.4.0`、`oneapi/mkl-2021.4.0`。
+- 风险与下一步：
+  - 当前 RTX 5090 节点 `gpu5/gpu6` 都处于 `power_cut`，不能立即开展 `sm_120` formal multi-GPU batching。
+  - 若只验证流程，可等待 `gpu1/gpu3` 资源释放后按 V100S/A40/A100 架构重编，但不能用作 RTX 5090 current-best 正式续跑。
+  - 下一步建议先请管理员恢复 `gpu5` 或 `gpu6`，随后提交极短 `sbatch` GPU probe，再上传/构建项目并运行 multi-GPU batching gate。

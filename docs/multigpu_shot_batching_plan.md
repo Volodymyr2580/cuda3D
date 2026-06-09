@@ -17,6 +17,43 @@ GPU 0: NVIDIA GeForce RTX 5090
 
 Therefore this plan is prepared but not validated on the current platform.
 
+## FreeOSC Slurm Target
+
+The department `freeosc` cluster was surveyed read-only on 2026-06-09.  See:
+
+```text
+docs/freeosc_cluster_survey_20260609.md
+```
+
+Important scheduler facts:
+
+- GPU jobs must be submitted through Slurm with explicit GPU GRES requests.
+- `ExclusiveUser=NO`, so multiple users can share one node.
+- `OverSubscribe=NO`, so correctly requested GPU GRES should not be
+  oversubscribed by Slurm.
+- Do not run CUDA benchmarks on the login node.
+- Current best `sm_120` binaries require RTX 5090 nodes (`gpu5/gpu6`).
+
+Survey result:
+
+- `gpu1` and `gpu3` were powered and mixed, but all configured GPU GRES were
+  allocated.
+- `gpu4`, `gpu5`, and `gpu6` were `down*` with reason `power_cut`.
+- `gpu5/gpu6` must be restored before RTX 5090 batching can be validated.
+
+For the current six-shot performance case, the preferred validation target is:
+
+```bash
+#SBATCH -p gpu
+#SBATCH -N 1
+#SBATCH --ntasks-per-node=6
+#SBATCH --gres=gpu:rtx5090:6
+```
+
+This gives the ideal `[1,1,1,1,1,1]` shot distribution.  If `gpu6` is restored
+and eight GPUs are available, still use six GPUs first for the formal
+six-shot benchmark; eight GPUs need a larger shot count to be meaningful.
+
 ## Code Requirements
 
 The existing program reads `gpus_p_node` from the input file and maps MPI ranks

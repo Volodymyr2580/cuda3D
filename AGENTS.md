@@ -1573,6 +1573,40 @@ make -B -f makefile.rtx5090 test
 - 需要为 RTX 5090 平台重新冻结 `smoke/correctness/perf_1gpu` baseline。
 - 密码不得写入项目文档或脚本；需要自动化时只通过临时环境变量传入。
 
+### FreeOSC Slurm 集群
+
+后续 Multi-GPU Batching 阶段优先转向系里的 `freeosc` Slurm 集群。
+
+连接方式：
+
+```bash
+ssh -p 26537 shengwz@162.105.91.194
+```
+
+注意：
+
+- 密码不得写入项目文档、脚本、git commit 或 shell 启动文件。
+- 登录节点只用于文件管理、排队状态查询和提交作业，不能直接运行 CUDA benchmark。
+- GPU benchmark 必须通过 `sbatch` 或 `srun` 申请 GPU GRES。
+- sbatch 脚本必须显式写 `#SBATCH -p gpu` 和 `#SBATCH --gres=gpu:<type>:<N>`。
+- Slurm 当前 `ExclusiveUser=NO`，所以多个用户可以共享同一节点；但 `OverSubscribe=NO`，正确申请 GRES 后 GPU 设备应由 Slurm 分配，不能只靠手写 `CUDA_VISIBLE_DEVICES`。
+- 当前 best RTX 5090 构建使用 `sm_120`，只能在 RTX 5090 节点上正式复现；若使用 A100/A40/V100S/RTX4090，必须按对应架构重编，不能直接复用 `sm_120` 二进制。
+
+2026-06-09 只读巡检结果：
+
+- `gpu1`：mixed，`4x V100S + 4x A40`，8 张 GPU 全部已分配。
+- `gpu2`：down，`4x A100`，原因 `power_cut`。
+- `gpu3`：mixed，`3x A100 + 4x 10gb`，7 个 GPU GRES 全部已分配。
+- `gpu4`：down，`8x RTX4090`，原因 `power_cut`。
+- `gpu5`：down，`6x RTX5090`，原因 `power_cut`。
+- `gpu6`：down，`8x RTX5090`，原因 `power_cut`。
+
+详细记录：
+
+```text
+docs/freeosc_cluster_survey_20260609.md
+```
+
 ### 原 RTX 4090 服务器
 
 服务器项目目录：
