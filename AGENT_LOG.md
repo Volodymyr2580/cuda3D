@@ -5723,3 +5723,44 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 该 gate 是 optimistic ceiling，不代表实际能达到 `1.096x`。
   - `v_len16` 当前不更新 CPML state，compact-state 首版只瞄准 pressure len16 的 `memory_dzz` 与 z-recompute `memory_dz` old/next。
   - 下一步先实现 `CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR`，full-array path 仍权威；mirror 失败则停止 commit prototype。
+
+## 2026-06-09 17:08:00 +08:00
+
+- 操作目标：
+  - 实现并验证 Phase 3 `CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR`。
+  - mirror 只验证 accepted pressure len16 compact line mapping，不改变输出数学路径。
+- 修改文件：
+  - `include/inc3D/single_solver.h`
+  - `src/single_solver.cu`
+  - `src/rem_fd.cu`
+  - 新增 `docs/compact_state/pml_len16_compact_state_mirror_result.md`
+  - 新增 `reports/compact_state/mirror_binary_sha256.txt`
+  - 新增 `reports/compact_state/compare_mirror_correctness_vs_current_best/comparison.md`
+  - 新增 `reports/compact_state/compare_mirror_correctness_vs_current_best/comparison.json`
+  - 新增 `reports/compact_state/compare_mirror_perf6_probe_vs_current_best/comparison.md`
+  - 新增 `reports/compact_state/compare_mirror_perf6_probe_vs_current_best/comparison.json`
+- 执行命令摘要：
+  - Build mirror binary with current-best flags plus `-DCUDA3D_PML_LEN16_COMPACT_STATE_MIRROR`。
+  - `python tools/run_benchmark.py --case smoke_1gpu --tag compact_mirror_smoke`
+  - `python tools/run_benchmark.py --case correctness --tag compact_mirror_correctness`
+  - `python tools/run_benchmark.py --case perf_1gpu_6shots --tag compact_mirror_perf6_probe`
+  - `python3 tools/compare_outputs.py --baseline ...current_best_correctness... --candidate ...mirror_correctness...`
+  - `python3 tools/compare_outputs.py --baseline ...current_best_perf6_a2... --candidate ...mirror_perf6_probe...`
+- 测试结果：
+  - 初次 mirror build link 失败：mirror kernels 被错误放在 disabled fused-zface conditional block 内。
+  - 修正条件编译位置后，mirror build 通过。
+  - `smoke_1gpu` 通过，outputs `3`。
+  - `correctness` 通过，outputs `6`。
+  - `perf_1gpu_6shots` probe 通过，outputs `6`。
+  - mirror internal check 覆盖 6 炮，每炮 `it=0/1/2/1500`。
+- 输出/哈希/误差摘要：
+  - mirror binary SHA256：`3d284fac86d066d8ce09c4d1f0a7126714f198555ecb087350b5e27c6ae636b3`。
+  - mirror internal check：所有检查行均为 `rel_l2=0`、`max_abs=0`、`bad=0`。
+  - correctness output compare vs Phase 0 current-best：pass，6 个输出 rel L2 全部 `0`。
+  - perf probe output compare vs Phase 0 current-best：pass，6 个输出 rel L2 全部 `0`。
+  - mirror perf probe WP：`2.079581s`。
+  - mirror perf probe Gradient：`2.191727s`。
+- 风险与下一步：
+  - mirror 有额外 gather/compare 开销，不能作为性能数据。
+  - mirror 当前证明 compact line mapping 和 23-slot z-window 映射与 full arrays 对齐。
+  - 下一步才是 commit prototype：`CUDA3D_PML_LEN16_COMPACT_STATE`，让 accepted pressure len16 kernel 真正从 compact state 读写，并保留 residual full-array fallback。
