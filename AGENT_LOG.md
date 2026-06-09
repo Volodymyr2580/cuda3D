@@ -5531,3 +5531,63 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
     - `>=2` visible GPUs 进行 true multi-GPU batching validation。
     - 用户明确放宽 tolerance policy 后做 precision-relaxation。
     - 提出全新的 ownership representation，并先通过 byte/synchronization model。
+
+## 2026-06-09 12:46:39 +08:00
+
+- 操作目标：
+  - 根据 Pro 反馈开展今日任务：固化 current-best、建立 micro-bank 政策、准备 multi-GPU batching、写 precision-relaxation proposal 和 next-scope menu。
+  - 明确 `2.3x vs original` 只能作为估算，不能伪造成 direct original-vs-current formal table。
+- 修改文件：
+  - 新增 `docs/current_best_v_pml_len16_release.md`。
+  - 新增 `docs/original_vs_current_best_20260609.md`。
+  - 新增 `reports/original_vs_current_best_20260609/summary.json`。
+  - 新增 `docs/micro_bank_policy.md`。
+  - 新增 `docs/multigpu_shot_batching_plan.md`。
+  - 新增 `tools/run_multigpu_batching.py`。
+  - 新增 `docs/precision_relaxation_policy_proposal.md`。
+  - 新增 `docs/next_scope_decision_menu.md`。
+  - 新增 `reports/current_best_frontier_20260609/final_report.md`。
+  - 更新 `AGENTS.md`。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - current-best tag：
+    - `git tag -a current-best-v-pml-len16-rtx5090-20260609 -m "current best v-pml len16 RTX5090 20260609"`
+  - original baseline 可用性核对：
+    - `git tag --list "current-best-v-pml-len16-rtx5090-20260609"`
+    - `git branch --all --list "*orig*" "*baseline*" "*current*"`
+    - `Get-ChildItem -Recurse -Directory -Depth 3 | Where-Object {$_.Name -match 'orig|original|baseline|archive'}`
+    - `Select-String ... -Pattern "orig_code|original baseline|最原始|current_best_reference|1.8x"`
+  - multi-GPU runner checks：
+    - `python -m py_compile tools\run_multigpu_batching.py`
+    - `python tools\run_multigpu_batching.py --case perf_1gpu_6shots --gpus 0`
+    - `python tools\run_multigpu_batching.py --case perf_1gpu_6shots --gpus 0,1`
+- 测试结果：
+  - `tools/run_multigpu_batching.py` 语法检查通过。
+  - `--gpus 0` 正确拒绝：true multi-GPU batching requires at least 2 requested GPUs。
+  - `--gpus 0,1` 在当前可见 GPU 不足时正确拒绝：nvidia-smi reports 1 GPUs, but 2 were requested。
+  - 本轮不修改主 CUDA 程序，不需要 build/correctness/perf repeat。
+- 输出/哈希/误差摘要：
+  - current-best release：
+    - tag：`current-best-v-pml-len16-rtx5090-20260609`。
+    - tag target commit：`f637ba115d52852b493867ab4a957113a01142a5`。
+    - WP speedup vs zmem：`1.222023x`。
+    - Gradient speedup vs zmem：`1.206588x`。
+    - elapsed speedup vs zmem：`1.118261x`。
+    - max rel L2：`6.384336e-07`。
+  - current-best binary hashes：
+    - round 1：`aa58035a8a084bfd34fc2336bfbbb10fb3586ba9352c75109e49fd2be7909278`。
+    - round 2：`dd085284245186517599db50cb98f19affef2855ef8ed17cc13a54273c64162b`。
+    - round 3：`881e9e35f0291bad9b63da90bf04f18d0ad07550325a8b808475b2a1264940b9`。
+  - original-vs-current：
+    - direct original-vs-current table：`unavailable`。
+    - 原因：未找到可证明为“最原始版本”的可重建源码；`orig_code` 不能作为 original baseline。
+    - estimated WP vs original：`2.308x`。
+    - estimated Gradient vs original：`2.274x`。
+- 风险与下一步：
+  - 当前 `2.3x` 必须表述为 estimated speedup vs original，直到找到真正 original source/commit 并同机重跑。
+  - 不创建 `archives/speedups/1.5x...`，因为当前 package 不是 speed-threshold archive。
+  - 下一步由 scope 决策驱动：
+    - `>=2` GPUs：运行 true multi-GPU batching。
+    - 用户批准 Tier 1/2 tolerance：启动 precision-relaxation feasibility。
+    - 新 ownership idea：先过 byte/synchronization model。
+    - 否则使用 current-best package 收口。

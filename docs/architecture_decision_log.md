@@ -3141,3 +3141,63 @@ Allowed next:
   precision-relaxation only after explicit tolerance policy change
   stop CUDA-core sprint at current-best and package results
 ```
+
+## 2026-06-09 12:46:39 +08:00 - Pro feedback follow-up scope
+
+Decision:
+
+```text
+Adopt current-best release packaging and micro-bank policy.
+Do not treat the estimated 2.3x vs original as a formal direct measurement.
+Do not reopen heavy exact-CUDA routes under the micro-bank label.
+```
+
+Evidence:
+
+```text
+release:
+  docs/current_best_v_pml_len16_release.md
+
+original-vs-current status:
+  docs/original_vs_current_best_20260609.md
+  reports/original_vs_current_best_20260609/summary.json
+
+policies/plans:
+  docs/micro_bank_policy.md
+  docs/multigpu_shot_batching_plan.md
+  docs/precision_relaxation_policy_proposal.md
+  docs/next_scope_decision_menu.md
+  reports/current_best_frontier_20260609/final_report.md
+
+safe runner:
+  tools/run_multigpu_batching.py
+```
+
+Current-best:
+
+```text
+candidate                     current_best_v_pml_len16
+WP speedup vs zmem             1.222023x
+Gradient speedup vs zmem       1.206588x
+max rel L2                    6.384336e-07
+tag                            current-best-v-pml-len16-rtx5090-20260609
+tag target commit              f637ba115d52852b493867ab4a957113a01142a5
+```
+
+Original baseline:
+
+```text
+direct original-vs-current formal table    unavailable
+reason                                     no proven rebuildable original source
+estimated WP vs original                   2.308x
+estimated Gradient vs original             2.274x
+```
+
+Micro-bank boundary:
+
+```text
+Low-risk composable micro patches may be banked under exp/micro-bank-current-best
+if they meet repeat, correctness, resource, and ablation gates.  Heavy
+ownership/fusion/temporal/cluster routes remain non-bankable and require a new
+byte/synchronization model before CUDA code.
+```

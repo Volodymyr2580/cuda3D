@@ -1,0 +1,19 @@
+{
+  "decision": "direct_original_vs_current_table_unavailable",
+  "reason": "No clean rebuildable very-first original source snapshot was found. Existing notes state orig_code matches current runnable source hashes for key files, so it cannot be used as an original baseline.",
+  "current_best": {
+    "candidate": "current_best_v_pml_len16",
+    "wp_speedup_vs_zmem": 1.2220234686933649,
+    "gradient_speedup_vs_zmem": 1.2065883595902978,
+    "max_rel_l2": 6.384336369813099e-7
+  },
+  "estimated_total_speedup": {
+    "assumed_pre_zmem_anchor": 1.8,
+    "zmem_vs_current_best_reference_wp": 1.0493,
+    "zmem_vs_current_best_reference_gradient": 1.046865,
+    "estimated_wp_vs_original": 2.308458903942868,
+    "estimated_gradient_vs_original": 2.273999753078044,
+    "is_formal_direct_measurement": false
+  },
+  "reopen_condition": "Provide a proven original source commit, tag, tarball, or rebuildable binary with hashes and environment notes."
+}

@@ -1386,6 +1386,61 @@ Phase 4.38 current-best package summary 已完成：
     - 用户明确放宽 tolerance policy 后做 precision-relaxation。
     - 提出全新的 ownership representation，并先通过 byte/synchronization model。
 
+Phase 4.39 Pro feedback follow-up package 已完成：
+
+- 触发背景：
+  - Pro 反馈确认当前估算已到约 `2.3x` vs 最早版本。
+  - 要求停止普通 exact-CUDA 随机原型，改为 current-best 固化、micro-bank policy、多 GPU计划、precision proposal 和 next-scope menu。
+- tag：
+  - `current-best-v-pml-len16-rtx5090-20260609`。
+  - tag target commit：`f637ba115d52852b493867ab4a957113a01142a5`。
+- 新增 release / packaging 文档：
+  - `docs/current_best_v_pml_len16_release.md`。
+  - `docs/original_vs_current_best_20260609.md`。
+  - `reports/original_vs_current_best_20260609/summary.json`。
+  - `reports/current_best_frontier_20260609/final_report.md`。
+- 新增策略文档：
+  - `docs/micro_bank_policy.md`。
+  - `docs/multigpu_shot_batching_plan.md`。
+  - `docs/precision_relaxation_policy_proposal.md`。
+  - `docs/next_scope_decision_menu.md`。
+- 新增安全脚本：
+  - `tools/run_multigpu_batching.py`。
+  - 该脚本默认 dry-run。
+  - 少于 `2` 张 requested GPUs 时拒绝运行。
+  - 当前平台检测到 GPU 数不足 requested GPU 数时拒绝运行。
+  - 要求 `--np` 等于 requested GPU 数，避免 same-GPU oversubscription。
+- original-vs-current 结论：
+  - 当前未找到可证明为“最原始版本”的可重建源码。
+  - `orig_code` 已记录为与当前 runnable source 关键文件哈希一致，不能作为 original baseline。
+  - 因此 `2.3x` 只能作为估算：
+    - estimated WP vs original：`2.308x`。
+    - estimated Gradient vs original：`2.274x`。
+  - 只有找到真实 original commit/tag/tarball 后，才允许做 formal original-vs-current table。
+- micro-bank 政策：
+  - 低风险可组合 micro patch 可以进入 `exp/micro-bank-current-best`。
+  - 单补丁要求 repeat mean WP `>=1.010x`，或 stack-level ablation `>=1.020x`。
+  - no single run below `0.995x`。
+  - Gradient 不退。
+  - register increase `<=4` registers/thread。
+  - shared memory increase `<=2 KiB` unless justified。
+  - 重型 ownership/fusion/temporal/cluster routes 不属于 micro-bank。
+- multi-GPU batching：
+  - `2` GPUs ideal shot speedup `[3,3] = 2.0000x`。
+  - `3` GPUs ideal `[2,2,2] = 3.0000x`。
+  - `4` GPUs ideal `[2,2,1,1] = 3.0000x`，受 6 shots 限制。
+  - `6` GPUs ideal `[1,1,1,1,1,1] = 6.0000x`。
+  - 验收必须用 elapsed 和 `Gradient TIME all`，不能用 root-rank printed WP。
+- precision relaxation：
+  - 当前仍未授权 mixed precision。
+  - 只有用户明确批准 Tier 1 或 Tier 2 tolerance 后才允许写 CUDA code。
+  - 第一候选应是 CPML auxiliary memory storage，pressure `p_curr/p_next` 和 receiver output 先保持 FP32。
+- 当前下一步菜单：
+  - `A`：停止并使用 current-best package。
+  - `B`：等待 `>=2` GPUs，做 true multi-GPU batching。
+  - `C`：用户批准 precision relaxation 后做 mixed-precision feasibility。
+  - `D`：Pro 提出全新 ownership representation，并先过 byte/sync model。
+
 ## 速度阈值存档规则
 
 以 `perf_3gpu` 的冻结 baseline 作为 1.0x：
