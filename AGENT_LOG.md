@@ -5937,3 +5937,65 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 当前公网访问需在阿里云控制台安全组中放行 TCP `8080`，或使用 SSH 隧道访问后台。
   - 当前采用“Docker 数据库 + systemd 二进制主程序”方式绕过 Sub2API 镜像拉取失败；后续维护时不要直接执行 `docker compose up -d` 全量启动，否则仍会尝试拉取 `weishaw/sub2api` 镜像。
   - 正式分发前需要配置 HTTPS、管理员密码安全保存、上游官方 API Key、用户子 Key、额度/限速策略。
+
+## 2026-06-09 18:59:30 +08:00
+
+- 操作目标：
+  - 继续 exact-FP32 高精度单卡冲刺。
+  - 将 `CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT` 从设计门推进到 macro-default-off CUDA prototype，并在 RTX 5090 远端 worktree `/work/wenzhe/cuda3D/.codex_worktrees/compact_state_20260609` 上验收。
+- 修改文件：
+  - `include/inc3D/single_solver.h`
+  - `src/single_solver.cu`
+  - `src/rem_fd.cu`
+  - 新增 `docs/compact_state/pml_len16_compact_dz_old_next_prototype_result.md`
+  - 新增 `reports/compact_state/compact_dz_old_next_perf6_repeat_summary.json`
+  - 新增 `reports/compact_state/compare_compact_dz_old_next_correctness_vs_current_best/`
+  - 新增 `reports/compact_state/compare_compact_dz_old_next_perf6_a_vs_current_best/`
+  - 新增 `reports/compact_state/compare_compact_dz_old_next_perf6_b_vs_current_best/`
+  - 新增 `reports/compact_state/compare_compact_dz_old_next_perf6_c_vs_current_best/`
+  - 更新 `AGENTS.md`
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地 `git diff --check`。
+  - 通过 `tools/remote_put.py` 同步三处源码到远端 worktree。
+  - 远端正常候选构建：
+    - `make -C src -f makefile.rtx5090 -B test NVFLAGS='-O3 -arch=sm_120 --use_fast_math ... -DCUDA3D_PML_LEN16_COMPACT_STATE -DCUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT'`
+  - 远端 debug fill 构建：
+    - 额外开启 `CUDA3D_PML_LEN16_COMPACT_DZ_DEBUG_FILL` 与 `CUDA3D_PML_ZMEM_DEBUG_FILL`。
+  - 远端 debug fill 覆盖运行：
+    - `python3 tools/run_benchmark.py --case profile_1gpu --tag compact_dz_old_next_debugfill_profile --timeout 300`
+  - 远端 correctness：
+    - `python3 tools/run_benchmark.py --case correctness --tag compact_dz_old_next_correctness_probe --timeout 300`
+  - 远端 perf probe：
+    - `python3 tools/run_benchmark.py --case perf_1gpu_6shots --tag compact_dz_old_next_perf6_probe --timeout 300`
+  - 远端 repeat：
+    - `perf_1gpu_6shots` tags `compact_dz_old_next_perf6_a/b/c`
+  - 远端输出对比：
+    - `python3 tools/compare_outputs.py --rel-tol 1e-5 --abs-tol 1e-6 ...`
+  - 通过 `tools/remote_get.py` 拉回 repeat summary 与 comparison artifacts。
+- 测试结果：
+  - 正常候选构建通过。
+  - debug fill 构建通过。
+  - debug fill `profile_1gpu` 通过：
+    - `benchmarks/runs/profile_1gpu_compact_dz_old_next_debugfill_profile_20260609_184932`
+  - correctness vs current-best：pass，6 个输出 rel L2 全部 `0`。
+  - perf probe vs current-best：pass，6 个输出 rel L2 全部 `0`。
+  - `perf_1gpu_6shots` repeat `a/b/c`：全部 pass，所有输出 rel L2 全部 `0`。
+- 输出/哈希/误差摘要：
+  - repeat summary：`reports/compact_state/compact_dz_old_next_perf6_repeat_summary.json`
+  - baseline mean WP：`2.004982s`。
+  - candidate mean WP：`1.969942s`。
+  - WP speedup vs current-best：`1.017787x`。
+  - baseline mean Gradient：`2.118638s`。
+  - candidate mean Gradient：`2.087878s`。
+  - Gradient speedup vs current-best：`1.014733x`。
+  - max rel L2：`0.000000e+00`。
+  - candidate repeat runs：
+    - `a`：WP `1.966728s`，Gradient `2.085733s`。
+    - `b`：WP `1.969489s`，Gradient `2.088332s`。
+    - `c`：WP `1.973608s`，Gradient `2.089570s`。
+- 风险与下一步：
+  - 该 route 数值正确，但 WP speedup 低于 `>=1.02x` 小候选门槛。
+  - 决策：拒绝作为性能候选，宏保持默认关闭；归档为 exact-FP32 negative result。
+  - 后续不要继续做 narrow `dz16 old/next` compact-state 微调，除非新的 profiler 证据证明 `memory_dz` old/next traffic 已成为主瓶颈。
+  - 下一步应转向更大粒度的 pressure-PML memory ownership，或其他有 `>=5%` repeat speedup ceiling 的 profiler-supported 路线。

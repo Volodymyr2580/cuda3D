@@ -136,6 +136,9 @@ __global__ void cuda_fd3d_p_pml_tile_ns(float *p0, const float *__restrict__ p1,
 #if defined(CUDA3D_PML_LEN16_COMPACT_STATE) && defined(CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR)
 #error CUDA3D_PML_LEN16_COMPACT_STATE and CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR are mutually exclusive
 #endif
+#if defined(CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT) && !defined(CUDA3D_PML_LEN16_COMPACT_STATE)
+#error CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT requires CUDA3D_PML_LEN16_COMPACT_STATE
+#endif
 __global__ void cuda_fd3d_p_pml_len16_halfwarp_ns(float *p0, const float *__restrict__ p1,
 				const float *__restrict__ vy, const float *__restrict__ vx,
 				float *cw2, float _dy2, float _dx2, float _dz2,
@@ -143,6 +146,10 @@ __global__ void cuda_fd3d_p_pml_len16_halfwarp_ns(float *p0, const float *__rest
 				float *mem_dzz,
 #ifdef CUDA3D_PML_LEN16_COMPACT_STATE
 				float *compact_dzz16,
+#endif
+#ifdef CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT
+				const float *__restrict__ compact_dz_old16,
+				float *compact_dz_next16,
 #endif
 				const float *__restrict__ mem_dz_v,
 				float *mem_dz_next_v,

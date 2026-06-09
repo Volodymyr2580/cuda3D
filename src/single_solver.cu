@@ -1927,9 +1927,58 @@ __device__ __forceinline__ void fill_pml_pressure_vz_cache_entry(
 #if defined(CUDA3D_PML_LEN16_COMPACT_STATE) && defined(CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR)
 #error CUDA3D_PML_LEN16_COMPACT_STATE and CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR are mutually exclusive
 #endif
+#if defined(CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT) && !defined(CUDA3D_PML_LEN16_COMPACT_STATE)
+#error CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT requires CUDA3D_PML_LEN16_COMPACT_STATE
+#endif
 #if PmlTileBlockSize1 != 32 || PmlTileBlockSize2 != 4 || PmlTileBlockSize3 != 2
 #error CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK currently requires PmlTileBlockSize=32x4x2
 #endif
+#ifdef CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT
+__device__ __forceinline__ float recompute_vz_after_update_from_compact_old_mem(
+  const float *__restrict__ p1,
+  const float *__restrict__ compact_dz_old16,
+  float *__restrict__ compact_dz_next16,
+  float *full_mem_dz_next,
+  float _dz2,
+  int n3, int n2, int n1, int npml,
+  int gtid3, int gtid2, int gtid1,
+  size_t compact_z16) {
+  const int stride2 = n1 + 2 * radius;
+  const int stride3 = stride2 * (n2 + 2 * radius);
+  const size_t base = (size_t)(gtid3 + radius) * stride3 +
+    (size_t)(gtid2 + radius) * stride2 + (gtid1 + radius);
+  float value=stencil[1]*(__ldg(p1+base+1)-__ldg(p1+base  ))
+    +stencil[2]*(__ldg(p1+base+2)-__ldg(p1+base-1))
+    +stencil[3]*(__ldg(p1+base+3)-__ldg(p1+base-2))
+    +stencil[4]*(__ldg(p1+base+4)-__ldg(p1+base-3));
+
+  value *= _dz2;
+  if (gtid1 < npml) {
+    const float coef = c_bz_h_pml[gtid1];
+    const float new_mem = __ldg(compact_dz_old16+compact_z16)*coef + value*(coef-1.0f);
+    compact_dz_next16[compact_z16] = new_mem;
+#if defined(CUDA3D_PML_DEBUG_DUMP) || defined(CUDA3D_PML_ZMEM_DEBUG_FILL)
+    const size_t pind=(size_t)gtid3*n2*npml + (size_t)gtid2*npml + gtid1;
+    full_mem_dz_next[pind] = new_mem;
+#endif
+    value += new_mem;
+  } else if (gtid1 >= n1-npml) {
+    const size_t ic=gtid1-n1+npml;
+    const float coef = c_az_h_pml[ic];
+    const float new_mem = __ldg(compact_dz_old16+compact_z16)*coef + value*(coef-1.0f);
+    compact_dz_next16[compact_z16] = new_mem;
+#if defined(CUDA3D_PML_DEBUG_DUMP) || defined(CUDA3D_PML_ZMEM_DEBUG_FILL)
+    const size_t pind=(size_t)n3*n2*npml + (size_t)gtid3*npml*n2 + (size_t)gtid2*npml + ic;
+    full_mem_dz_next[pind] = new_mem;
+#endif
+    value += new_mem;
+  } else {
+    compact_dz_next16[compact_z16] = 0.0f;
+  }
+  return value;
+}
+#endif
+
 __global__ void cuda_fd3d_p_pml_len16_halfwarp_ns(float *p0, const float *__restrict__ p1,
 				   const float *__restrict__ vy, const float *__restrict__ vx,
 				   float *cw2, float _dy2, float _dx2, float _dz2,
@@ -1937,6 +1986,10 @@ __global__ void cuda_fd3d_p_pml_len16_halfwarp_ns(float *p0, const float *__rest
 				   float *mem_dzz,
 #ifdef CUDA3D_PML_LEN16_COMPACT_STATE
 				   float *compact_dzz16,
+#endif
+#ifdef CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT
+				   const float *__restrict__ compact_dz_old16,
+				   float *compact_dz_next16,
 #endif
 				   const float *__restrict__ mem_dz_v,
 				   float *mem_dz_next_v,
@@ -1965,10 +2018,21 @@ __global__ void cuda_fd3d_p_pml_len16_halfwarp_ns(float *p0, const float *__rest
   const int cache_z_center = active_z0 + local_z;
   const int stride2 = n1 + 2 * radius;
   const int stride3 = stride2 * (n2 + 2 * radius);
+#ifdef CUDA3D_PML_LEN16_COMPACT_STATE
+  const size_t compact_line = ((size_t)blockIdx.x * PmlTileBlockSize2 * PmlTileBlockSize3) +
+    (size_t)local_line;
+  const size_t compact_z16 = compact_line * 16u + (size_t)local_z;
+#endif
 
+#ifdef CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT
+  vz_line_cache[cache_base + local_z + 4] = recompute_vz_after_update_from_compact_old_mem(
+    p1, compact_dz_old16, compact_dz_next16, mem_dz_next_v, _dz2,
+    n3, n2, n1, npml, gtid3, gtid2, cache_z_center, compact_z16);
+#else
   vz_line_cache[cache_base + local_z + 4] = recompute_vz_after_update_from_old_mem(
     p1, mem_dz_v, mem_dz_next_v, _dz2,
     n3, n2, n1, npml, gtid3, gtid2, cache_z_center, true);
+#endif
   if (local_z < 4) {
     vz_line_cache[cache_base + local_z] = recompute_vz_after_update_from_old_mem(
       p1, mem_dz_v, mem_dz_next_v, _dz2,
@@ -2005,11 +2069,6 @@ __global__ void cuda_fd3d_p_pml_len16_halfwarp_ns(float *p0, const float *__rest
   c1*=_dz2;
   c2*=_dx2;
   c3*=_dy2;
-#ifdef CUDA3D_PML_LEN16_COMPACT_STATE
-  const size_t compact_line = ((size_t)blockIdx.x * PmlTileBlockSize2 * PmlTileBlockSize3) +
-    (size_t)local_line;
-  const size_t compact_z16 = compact_line * 16u + (size_t)local_z;
-#endif
   if(gtid1<npml) {
 #ifdef CUDA3D_PML_LEN16_COMPACT_STATE
     const float coef = c_bz_pml[gtid1];

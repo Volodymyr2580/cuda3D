@@ -1,0 +1,39 @@
+{
+  "baseline_dirs": [
+    "benchmarks/runs/perf_1gpu_6shots_compact_current_best_perf6_a2_20260609_163148",
+    "benchmarks/runs/perf_1gpu_6shots_compact_current_best_perf6_b2_20260609_163151",
+    "benchmarks/runs/perf_1gpu_6shots_compact_current_best_perf6_c2_20260609_163154"
+  ],
+  "candidate_dirs": [
+    "benchmarks/runs/perf_1gpu_6shots_compact_dz_old_next_perf6_a_20260609_185349",
+    "benchmarks/runs/perf_1gpu_6shots_compact_dz_old_next_perf6_b_20260609_185353",
+    "benchmarks/runs/perf_1gpu_6shots_compact_dz_old_next_perf6_c_20260609_185356"
+  ],
+  "baseline_wp": [
+    2.002595,
+    2.004484,
+    2.007866
+  ],
+  "candidate_wp": [
+    1.966728,
+    1.969489,
+    1.973608
+  ],
+  "baseline_gradient": [
+    2.11604,
+    2.119912,
+    2.119963
+  ],
+  "candidate_gradient": [
+    2.085733,
+    2.088332,
+    2.08957
+  ],
+  "baseline_wp_mean": 2.0049816666666667,
+  "candidate_wp_mean": 1.9699416666666667,
+  "wp_speedup": 1.017787328728008,
+  "baseline_gradient_mean": 2.118638333333333,
+  "candidate_gradient_mean": 2.0878783333333333,
+  "gradient_speedup": 1.0147326592306225,
+  "decision": "reject_below_2_percent_gate"
+}

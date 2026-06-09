@@ -1684,6 +1684,29 @@ docs/compact_state/pml_len16_compact_dz_old_next_design.md
 - debug 构建可以 mirror compact state 回 full arrays 以服务 debug dump。
 - 下一步只允许写 macro-default-off prototype；没有 debug coverage 与 `perf_1gpu_6shots` repeat，不得 promotion。
 
+`CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT` prototype 已测试完成：
+
+- 范围：只将 accepted pressure len16 central z positions 的 `memory_dz` old/next 状态改为 compact `dz_old16/dz_next16`。
+- 覆盖：debug fill `profile_1gpu` 通过，确认 compact `dz_next16` 无漏写。
+- 数值：
+  - correctness vs current-best：pass，6 个输出 max rel L2 `0`。
+  - `perf_1gpu_6shots` repeat `a/b/c`：全部 pass，max rel L2 `0`。
+- 性能：
+  - baseline mean WP：`2.004982s`。
+  - candidate mean WP：`1.969942s`。
+  - WP speedup：`1.017787x`。
+  - Gradient speedup：`1.014733x`。
+- 决策：低于 `>=1.02x` 小候选门槛，拒绝作为性能候选；宏保持默认关闭，只作为 exact-FP32 negative result 归档。
+
+后续不要继续做 narrow `dz16 old/next` compact-state 微调，除非新的 profiler 证据证明 `memory_dz` old/next traffic 已成为主瓶颈。下一步应转向更大粒度的 pressure-PML memory ownership，或其他有 `>=5%` repeat speedup ceiling 的 profiler-supported 路线。
+
+详细报告：
+
+```text
+docs/compact_state/pml_len16_compact_dz_old_next_prototype_result.md
+reports/compact_state/compact_dz_old_next_perf6_repeat_summary.json
+```
+
 ### 原 RTX 4090 服务器
 
 服务器项目目录：

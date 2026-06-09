@@ -32,6 +32,10 @@
 #error "CUDA3D_PML_ZFACE_SHARED_VP_DEBUG replaces the old pressure-only zface specialize path"
 #endif
 
+#if defined(CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT) && !defined(CUDA3D_PML_LEN16_COMPACT_STATE)
+#error "CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT requires CUDA3D_PML_LEN16_COMPACT_STATE"
+#endif
+
 #ifdef CUDA3D_PML_DEBUG_DUMP
 #include <sys/stat.h>
 #endif
@@ -150,6 +154,36 @@ static void check_zmem_new_written(float *d_memory_dz_next, size_t count,
 
   if (unwritten != 0) {
     printf("ERROR ZMEM_IN_P unwritten entries: rank=%d shot=%d it=%d count=%zu first=%zu\n",
+	   mytid, snum, it, unwritten, first_unwritten);
+    exit(0);
+  }
+}
+#endif
+
+#if defined(CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT) && defined(CUDA3D_PML_LEN16_COMPACT_DZ_DEBUG_FILL)
+static void check_compact_dz_next_written(float *d_compact_dz_next, size_t count,
+					  int mytid, int snum, int it) {
+  float *host = (float*)malloc(count * sizeof(float));
+  if (host == NULL) {
+    printf("ERROR allocating compact DZ debug host buffer\n");
+    exit(0);
+  }
+
+  cudaMemcpy(host, d_compact_dz_next, count * sizeof(float), cudaMemcpyDeviceToHost);
+  check_gpu_error_2("copy compact DZ debug buffer");
+
+  size_t unwritten = 0;
+  size_t first_unwritten = 0;
+  for (size_t i = 0; i < count; ++i) {
+    if (host[i] != host[i]) {
+      if (unwritten == 0) first_unwritten = i;
+      ++unwritten;
+    }
+  }
+  free(host);
+
+  if (unwritten != 0) {
+    printf("ERROR PML len16 compact DZ unwritten entries: rank=%d shot=%d it=%d count=%zu first=%zu\n",
 	   mytid, snum, it, unwritten, first_unwritten);
     exit(0);
   }
@@ -610,6 +644,11 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 #if defined(CUDA3D_PML_LEN16_COMPACT_STATE) || defined(CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR)
   float *d_p_len16_compact_dzz16 = NULL;
 #endif
+#ifdef CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT
+  float *d_p_len16_compact_dz_old16 = NULL;
+  float *d_p_len16_compact_dz_next16 = NULL;
+  size_t p_len16_compact_items16 = 0;
+#endif
 #ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
   float *d_p_len16_compact_dz_old23 = NULL;
   float *d_p_len16_compact_dz_next23 = NULL;
@@ -876,6 +915,13 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 #ifdef CUDA3D_PML_LEN16_COMPACT_STATE
     cudaMemset(d_p_len16_compact_dzz16, 0, compact_lines * 16u * sizeof(float));
 #endif
+#ifdef CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT
+    p_len16_compact_items16 = compact_lines * 16u;
+    cudaMalloc((void**)&d_p_len16_compact_dz_old16, p_len16_compact_items16 * sizeof(float));
+    cudaMalloc((void**)&d_p_len16_compact_dz_next16, p_len16_compact_items16 * sizeof(float));
+    cudaMemset(d_p_len16_compact_dz_old16, 0, p_len16_compact_items16 * sizeof(float));
+    cudaMemset(d_p_len16_compact_dz_next16, 0, p_len16_compact_items16 * sizeof(float));
+#endif
 #endif
 #ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
     cudaMalloc((void**)&d_p_len16_compact_dz_old23, compact_lines * 23u * sizeof(float));
@@ -1090,6 +1136,12 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
     cudaMemset(d_memory_dz_next, 0xff, mem_z_bytes);
     check_gpu_error_loop("fill ZMEM next");
 #endif
+#if defined(CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT) && defined(CUDA3D_PML_LEN16_COMPACT_DZ_DEBUG_FILL)
+    if (n_p_len16_tiles > 0) {
+      cudaMemset(d_p_len16_compact_dz_next16, 0xff, p_len16_compact_items16 * sizeof(float));
+      check_gpu_error_loop("fill P len16 compact DZ next");
+    }
+#endif
 #ifdef CUDA3D_PML_ZFACE_P_SPECIALIZE
     if (n_zface_p_pml_tiles > 0) {
       cuda_fd3d_p_pml_zface_ns<<<dimg_pml_zface, dimb_pml_zface >>>(d_p0, d_p1, d_vy, d_vx, d_vz,
@@ -1119,6 +1171,10 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 					     d_memory_dzz,
 #ifdef CUDA3D_PML_LEN16_COMPACT_STATE
 					     d_p_len16_compact_dzz16,
+#endif
+#ifdef CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT
+					     d_p_len16_compact_dz_old16,
+					     d_p_len16_compact_dz_next16,
 #endif
 					     d_memory_dz,
 					     d_memory_dz_next,
@@ -1221,6 +1277,13 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
     check_cpml_vmem_next_written("memory_dx_next", d_memory_dx_next, mem_x_count, mytid, snum, it);
     check_cpml_vmem_next_written("memory_dz_next", d_memory_dz_next, mem_z_count, mytid, snum, it);
 #endif
+#if defined(CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT) && defined(CUDA3D_PML_LEN16_COMPACT_DZ_DEBUG_FILL)
+    if (n_p_len16_tiles > 0) {
+      cudaDeviceSynchronize();
+      check_gpu_error_2("sync before P len16 compact DZ coverage check");
+      check_compact_dz_next_written(d_p_len16_compact_dz_next16, p_len16_compact_items16, mytid, snum, it);
+    }
+#endif
 #ifdef CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
     {
       float *tmp_dy = d_memory_dy;
@@ -1234,6 +1297,13 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
       float *tmp_dz = d_memory_dz;
       d_memory_dz = d_memory_dz_next;
       d_memory_dz_next = tmp_dz;
+#ifdef CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT
+      {
+	float *tmp_compact_dz = d_p_len16_compact_dz_old16;
+	d_p_len16_compact_dz_old16 = d_p_len16_compact_dz_next16;
+	d_p_len16_compact_dz_next16 = tmp_compact_dz;
+      }
+#endif
     }
 #else
 #ifdef CUDA3D_PML_ZMEM_IN_P
@@ -1246,6 +1316,13 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
       float *tmp_dz = d_memory_dz;
       d_memory_dz = d_memory_dz_next;
       d_memory_dz_next = tmp_dz;
+#ifdef CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT
+      {
+	float *tmp_compact_dz = d_p_len16_compact_dz_old16;
+	d_p_len16_compact_dz_old16 = d_p_len16_compact_dz_next16;
+	d_p_len16_compact_dz_next16 = tmp_compact_dz;
+      }
+#endif
     }
 #endif
 #endif
@@ -1330,6 +1407,10 @@ void fd_3d_f(float *src, float bscl, float ***cw2, float **h_est,
 #endif
 #if defined(CUDA3D_PML_LEN16_COMPACT_STATE) || defined(CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR)
   if (d_p_len16_compact_dzz16) cudaFree(d_p_len16_compact_dzz16);
+#endif
+#ifdef CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT
+  if (d_p_len16_compact_dz_old16) cudaFree(d_p_len16_compact_dz_old16);
+  if (d_p_len16_compact_dz_next16) cudaFree(d_p_len16_compact_dz_next16);
 #endif
 #ifdef CUDA3D_PML_LEN16_COMPACT_STATE_MIRROR
   if (d_p_len16_compact_dz_old23) cudaFree(d_p_len16_compact_dz_old23);
