@@ -5837,3 +5837,79 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 决策：拒绝作为性能候选，宏保持默认关闭；记录为 exact-FP32 negative result。
   - 后续不要继续扩展 dzz16-only compact path。
   - 如果 compact-state 继续推进，必须先证明 `memory_dz` old/next halo ownership 安全，再写 commit prototype；不能直接 compact `memory_dz` 后只看性能。
+
+## 2026-06-09 18:15:54 +08:00
+
+- 操作目标：
+  - 重新开始 exact-FP32 高精度线的下一步设计门。
+  - 对 `memory_dz` / `memory_dz_next` old/next compact ownership 做静态 halo audit，确认 residual pressure PML 是否会读写 len16-owned z-state。
+- 修改文件：
+  - 新增 `tools/pml_len16_dz_halo_ownership_audit.py`
+  - 新增 `docs/compact_state/pml_len16_dz_halo_ownership_audit.md`
+  - 新增 `reports/compact_state/pml_len16_dz_halo_ownership_audit.json`
+  - 更新 `AGENTS.md`
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - `python tools/pml_len16_dz_halo_ownership_audit.py --inputs benchmarks/cases/correctness/input_correctness.in benchmarks/cases/perf_1gpu_6shots/input_perf_1gpu_6shots.in --json-out reports/compact_state/pml_len16_dz_halo_ownership_audit.json --md-out docs/compact_state/pml_len16_dz_halo_ownership_audit.md`
+- 测试结果：
+  - 静态 audit 工具运行通过。
+  - `correctness` case 没有 pressure len16 tiles，因此标记为 `not_applicable_no_len16`；它可以验证 residual fallback，但不能覆盖 compact len16 path。
+  - `perf_1gpu_6shots` case gate：`allow_compact_dz16_old_next_design`。
+- 输出/哈希/误差摘要：
+  - `correctness` padded dims：`n3=112,n2=112,n1=80,npml=8`。
+  - `correctness` pressure len16 tiles：`0`，residual tiles：`3736`。
+  - `perf_1gpu_6shots` padded dims：`n3=408,n2=408,n1=119,npml=12`。
+  - `perf_1gpu_6shots` modeled pressure len16 tiles：`35344`，residual tiles：`12544`。
+  - `perf_1gpu_6shots` len16 zmem write states：`3393024`。
+  - len16 halo reads outside writes：`0`。
+  - residual reads len16-written states：`0`。
+  - residual writes len16-written states：`0`。
+- 风险与下一步：
+  - audit 使用 input padded dimensions 的静态 topology；正式 CUDA prototype 仍必须在远端 perf/profile case 上跑 debug dump step `0/1/2` 和 output comparison。
+  - 允许进入 design-only 阶段：`CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT`。
+  - 在写 CUDA commit prototype 前必须先明确 compact old/next buffer swap、full-array fallback 同步规则，以及 correctness case 不覆盖 len16 的测试缺口。
+
+## 2026-06-09 18:09:57 +08:00
+
+- 操作目标：
+  - 根据用户请求，在个人阿里云 ECS `121.43.32.242` 上为 Wei-Shaw/sub2api 配置基础运行环境，用作官方 API 额度的中转分发站。
+- 修改文件：
+  - 本地安装 Python 用户级依赖 `paramiko`，用于本次非交互 SSH 执行。
+  - 本地新增临时下载目录 `.agent_tmp/sub2api-0.1.132/`，包含 Sub2API release 包与 checksums。
+  - 远程新增目录 `/opt/sub2api-deploy/`，包含官方 Docker Compose 部署文件、`.env`、数据目录。
+  - 远程新增 `/opt/sub2api-release-0.1.132/`，缓存 Sub2API release 包与解压内容。
+  - 远程新增 `/opt/sub2api/sub2api` 主程序。
+  - 远程新增 `/opt/sub2api-deploy/docker-compose.override.yml`，将 PostgreSQL/Redis 仅映射到 `127.0.0.1`。
+  - 远程新增 `/etc/systemd/system/sub2api.service`，并启用开机自启。
+  - 远程追加 `/opt/sub2api-deploy/.env` 的本机二进制运行 override 变量。
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 本地检查 `ssh`、`sshpass`、`plink`、`python`，并执行 `python -m pip install --user paramiko`。
+  - 远程检查 `whoami`、`hostname`、`/etc/os-release`、`uname -a`、`docker --version`、`docker compose version`、`ss -ltnp`、`ufw status`、磁盘空间。
+  - 远程执行官方部署脚本：`mkdir -p /opt/sub2api-deploy && cd /opt/sub2api-deploy && curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/docker-deploy.sh | bash >/dev/null`。
+  - 尝试 `docker compose up -d` 时，`weishaw/sub2api:latest` 因 Docker mirror `docker.m.daocloud.io` 返回 `403 Forbidden` 拉取失败。
+  - 远程启动数据库组件：`cd /opt/sub2api-deploy && docker compose up -d postgres redis`。
+  - 本地下载 `sub2api_0.1.132_linux_amd64.tar.gz` 与 `checksums.txt`；第一次下载 SHA256 mismatch，第二次使用 `curl.exe -L --retry 5` 下载并校验通过。
+  - 通过 SFTP 上传校验通过的 release 包到远程 `/opt/sub2api-release-0.1.132/sub2api_0.1.132_linux_amd64.tar.gz`。
+  - 远程 `tar -xzf` 解压 release 包，`install -m 0755 extracted/sub2api /opt/sub2api/sub2api`。
+  - 写入并启用 systemd 服务：`systemctl daemon-reload`、`systemctl enable sub2api`、`systemctl restart sub2api`。
+  - 验证：远程 `curl -I http://127.0.0.1:8080`、`systemctl is-active sub2api`、`docker compose ps`、本地 `Test-NetConnection 121.43.32.242 -Port 22/8080`。
+- 测试结果：
+  - ECS 系统：Ubuntu `22.04.5 LTS`，kernel `5.15.0-179-generic`。
+  - Docker `29.5.3` 与 Docker Compose `v5.1.4` 已可用。
+  - PostgreSQL `postgres:18-alpine` 与 Redis `redis:8-alpine` 容器启动成功且 healthy，仅监听 `127.0.0.1:5432` 与 `127.0.0.1:6379`。
+  - Sub2API 主程序版本 `0.1.132`，commit `cc077862b3d40fdbdb3711973f3ab18e1fdc5a7b`。
+  - `sub2api.service` 状态为 `active (running)`，且 `enabled`。
+  - ECS 本机访问 `http://127.0.0.1:8080` 返回 `HTTP/1.1 200 OK`。
+  - ECS 上 `8080` 监听为 `*:8080`。
+  - 从本机访问 ECS `22` 端口成功；访问公网 `8080` 超时或连接重置，ECS 内部 `ufw inactive`、`iptables INPUT ACCEPT`，因此主要怀疑阿里云安全组未放行 TCP `8080` 入站。
+- 输出/哈希/误差摘要：
+  - 本地校验通过的 release 包 SHA256：`2fa4f18cf305daaada5608aa6a73675f062223925af5e7e6a9a448934d0d7cef`。
+  - 远程上传后 release 包 SHA256：`2fa4f18cf305daaada5608aa6a73675f062223925af5e7e6a9a448934d0d7cef`。
+  - 远程安装后的 `/opt/sub2api/sub2api` SHA256：`f2eee829db0f63a49123bb795d4069912f6710310a60eb53940ef0d4a4eb4c3c`。
+  - 未在日志中记录 ECS root 密码、`.env` 密钥、admin 密码或上游 API Key。
+- 风险与下一步：
+  - 用户已在聊天中暴露 ECS root 密码；建议部署确认后尽快更换密码，并改用 SSH key 登录。
+  - 当前公网访问需在阿里云控制台安全组中放行 TCP `8080`，或使用 SSH 隧道访问后台。
+  - 当前采用“Docker 数据库 + systemd 二进制主程序”方式绕过 Sub2API 镜像拉取失败；后续维护时不要直接执行 `docker compose up -d` 全量启动，否则仍会尝试拉取 `weishaw/sub2api` 镜像。
+  - 正式分发前需要配置 HTTPS、管理员密码安全保存、上游官方 API Key、用户子 Key、额度/限速策略。

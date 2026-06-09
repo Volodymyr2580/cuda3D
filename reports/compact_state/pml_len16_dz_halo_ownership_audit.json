@@ -1,0 +1,64 @@
+{
+  "results": [
+    {
+      "input": "benchmarks\\cases\\correctness\\input_correctness.in",
+      "dims": {
+        "ny": 96,
+        "nx": 96,
+        "nz": 64,
+        "npml": 8,
+        "n3": 112,
+        "n2": 112,
+        "n1": 80
+      },
+      "tile_shape": {
+        "z": 32,
+        "x": 4,
+        "y": 2,
+        "core_margin": 4
+      },
+      "pressure_tiles": 3736,
+      "len16_tiles": 0,
+      "residual_tiles": 3736,
+      "len16_zmem_read_states": 0,
+      "len16_zmem_write_states": 0,
+      "len16_halo_read_states_outside_writes": 0,
+      "residual_zmem_read_states": 200704,
+      "residual_zmem_write_states": 200704,
+      "residual_reads_len16_written_states": 0,
+      "residual_writes_len16_written_states": 0,
+      "len16_reads_residual_written_states": 0,
+      "gate": "not_applicable_no_len16"
+    },
+    {
+      "input": "benchmarks\\cases\\perf_1gpu_6shots\\input_perf_1gpu_6shots.in",
+      "dims": {
+        "ny": 384,
+        "nx": 384,
+        "nz": 95,
+        "npml": 12,
+        "n3": 408,
+        "n2": 408,
+        "n1": 119
+      },
+      "tile_shape": {
+        "z": 32,
+        "x": 4,
+        "y": 2,
+        "core_margin": 4
+      },
+      "pressure_tiles": 47888,
+      "len16_tiles": 35344,
+      "residual_tiles": 12544,
+      "len16_zmem_read_states": 3393024,
+      "len16_zmem_write_states": 3393024,
+      "len16_halo_read_states_outside_writes": 0,
+      "residual_zmem_read_states": 602112,
+      "residual_zmem_write_states": 602112,
+      "residual_reads_len16_written_states": 0,
+      "residual_writes_len16_written_states": 0,
+      "len16_reads_residual_written_states": 0,
+      "gate": "allow_compact_dz16_old_next_design"
+    }
+  ]
+}

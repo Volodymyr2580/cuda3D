@@ -1651,6 +1651,24 @@ docs/compact_state/pml_len16_compact_dzz16_commit_result.md
 reports/compact_state/compact_dzz16_commit_perf6_summary.json
 ```
 
+`memory_dz` old/next halo ownership audit 已完成：
+
+- 工具：`tools/pml_len16_dz_halo_ownership_audit.py`。
+- 报告：`docs/compact_state/pml_len16_dz_halo_ownership_audit.md`。
+- JSON：`reports/compact_state/pml_len16_dz_halo_ownership_audit.json`。
+- `correctness` case：`not_applicable_no_len16`，不覆盖 compact len16 path。
+- `perf_1gpu_6shots` case：`allow_compact_dz16_old_next_design`。
+- audit 结果：
+  - len16 halo reads outside writes：`0`。
+  - residual reads len16-written states：`0`。
+  - residual writes len16-written states：`0`。
+
+下一步允许进入 design-only 阶段：`CUDA3D_PML_LEN16_COMPACT_DZ16_OLD_NEXT`。在写 CUDA commit prototype 前必须先解决：
+
+- compact old/next buffer swap 与 full-array fallback 的同步规则。
+- correctness case 不覆盖 len16 的测试缺口。
+- debug dump 或 perf/profile case 对 compact path 的 step `0/1/2` 覆盖。
+
 ### 原 RTX 4090 服务器
 
 服务器项目目录：
