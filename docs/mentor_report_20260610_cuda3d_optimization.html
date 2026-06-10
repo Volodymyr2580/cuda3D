@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CUDA3D 单卡 CUDA 优化阶段汇报</title>
+
+<script>
+window.MathJax = {tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$','$$'], ['\\[','\\]']]}};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<style>
+:root {
+  --ink: #10253f;
+  --muted: #53708e;
+  --sky: #23aaf2;
+  --sky-2: #8bd8ff;
+  --ice: #eefaff;
+  --paper: rgba(255,255,255,.88);
+  --line: rgba(42,154,220,.24);
+  --shadow: 0 24px 70px rgba(32, 132, 203, .20);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: "Inter", "Segoe UI", "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+  line-height: 1.72;
+  background:
+    radial-gradient(circle at 14% 6%, rgba(96, 198, 255, .38), transparent 30%),
+    radial-gradient(circle at 86% 12%, rgba(190, 232, 255, .76), transparent 28%),
+    linear-gradient(180deg, #d9f4ff 0%, #f7fdff 32%, #eef8ff 100%);
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(120deg, rgba(255,255,255,.38), transparent 32%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.22) 0 1px, transparent 1px 84px);
+  opacity: .55;
+}
+.page {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  position: relative;
+}
+.hero {
+  min-height: 420px;
+  display: grid;
+  grid-template-columns: 1.2fr .8fr;
+  gap: 34px;
+  align-items: center;
+  padding: 54px 0 36px;
+}
+.hero-copy {
+  padding: 16px 0;
+}
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: #16679e;
+  background: rgba(255,255,255,.68);
+  font-size: 13px;
+  font-weight: 700;
+}
+h1 {
+  margin: 18px 0 16px;
+  font-size: clamp(34px, 5vw, 66px);
+  line-height: 1.05;
+  letter-spacing: 0;
+  color: #0b3155;
+}
+.subtitle {
+  max-width: 780px;
+  color: var(--muted);
+  font-size: 18px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 26px;
+}
+.chip {
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.72);
+  color: #155984;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.hero-art {
+  position: relative;
+  min-height: 330px;
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255,255,255,.7);
+  background: linear-gradient(160deg, #79cdfb, #eaf9ff);
+}
+.hero-art img {
+  width: 100%;
+  height: 100%;
+  min-height: 330px;
+  object-fit: cover;
+  display: block;
+  filter: saturate(1.04) brightness(1.03);
+}
+.hero-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(176,224,255,.28));
+}
+.hero-art-empty {
+  display: grid;
+  place-items: center;
+  color: #116a9d;
+  font-size: 30px;
+  font-weight: 800;
+}
+.layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 30px;
+  align-items: start;
+  padding-bottom: 70px;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255,255,255,.72);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 14px 38px rgba(37,133,191,.12);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+}
+.toc-title {
+  font-weight: 900;
+  color: #0b456c;
+  margin-bottom: 10px;
+}
+.toc a {
+  display: block;
+  text-decoration: none;
+  color: #376886;
+  padding: 7px 0;
+  border-top: 1px solid rgba(31,148,216,.10);
+  font-size: 14px;
+}
+.toc a:hover { color: #0088ce; }
+.toc-l1 { font-weight: 800; }
+.toc-l2 { padding-left: 12px !important; }
+main {
+  border: 1px solid rgba(95,180,229,.28);
+  border-radius: 22px;
+  background: var(--paper);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+  padding: 42px min(6vw, 70px);
+}
+main h1 { font-size: 42px; margin-top: 0; }
+main h2 {
+  margin: 58px 0 18px;
+  padding-top: 10px;
+  font-size: 30px;
+  color: #0c4e7b;
+  border-top: 1px solid var(--line);
+}
+main h3 {
+  margin: 34px 0 12px;
+  color: #155f8f;
+  font-size: 23px;
+}
+main h4 {
+  margin: 26px 0 10px;
+  color: #1b6d9c;
+}
+p { margin: 14px 0; }
+blockquote {
+  margin: 20px 0;
+  padding: 17px 20px;
+  border-left: 5px solid var(--sky);
+  border-radius: 14px;
+  background: linear-gradient(90deg, rgba(208,240,255,.86), rgba(255,255,255,.68));
+  color: #254d69;
+}
+ul, ol { padding-left: 26px; }
+li { margin: 7px 0; }
+code {
+  font-family: "Cascadia Code", "Consolas", monospace;
+  background: rgba(188,232,255,.55);
+  color: #07527e;
+  padding: 2px 6px;
+  border-radius: 7px;
+  font-size: .92em;
+}
+pre {
+  overflow: auto;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(36,154,222,.20);
+  background: #0f2b46;
+  color: #d9f4ff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+.formula-card {
+  margin: 22px 0;
+  padding: 18px 20px;
+  border: 1px solid rgba(38,163,235,.26);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.92), rgba(229,247,255,.90));
+  box-shadow: 0 16px 44px rgba(41,147,210,.14);
+  overflow-x: auto;
+}
+.formula-label {
+  width: fit-content;
+  margin-bottom: 10px;
+  color: #0c75aa;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.katex-display {
+  margin: .5em 0 !important;
+}
+.table-wrap {
+  overflow-x: auto;
+  margin: 22px 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255,255,255,.78);
+}
+th, td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(50,153,213,.15);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  color: #0d5685;
+  background: rgba(190,232,255,.58);
+}
+tr:last-child td { border-bottom: 0; }
+a { color: #007fc0; }
+strong { color: #0b456c; }
+footer {
+  color: #5c7a92;
+  text-align: center;
+  padding: 28px 0 44px;
+}
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; padding-top: 34px; }
+  .layout { grid-template-columns: 1fr; }
+  .toc { position: relative; top: auto; max-height: none; }
+  main { padding: 28px 20px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="eyebrow">Sky-blue mathematical lecture</div>
+      <h1>CUDA3D 单卡 CUDA 优化阶段汇报</h1>
+      <p class="subtitle">从 PML 数据流、warp ownership 到 multi-GPU batching 的下一步</p>
+      <div class="chips">
+        <span class="chip">CUDA3D</span>
+<span class="chip">RTX 5090</span>
+<span class="chip">exact-FP32</span>
+<span class="chip">PML</span>
+<span class="chip">Multi-GPU</span>
+      </div>
+    </div>
+    <div class="hero-art hero-art-empty"><span>Sky Math</span></div>
+  </section>
+  <section class="layout">
+    <nav class="toc">
+      <div class="toc-title">目录</div>
+      <a class="toc-l2" href="#一句话结论">一句话结论</a>
+<a class="toc-l2" href="#测试环境和验收口径">测试环境和验收口径</a>
+<a class="toc-l2" href="#对最初代码结构的认识">对最初代码结构的认识</a>
+<a class="toc-l2" href="#我们做对了什么">我们做对了什么</a>
+<a class="toc-l2" href="#主要尝试路线和结果">主要尝试路线和结果</a>
+<a class="toc-l2" href="#为什么认为单卡-exact-fp32-优化基本到头">为什么认为单卡 exact-FP32 优化基本到头</a>
+<a class="toc-l2" href="#为什么-temporal-blocking-cluster-也没有立刻打开">为什么 temporal blocking / cluster 也没有立刻打开</a>
+<a class="toc-l2" href="#多-gpu-还有什么空间">多 GPU 还有什么空间</a>
+<a class="toc-l2" href="#对导师汇报时可以强调的三点">对导师汇报时可以强调的三点</a>
+<a class="toc-l2" href="#可引用的核心数据">可引用的核心数据</a>
+<a class="toc-l2" href="#后续建议">后续建议</a>
+    </nav>
+    <main>
+      <p>﻿# CUDA3D 单卡 CUDA 优化阶段汇报</p>
+<blockquote>汇报目标：说明本阶段 CUDA3D 正演程序的性能优化结果、已尝试路线、当前瓶颈判断，以及后续多 GPU batching 的空间。</blockquote>
+<h2 id="一句话结论">一句话结论</h2>
+<p>在 RTX 5090 单 GPU、<code>perf_1gpu_6shots</code>、三轮同机同 session 复现实验中，当前 <code>current_best_v_pml_len16</code> 相比冻结的 <code>zmem</code> baseline：</p>
+<div class="table-wrap"><table>
+<tr><th>指标</th><th>baseline 平均</th><th>当前 best 平均</th><th>speedup</th><th>时间下降</th></tr>
+<tr><td>WP computing time</td><td>约 <code>2.4305s</code></td><td><code>1.988905s</code></td><td><code>1.222023x</code></td><td>约 <code>18.17%</code></td></tr>
+<tr><td>Gradient TIME all</td><td>约 <code>2.5482s</code></td><td><code>2.111930s</code></td><td><code>1.206588x</code></td><td>约 <code>17.12%</code></td></tr>
+<tr><td>elapsed wall time</td><td>约 <code>3.3733s</code></td><td><code>3.016667s</code></td><td><code>1.118261x</code></td><td>约 <code>10.58%</code></td></tr>
+</table></div>
+<p>正确性通过：</p>
+<pre><code>max rel L2 = 6.384336e-07
+max abs    = 4.768372e-06</code></pre>
+<p>这里的 “baseline / 最初代码” 指我们为优化阶段冻结的可运行 CUDA baseline <code>zmem</code>。它是后续所有实验的数值金标准。由于更早的原始工程状态没有在同机同 session 下形成完整可复现实验表，本汇报不混用不可追溯的早期口头倍数。</p>
+<h2 id="测试环境和验收口径">测试环境和验收口径</h2>
+<p>核心原则是先保证可重复，再谈加速。</p>
+<pre><code>GPU             NVIDIA GeForce RTX 5090
+CUDA            13.0
+GPU arch        sm_120
+case            perf_1gpu_6shots
+rounds          3
+baseline        zmem
+current best    current_best_v_pml_len16
+tolerance       rel L2 &lt;= 1e-5, no NaN / Inf</code></pre>
+<p>正式 current-best flags：</p>
+<pre><code>-O3 -arch=sm_120 --use_fast_math
+-DCUDA3D_PML_RECOMPUTE_Z
+-DCUDA3D_PML_TILE_LIST
+-DCUDA3D_PML_ZMEM_IN_P
+-DPmlTileBlockSize1=32
+-DPmlTileBlockSize2=4
+-DPmlTileBlockSize3=2
+-DCUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+-DCUDA3D_CPML_VMEM_DISABLE_MPI
+-DCUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE
+-DCUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK
+-DCUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK</code></pre>
+<h2 id="对最初代码结构的认识">对最初代码结构的认识</h2>
+<p>这个程序不是一个单 kernel 的简单 stencil，而是一个 3D acoustic / CPML 正演计算管线。每一步 wave-step 大致由三类 kernel 构成：</p>
+<ol>
+<li><code>p_core</code></li>
+</ol>
+<ul>
+<li>主体内部区域的 pressure 更新。</li>
+<li>规则 stencil，计算密度相对高，但很吃 memory/L2 throughput。</li>
+</ul>
+<ol>
+<li><code>v_pml</code></li>
+</ol>
+<ul>
+<li>PML 区域的速度或一阶导相关更新。</li>
+<li>边界条件复杂，活跃线程不满，分支和访存不规则。</li>
+</ul>
+<ol>
+<li><code>p_pml</code></li>
+</ol>
+<ul>
+<li>PML 区域的 pressure 更新。</li>
+<li>本阶段最关键瓶颈；包含 CPML memory state 更新、<code>vx/vy/vz</code> 导数路径、最终 pressure writeback。</li>
+</ul>
+<p>从 profiling 看，优化前主要瓶颈集中在 PML，尤其是 pressure-PML：</p>
+<pre><code>p_pml sampled-main share       about 53%
+p_core sampled-main share      about 26%
+v_pml sampled-main share       about 20%</code></pre>
+<p>这意味着：如果只盯着 core stencil 或编译参数，很难获得大幅提速。真正有价值的方向是重构 PML 数据流和线程所有权。</p>
+<h2 id="我们做对了什么">我们做对了什么</h2>
+<h3 id="1-cpml-velocity-memory-double-buffer">1. CPML velocity memory double buffer</h3>
+<p>宏：</p>
+<pre><code>CUDA3D_CPML_VMEM_DOUBLE_BUFFER_ALL
+CUDA3D_CPML_VMEM_DISABLE_MPI</code></pre>
+<p>作用：</p>
+<ul>
+<li>明确 CPML velocity memory 的 old/next ownership。</li>
+<li>减少不必要的状态依赖和 global round trip。</li>
+<li>作为后续 PML 数据流重构的 scaffold。</li>
+</ul>
+<p>效果：</p>
+<pre><code>WP speedup      about 1.032x
+Gradient        about 1.028x</code></pre>
+<h3 id="2-pressure-pml-z-recompute-shared-line-cache">2. pressure-PML z-recompute shared line cache</h3>
+<p>宏：</p>
+<pre><code>CUDA3D_PML_PRESSURE_ZRECOMP_SHARED_LINE_CACHE</code></pre>
+<p>背景：</p>
+<p>在原 pressure-PML 中，<code>vz_after_update</code> 的 z 方向 recompute 被重复调用。静态模型估计：</p>
+<pre><code>current recompute calls          152,951,552
+shared z-line cache estimate      29,093,740
+call reduction                    about 80.98%</code></pre>
+<p>实现思想：</p>
+<ul>
+<li>在 pressure-PML tile 内用 shared z-line cache 保存 <code>vz_after_update</code> 中间量。</li>
+<li>保持原有数学路径，不重开已经失败的 z-face direct derivative / fusion 路线。</li>
+</ul>
+<p>效果：</p>
+<pre><code>directfill vs zmem
+WP speedup        1.101172x
+Gradient speedup  1.100029x
+max rel L2        0</code></pre>
+<h3 id="3-pressure-pml-length-16-half-warp-packing">3. pressure-PML length-16 half-warp packing</h3>
+<p>宏：</p>
+<pre><code>CUDA3D_PML_PRESSURE_LEN16_HALF_WARP_PACK</code></pre>
+<p>背景：</p>
+<p>pressure-PML tile 的 active lane 利用率很低，典型 active z-line 有 length-16、length-23、length-32。length-16 可以自然地把两条 z-line 塞进一个 warp：</p>
+<pre><code>lane 0..15    line A
+lane 16..31   line B</code></pre>
+<p>这解决的是 “warp 里一半线程闲着” 的 ownership 问题，而不是语法级微调。</p>
+<p>效果：</p>
+<pre><code>pressure_len16 vs zmem
+WP speedup        1.194495x
+Gradient speedup  1.179869x
+max rel L2        6.384336e-07</code></pre>
+<h3 id="4-velocity-pml-length-16-half-warp-packing">4. velocity-PML length-16 half-warp packing</h3>
+<p>宏：</p>
+<pre><code>CUDA3D_PML_VELOCITY_LEN16_HALF_WARP_PACK</code></pre>
+<p>作用：</p>
+<ul>
+<li>把 pressure-PML 的 active-segment 思路迁移到 v-PML。</li>
+<li>收益比 pressure-PML 小，但 repeat 稳定。</li>
+</ul>
+<p>最终叠加效果：</p>
+<pre><code>current_best_v_pml_len16 vs zmem
+WP speedup        1.222023x
+Gradient speedup  1.206588x
+elapsed speedup   1.118261x
+max rel L2        6.384336e-07</code></pre>
+<h2 id="主要尝试路线和结果">主要尝试路线和结果</h2>
+<div class="table-wrap"><table>
+<tr><th>路线</th><th>类型</th><th>结果</th><th>决策</th></tr>
+<tr><td>CPML velocity double buffer</td><td>ownership scaffold</td><td>WP <code>~1.032x</code></td><td>保留</td></tr>
+<tr><td>pressure z-recompute line cache</td><td>PML 数据复用</td><td>WP <code>1.101x</code> vs zmem</td><td>保留</td></tr>
+<tr><td>pressure len16 half-warp packing</td><td>warp lane ownership</td><td>WP <code>1.194x</code> vs zmem</td><td>保留</td></tr>
+<tr><td>velocity len16 half-warp packing</td><td>warp lane ownership</td><td>最终 WP <code>1.222x</code> vs zmem</td><td>保留</td></tr>
+<tr><td>compact <code>dzz16</code> state</td><td>compact-state 微调</td><td>WP <code>1.011842x</code> vs current-best</td><td>拒绝</td></tr>
+<tr><td>compact <code>dz16 old/next</code> state</td><td>compact-state 微调</td><td>WP <code>1.017787x</code> vs current-best</td><td>拒绝</td></tr>
+<tr><td>residual pressure branch split</td><td>分支特化</td><td>ceiling <code>&lt;5%</code></td><td>拒绝</td></tr>
+<tr><td>length-23 / exact active-point descriptor</td><td>descriptor compaction</td><td>calibrated <code>~1.015x</code></td><td>拒绝</td></tr>
+<tr><td><code>p0 __ldg</code>, local <code>new_mem</code>, ptxas cache-policy</td><td>语法/编译微调</td><td>noise-level 或变慢</td><td>拒绝</td></tr>
+<tr><td>z-face VP fusion / shared-VP</td><td>kernel fusion</td><td>正确但变慢</td><td>拒绝</td></tr>
+<tr><td>K=2 ordinary temporal blocking</td><td>temporal pipeline</td><td>同步 / halo 模型失败</td><td>拒绝</td></tr>
+<tr><td>CUDA Graph / async stream</td><td>调度优化</td><td><code>~1.005x</code></td><td>拒绝</td></tr>
+</table></div>
+<h2 id="为什么认为单卡-exact-fp32-优化基本到头">为什么认为单卡 exact-FP32 优化基本到头</h2>
+<p>当前 profiling anchor：</p>
+<div class="table-wrap"><table>
+<tr><th>区域</th><th>duration</th><th>share</th><th>若要再带来 5% sampled-main，需要局部提速</th></tr>
+<tr><td><code>p_core</code></td><td><code>93.730us</code></td><td><code>33.00%</code></td><td><code>1.1686x</code></td></tr>
+<tr><td>pressure-PML total</td><td><code>138.120us</code></td><td><code>48.63%</code></td><td><code>1.1085x</code></td></tr>
+<tr><td>pressure len16</td><td><code>66.180us</code></td><td><code>23.30%</code></td><td><code>1.2568x</code></td></tr>
+<tr><td>pressure residual</td><td><code>71.940us</code></td><td><code>25.33%</code></td><td><code>1.2315x</code></td></tr>
+<tr><td>v-PML total</td><td><code>52.160us</code></td><td><code>18.37%</code></td><td><code>1.3500x</code></td></tr>
+</table></div>
+<p>问题在于：剩下的耗时不再是容易消掉的冗余。</p>
+<p>pressure-PML source profile 显示，packed pressure kernel 的热点主要是：</p>
+<pre><code>final p0 / p1 / cw2 update      about 60.78%
+CPML mem_dzz recursive update   about 26.82%
+z-cache shared loads             about 1.92%
+address/control visible lines    about 4.31%</code></pre>
+<p>这说明后续瓶颈主要来自数学上必须存在的状态更新：</p>
+<ul>
+<li>二阶 pressure update 需要 old pressure、current pressure、velocity model、new pressure write。</li>
+<li>CPML memory 是递归状态，每步必须读旧状态、写新状态。</li>
+<li>单纯换 <code>__ldg</code>、调整局部变量、改 cache policy，不能消除这些状态流量。</li>
+</ul>
+<p>用 Amdahl 视角看，如果想让整体 sampled-main 再快 5%，必须满足：</p>
+<pre><code>pressure-PML total local speedup  &gt;= 1.1085x
+pressure len16 local speedup      &gt;= 1.2568x
+pressure residual local speedup   &gt;= 1.2315x
+v-PML total local speedup         &gt;= 1.3500x</code></pre>
+<p>而现有可实现的普通 CUDA 路线都达不到这个门槛。项目中的 frontier gate 已经给出结论：</p>
+<pre><code>ordinary_exact_cuda_frontier_exhausted_for_micro_routes
+ordinary CUDA allowed prototype count = 0</code></pre>
+<p>这不是说理论上绝对没有更快的算法，而是说：在 exact-FP32、当前数学格式、普通 CUDA kernel 模型下，继续做小修已经缺少可证明的收益上界。</p>
+<h2 id="为什么-temporal-blocking-cluster-也没有立刻打开">为什么 temporal blocking / cluster 也没有立刻打开</h2>
+<p>我们也检查了更激进的 K=2 temporal blocking 思路。理想情况下，它可以减少中间 <code>p_mid</code> 的 global traffic；但普通 CUDA 没有 grid-wide barrier。</p>
+<p>曾经的 K=2 cooperative-grid 需求：</p>
+<pre><code>required blocks      70688
+resident ceiling      2040
+over capacity        34.651x</code></pre>
+<p>RTX 5090 支持 thread-block cluster，但 cluster-local DSM 模型也没有过门：</p>
+<pre><code>best DSM local pair byte ratio       1.1602x
+required local pair byte ratio      &lt;=0.8557x
+estimated sampled-main speedup       0.9498x</code></pre>
+<p>也就是说，在当前模型下，cluster-local temporal prototype 甚至可能更慢。后续除非有全新的 ownership 表示，不能直接写 cluster CUDA prototype。</p>
+<h2 id="多-gpu-还有什么空间">多 GPU 还有什么空间</h2>
+<p>原程序已有 MPI 并行能力，但这和我们后续说的 multi-GPU batching 不是完全一回事。</p>
+<p>原有 MPI 并行主要问题：</p>
+<ol>
+<li>root rank 打印的 WP 时间容易误导，不能代表全局 wall-clock throughput。</li>
+<li>多 rank 若共享同一张 GPU，会变慢；同 GPU oversubscription 已经被拒绝。</li>
+<li>多 GPU 情况下需要严格控制 GPU affinity、输出目录隔离、每轮 rebuild flags、正确性对比和负载均衡。</li>
+<li>对多炮正演，真正关心的是 shots/sec 或 Gradient wall-clock，而不仅是单个 rank 的 kernel 时间。</li>
+</ol>
+<p>对于 <code>perf_1gpu_6shots</code>，如果有多张 GPU，最自然的提升来自 multi-shot batching：</p>
+<div class="table-wrap"><table>
+<tr><th>GPU / ranks</th><th>shot 分配</th><th>理想 speedup</th><th>备注</th></tr>
+<tr><td>1</td><td><code>[6]</code></td><td><code>1.0x</code></td><td>当前单卡平台</td></tr>
+<tr><td>2</td><td><code>[3, 3]</code></td><td><code>2.0x</code></td><td>最干净的下一步</td></tr>
+<tr><td>3</td><td><code>[2, 2, 2]</code></td><td><code>3.0x</code></td><td>6 shots 完美均分</td></tr>
+<tr><td>4</td><td><code>[2, 2, 1, 1]</code></td><td><code>3.0x</code></td><td>受 longest rank 限制</td></tr>
+<tr><td>6</td><td><code>[1, 1, 1, 1, 1, 1]</code></td><td><code>6.0x</code></td><td>shot 数足够时才接近</td></tr>
+</table></div>
+<p>因此，多卡优化的空间主要不在于 “再把一个 kernel 改快 2 倍”，而在于：</p>
+<ul>
+<li>每张 GPU 跑 current-best kernel stack。</li>
+<li>每个 rank 处理独立 shot batch。</li>
+<li>输出目录和随机环境完全隔离。</li>
+<li>用 wall-clock / Gradient time 作为正式指标。</li>
+<li>避免同 GPU oversubscription。</li>
+<li>对不同 shot 数做负载均衡。</li>
+</ul>
+<p>一句话：单卡 CUDA-core 的 exact-FP32 微调已经接近 frontier；多卡 batching 的收益来自并行吞吐，而不是改变单炮数值路径。</p>
+<h2 id="对导师汇报时可以强调的三点">对导师汇报时可以强调的三点</h2>
+<ol>
+<li>这不是只调 block size 的优化。</li>
+</ol>
+<ul>
+<li>真正有效的是 PML dataflow 和 warp ownership：z-recompute cache、len16 half-warp packing、CPML old/next ownership。</li>
+</ul>
+<ol>
+<li>正确性是硬约束。</li>
+</ol>
+<ul>
+<li>当前 best 的 max rel L2 为 <code>6.38e-7</code>，低于 <code>1e-5</code> 门槛。</li>
+<li>所有性能结论都来自输出对比通过后的 repeat benchmark。</li>
+</ul>
+<ol>
+<li>当前单卡结论是工程上诚实的。</li>
+</ol>
+<ul>
+<li>后续不是没有方向，而是普通 exact-CUDA 微调已经没有足够收益上界。</li>
+<li>下一阶段应切换到 multi-GPU batching、relaxed precision，或全新 ownership 表示；不能继续随机开 kernel。</li>
+</ul>
+<h2 id="可引用的核心数据">可引用的核心数据</h2>
+<pre><code>baseline             zmem
+current best          current_best_v_pml_len16
+case                  perf_1gpu_6shots
+rounds                3
+mean WP               1.988905s
+mean Gradient          2.111930s
+WP speedup             1.222023x
+Gradient speedup       1.206588x
+elapsed speedup        1.118261x
+max rel L2             6.384336e-07</code></pre>
+<h2 id="后续建议">后续建议</h2>
+<p>如果目标是继续提升总体效率，我建议优先级是：</p>
+<ol>
+<li><strong>多 GPU batching 正式实验</strong></li>
+</ol>
+<ul>
+<li>需要至少 2 张稳定 GPU。</li>
+<li>先做 2 GPU <code>[3,3]</code> 的 6-shot benchmark。</li>
+<li>指标用 wall-clock、Gradient time、输出 rel L2。</li>
+</ul>
+<ol>
+<li><strong>relaxed precision 单独分支</strong></li>
+</ol>
+<ul>
+<li>只有在导师接受更宽精度策略后再做。</li>
+<li>必须维护 exact-FP32 与 relaxed 两条线，不能混报。</li>
+</ul>
+<ol>
+<li><strong>新 ownership representation</strong></li>
+</ol>
+<ul>
+<li>先做数学等价证明和 byte / sync model。</li>
+<li>没有 <code>&gt;=5%</code> repeat ceiling，不写 CUDA prototype。</li>
+</ul>
+<p>如果只是继续 ordinary exact-FP32 single-GPU kernel 微调，当前证据不支持继续投入。</p>
+    </main>
+  </section>
+  <footer>Generated with sky-math-lecture</footer>
+</div>
+</body>
+</html>

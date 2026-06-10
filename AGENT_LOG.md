@@ -6062,3 +6062,42 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
   - 该轮是文档同步，不产生新性能结果。
   - 后续 heartbeat 仍不得启动普通 CUDA micro-prototype。
   - 如继续 exact-FP32，只能先写新的 ownership model 并证明 `>=5%` repeat speedup ceiling。
+
+## 2026-06-10 10:25:00 +08:00
+
+- 操作目标：
+  - 按用户要求调用 `sky-math-lecture` skill，为导师汇报生成一份 CUDA3D 优化阶段 HTML 讲义。
+  - 汇总最终提速结果、初始代码结构认识、各优化路线效果、单卡 frontier 判断和 multi-GPU batching 下一步空间。
+- 修改文件：
+  - 新增 `docs/mentor_report_20260610_cuda3d_optimization.md`
+  - 新增 `docs/mentor_report_20260610_cuda3d_optimization.html`
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 读取 `sky-math-lecture` skill：`E:/latex&skills/skills/.codex/skills/sky-math-lecture/SKILL.md`。
+  - 汇总既有报告：
+    - `docs/day_20260609/pro_handoff_current_best_frontier.md`
+    - `docs/day_20260609/exact_fp32_frontier_closeout.md`
+    - `reports/day_20260608/formal_current_best_table_20260608_182525/summary.md`
+    - `reports/day_20260608/formal_vpmlen16_table_20260608_2359/summary.md`
+    - `docs/day_20260608/pml_pressure_dataflow_audit.md`
+    - `docs/day_20260608/len16_halfwarp_pressure_pml_prototype.md`
+    - `docs/day_20260609/application_level_frontier_gate.md`
+    - `docs/day_20260609/cluster_local_ownership_model.md`
+    - `docs/day_20260609/cluster_cooperative_frontier_gate.md`
+  - 渲染 HTML：
+    - `python E:/latex&skills/skills/.codex/skills/sky-math-lecture/scripts/render_sky_math_lecture.py docs/mentor_report_20260610_cuda3d_optimization.md docs/mentor_report_20260610_cuda3d_optimization.html --title "CUDA3D 单卡 CUDA 优化阶段汇报" --subtitle "从 PML 数据流、warp ownership 到 multi-GPU batching 的下一步" --chips "CUDA3D,RTX 5090,exact-FP32,PML,Multi-GPU"`
+  - 对 HTML 结果做关键字校验：`1.222023x`、`current_best_v_pml_len16`、`6.384336e-07`、`multi-GPU batching`、`ordinary_exact_cuda_frontier_exhausted_for_micro_routes`。
+- 测试结果：
+  - 本轮只生成汇报文档，不修改 CUDA 源码行为，不运行新的 GPU benchmark。
+  - HTML 已成功生成，大小约 `23801` bytes。
+  - 已修正代码块语言标记，避免渲染器将 flags/code fence 误识别为公式块。
+- 输出/哈希/误差摘要：
+  - 汇报采用正式可追溯口径：当前 best 相对冻结 `zmem` 基线。
+  - 当前正式 best：`current_best_v_pml_len16`。
+  - WP speedup vs zmem：`1.222023x`。
+  - Gradient speedup vs zmem：`1.206588x`。
+  - elapsed speedup vs zmem：`1.118261x`。
+  - max rel L2：`6.384336e-07`。
+- 风险与下一步：
+  - 讲义中明确说明“最初代码”按已封存、可复现实验的 `zmem` 基线报告；更早未正式封存的 pristine original 不作为正式导师汇报数字口径。
+  - 后续若导师要求“完全未优化原始版”对比，需要单独恢复并封存 pristine original 后同机重跑。
