@@ -6101,3 +6101,30 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
 - 风险与下一步：
   - 讲义中明确说明“最初代码”按已封存、可复现实验的 `zmem` 基线报告；更早未正式封存的 pristine original 不作为正式导师汇报数字口径。
   - 后续若导师要求“完全未优化原始版”对比，需要单独恢复并封存 pristine original 后同机重跑。
+
+## 2026-06-10 10:45:00 +08:00
+
+- 操作目标：
+  - 按用户反馈修订导师汇报讲义，补充“从最初最初实现到当前 best”的总提速链条。
+  - 区分导师汇报总估算口径与严格同机 direct benchmark 口径。
+- 修改文件：
+  - 更新 `docs/mentor_report_20260610_cuda3d_optimization.md`
+  - 重新渲染 `docs/mentor_report_20260610_cuda3d_optimization.html`
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 读取 `docs/original_vs_current_best_20260609.md`。
+  - 读取 `reports/original_vs_current_best_20260609/summary.json`。
+  - 读取 `docs/current_best_v_pml_len16_release.md`。
+  - 使用 `sky-math-lecture` render script 重新生成 HTML。
+  - 校验 HTML 关键字：`2.308x`、`2.274x`、`从最初到当前的提速链条`、`very-first original`、`导师汇报总口径`。
+- 测试结果：
+  - 本轮只修改汇报文档，不修改 CUDA 源码行为，不运行新的 GPU benchmark。
+  - HTML 重新渲染成功，已包含总提速链条与双口径说明。
+- 输出/哈希/误差摘要：
+  - estimated WP speedup vs first original：`2.308x`。
+  - estimated Gradient speedup vs first original：`2.274x`。
+  - 计算口径：`1.8 * 1.049300 * 1.222023 = 2.308`。
+  - 当前 direct benchmark 仍为 best vs `zmem`：WP `1.222023x`，Gradient `1.206588x`，max rel L2 `6.384336e-07`。
+- 风险与下一步：
+  - `2.308x` 是基于历史 `1.8x` anchor 的总估算，不是 very-first original 同机 direct table。
+  - 若导师要求正式 direct table，需要找到可证明的原始源码 commit/tag/tarball 或原始二进制及环境哈希后重跑。

@@ -4,7 +4,24 @@
 
 ## 一句话结论
 
-在 RTX 5090 单 GPU、`perf_1gpu_6shots`、三轮同机同 session 复现实验中，当前 `current_best_v_pml_len16` 相比冻结的 `zmem` baseline：
+如果把前期已经完成但没有保留干净原始源码快照的 `1.8x` 提速 anchor 计入，再乘以后续正式封存的两段加速，本项目从“最初最初的实现”到当前 best 的估算总提速为：
+
+```console
+estimated WP speedup vs first original
+  = early anchor * zmem over current_best_reference * current_best over zmem
+  = 1.8 * 1.049300 * 1.222023
+  = 2.308x
+
+estimated Gradient speedup vs first original
+  = 1.8 * 1.046865 * 1.206588
+  = 2.274x
+```
+
+这就是给导师汇报时最直接的总结果：**单 GPU exact-FP32 线总体约 `2.31x` WP 提速，Gradient 约 `2.27x` 提速**。
+
+同时需要诚实说明口径：这个 `2.31x` 是基于项目历史 anchor 的总估算，不是“同一台机器上重新编译最初源码后直接测出来”的正式 direct table。原因是仓库当前没有一个可证明、可重建的 very-first original source snapshot；已有记录显示 `orig_code` 与当前 runnable source 的关键文件 hash 已经匹配，不能再当原始基线使用。
+
+在 RTX 5090 单 GPU、`perf_1gpu_6shots`、三轮同机同 session 复现实验中，当前 `current_best_v_pml_len16` 相比冻结的 `zmem` baseline 的正式直接测量结果为：
 
 | 指标 | baseline 平均 | 当前 best 平均 | speedup | 时间下降 |
 |---|---:|---:|---:|---:|
@@ -19,7 +36,39 @@ max rel L2 = 6.384336e-07
 max abs    = 4.768372e-06
 ```
 
-这里的 “baseline / 最初代码” 指我们为优化阶段冻结的可运行 CUDA baseline `zmem`。它是后续所有实验的数值金标准。由于更早的原始工程状态没有在同机同 session 下形成完整可复现实验表，本汇报不混用不可追溯的早期口头倍数。
+这里的 `zmem` 是中后期 CUDA 重构阶段冻结的可运行数值金标准，不是项目最初最初的版本。因此本讲义采用双口径：
+
+1. **导师汇报总口径**：估算从最初实现到当前 best，WP `2.308x`，Gradient `2.274x`。
+2. **严格复现实测口径**：当前 best 相对冻结 `zmem`，WP `1.222023x`，Gradient `1.206588x`。
+
+这样讲的好处是：既能回答“总共快了多少”，也不会把无法直接重跑的历史版本伪装成正式 direct benchmark。
+
+## 从最初到当前的提速链条
+
+整个优化不是一次完成的，而是分成三段：
+
+| 阶段 | 对比对象 | WP speedup | Gradient speedup | 证据状态 |
+|---|---|---:|---:|---|
+| 早期工程优化 anchor | very-first original -> early current-best | `~1.800x` | `~1.800x` | 历史项目 anchor，非当前同机 direct table |
+| `zmem_reference` 阶段 | `zmem_reference` -> `current_best_reference` | `1.049300x` | `1.046865x` | 项目封存记录 |
+| 当前 CUDA-core 阶段 | `current_best_v_pml_len16` -> `zmem_reference` | `1.222023x` | `1.206588x` | 三轮同机 repeat direct benchmark |
+| **累计估算** | very-first original -> current best | **`2.308x`** | **`2.274x`** | 前两段 anchor × 当前 direct result |
+
+累计 WP 计算：
+
+```console
+1.800 * 1.049300 * 1.222023 = 2.308
+```
+
+累计 Gradient 计算：
+
+```console
+1.800 * 1.046865 * 1.206588 = 2.274
+```
+
+因此，导师汇报可以这样说：
+
+> 当前单 GPU exact-FP32 版本相对项目最初实现，按已记录的阶段性 anchor 估算，WP 计算约提升 `2.31x`；其中最后一段、可严格复现实测的 CUDA-core 重构贡献了 `1.222x`。
 
 ## 测试环境和验收口径
 
@@ -320,6 +369,11 @@ estimated sampled-main speedup       0.9498x
 ## 可引用的核心数据
 
 ```console
+estimated total WP speedup vs first original        2.308x
+estimated total Gradient speedup vs first original  2.274x
+total-speedup status                                estimate, not direct table
+reason                                              no rebuildable very-first original snapshot
+
 baseline             zmem
 current best          current_best_v_pml_len16
 case                  perf_1gpu_6shots

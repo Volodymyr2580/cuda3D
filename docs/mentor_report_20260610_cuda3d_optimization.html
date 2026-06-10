@@ -300,6 +300,7 @@ footer {
     <nav class="toc">
       <div class="toc-title">目录</div>
       <a class="toc-l2" href="#一句话结论">一句话结论</a>
+<a class="toc-l2" href="#从最初到当前的提速链条">从最初到当前的提速链条</a>
 <a class="toc-l2" href="#测试环境和验收口径">测试环境和验收口径</a>
 <a class="toc-l2" href="#对最初代码结构的认识">对最初代码结构的认识</a>
 <a class="toc-l2" href="#我们做对了什么">我们做对了什么</a>
@@ -315,7 +316,18 @@ footer {
       <p>﻿# CUDA3D 单卡 CUDA 优化阶段汇报</p>
 <blockquote>汇报目标：说明本阶段 CUDA3D 正演程序的性能优化结果、已尝试路线、当前瓶颈判断，以及后续多 GPU batching 的空间。</blockquote>
 <h2 id="一句话结论">一句话结论</h2>
-<p>在 RTX 5090 单 GPU、<code>perf_1gpu_6shots</code>、三轮同机同 session 复现实验中，当前 <code>current_best_v_pml_len16</code> 相比冻结的 <code>zmem</code> baseline：</p>
+<p>如果把前期已经完成但没有保留干净原始源码快照的 <code>1.8x</code> 提速 anchor 计入，再乘以后续正式封存的两段加速，本项目从“最初最初的实现”到当前 best 的估算总提速为：</p>
+<pre><code>estimated WP speedup vs first original
+  = early anchor * zmem over current_best_reference * current_best over zmem
+  = 1.8 * 1.049300 * 1.222023
+  = 2.308x
+
+estimated Gradient speedup vs first original
+  = 1.8 * 1.046865 * 1.206588
+  = 2.274x</code></pre>
+<p>这就是给导师汇报时最直接的总结果：<strong>单 GPU exact-FP32 线总体约 <code>2.31x</code> WP 提速，Gradient 约 <code>2.27x</code> 提速</strong>。</p>
+<p>同时需要诚实说明口径：这个 <code>2.31x</code> 是基于项目历史 anchor 的总估算，不是“同一台机器上重新编译最初源码后直接测出来”的正式 direct table。原因是仓库当前没有一个可证明、可重建的 very-first original source snapshot；已有记录显示 <code>orig_code</code> 与当前 runnable source 的关键文件 hash 已经匹配，不能再当原始基线使用。</p>
+<p>在 RTX 5090 单 GPU、<code>perf_1gpu_6shots</code>、三轮同机同 session 复现实验中，当前 <code>current_best_v_pml_len16</code> 相比冻结的 <code>zmem</code> baseline 的正式直接测量结果为：</p>
 <div class="table-wrap"><table>
 <tr><th>指标</th><th>baseline 平均</th><th>当前 best 平均</th><th>speedup</th><th>时间下降</th></tr>
 <tr><td>WP computing time</td><td>约 <code>2.4305s</code></td><td><code>1.988905s</code></td><td><code>1.222023x</code></td><td>约 <code>18.17%</code></td></tr>
@@ -325,7 +337,27 @@ footer {
 <p>正确性通过：</p>
 <pre><code>max rel L2 = 6.384336e-07
 max abs    = 4.768372e-06</code></pre>
-<p>这里的 “baseline / 最初代码” 指我们为优化阶段冻结的可运行 CUDA baseline <code>zmem</code>。它是后续所有实验的数值金标准。由于更早的原始工程状态没有在同机同 session 下形成完整可复现实验表，本汇报不混用不可追溯的早期口头倍数。</p>
+<p>这里的 <code>zmem</code> 是中后期 CUDA 重构阶段冻结的可运行数值金标准，不是项目最初最初的版本。因此本讲义采用双口径：</p>
+<ol>
+<li><strong>导师汇报总口径</strong>：估算从最初实现到当前 best，WP <code>2.308x</code>，Gradient <code>2.274x</code>。</li>
+<li><strong>严格复现实测口径</strong>：当前 best 相对冻结 <code>zmem</code>，WP <code>1.222023x</code>，Gradient <code>1.206588x</code>。</li>
+</ol>
+<p>这样讲的好处是：既能回答“总共快了多少”，也不会把无法直接重跑的历史版本伪装成正式 direct benchmark。</p>
+<h2 id="从最初到当前的提速链条">从最初到当前的提速链条</h2>
+<p>整个优化不是一次完成的，而是分成三段：</p>
+<div class="table-wrap"><table>
+<tr><th>阶段</th><th>对比对象</th><th>WP speedup</th><th>Gradient speedup</th><th>证据状态</th></tr>
+<tr><td>早期工程优化 anchor</td><td>very-first original -&gt; early current-best</td><td><code>~1.800x</code></td><td><code>~1.800x</code></td><td>历史项目 anchor，非当前同机 direct table</td></tr>
+<tr><td><code>zmem_reference</code> 阶段</td><td><code>zmem_reference</code> -&gt; <code>current_best_reference</code></td><td><code>1.049300x</code></td><td><code>1.046865x</code></td><td>项目封存记录</td></tr>
+<tr><td>当前 CUDA-core 阶段</td><td><code>current_best_v_pml_len16</code> -&gt; <code>zmem_reference</code></td><td><code>1.222023x</code></td><td><code>1.206588x</code></td><td>三轮同机 repeat direct benchmark</td></tr>
+<tr><td><strong>累计估算</strong></td><td>very-first original -&gt; current best</td><td><strong><code>2.308x</code></strong></td><td><strong><code>2.274x</code></strong></td><td>前两段 anchor × 当前 direct result</td></tr>
+</table></div>
+<p>累计 WP 计算：</p>
+<pre><code>1.800 * 1.049300 * 1.222023 = 2.308</code></pre>
+<p>累计 Gradient 计算：</p>
+<pre><code>1.800 * 1.046865 * 1.206588 = 2.274</code></pre>
+<p>因此，导师汇报可以这样说：</p>
+<blockquote>当前单 GPU exact-FP32 版本相对项目最初实现，按已记录的阶段性 anchor 估算，WP 计算约提升 <code>2.31x</code>；其中最后一段、可严格复现实测的 CUDA-core 重构贡献了 <code>1.222x</code>。</blockquote>
 <h2 id="测试环境和验收口径">测试环境和验收口径</h2>
 <p>核心原则是先保证可重复，再谈加速。</p>
 <pre><code>GPU             NVIDIA GeForce RTX 5090
@@ -544,7 +576,12 @@ estimated sampled-main speedup       0.9498x</code></pre>
 <li>下一阶段应切换到 multi-GPU batching、relaxed precision，或全新 ownership 表示；不能继续随机开 kernel。</li>
 </ul>
 <h2 id="可引用的核心数据">可引用的核心数据</h2>
-<pre><code>baseline             zmem
+<pre><code>estimated total WP speedup vs first original        2.308x
+estimated total Gradient speedup vs first original  2.274x
+total-speedup status                                estimate, not direct table
+reason                                              no rebuildable very-first original snapshot
+
+baseline             zmem
 current best          current_best_v_pml_len16
 case                  perf_1gpu_6shots
 rounds                3
