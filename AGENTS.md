@@ -1738,6 +1738,44 @@ docs/day_20260609/pro_handoff_current_best_frontier.md
 docs/day_20260609/cluster_local_ownership_model.md
 ```
 
+### 2026-06-10 fused wave-step refactor gate
+
+用户提供的“融合压力更新、速度更新、PML 递推、z 方向 tiling、CPML 公式统一、数据布局/混合精度”方案已经转为模型 gate：
+
+```text
+tools/fused_wave_step_refactor_gate.py
+docs/day_20260610/fused_wave_step_refactor_gate.md
+reports/day_20260610/fused_wave_step_refactor_gate.json
+```
+
+当前结论：
+
+- decision：`reject_immediate_fused_wave_step_cuda_prototype`
+- 当前 exact-FP32 branch 不允许直接写普通 single-kernel fused wave-step prototype。
+- 原因不是方案方向错误，而是当前 best 已经消掉 cheap z/global round trip；剩余 fusion 需要跨 CTA 速度场可见性或大量 halo recompute。
+- 在现有 `32x4x2` PML tile 下，pressure 需要邻域 `vx/vy`：
+  - pressure outputs per tile：`256`
+  - `vx` points needed：`704`
+  - `vy` points needed：`1152`
+  - x/y component duplication factor：`3.625x`
+- modeled fused sampled-main speedup 只有 `0.7568x` conservative / `0.7935x` optimistic，即会变慢。
+- 减少 kernel launch 也不是主收益：
+  - Nsight Systems ideal gap elimination：`1.0029x`
+  - 已测 async stream scheduling：`1.0052x`
+
+禁止继续：
+
+- 直接照伪代码写 `fused_wave_step` single kernel，把 `v_pml`、`p_core`、`p_pml` 混成一个普通 CUDA kernel。
+- 以减少 launch count 为主要理由重开 CUDA Graph / async stream / kernel fusion。
+- 在 exact-FP32 current-best 分支内做 AoS 大布局重写，除非先有 all-field fused ownership model 证明 `>=5%` repeat ceiling。
+- 将 mixed precision / Tensor Core 混入 exact-FP32 分支。
+
+仍允许：
+
+- 如果坚持 exact-FP32 single-GPU，只能先研究新的 persistent/cluster ownership representation，且必须先击败 halo/DSM byte gate。
+- 如果目标是总吞吐，转向 multi-GPU batching，保留 current-best kernel stack。
+- 如果导师/用户接受精度策略变化，另开 relaxed-precision branch，单独定义 tolerance 和验收。
+
 ### 原 RTX 4090 服务器
 
 服务器项目目录：

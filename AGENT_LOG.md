@@ -6128,3 +6128,47 @@ make -B -f makefile.server test >/tmp/cuda3d_build_revert_block_skip.log 2>&1
 - 风险与下一步：
   - `2.308x` 是基于历史 `1.8x` anchor 的总估算，不是 very-first original 同机 direct table。
   - 若导师要求正式 direct table，需要找到可证明的原始源码 commit/tag/tarball 或原始二进制及环境哈希后重跑。
+
+## 2026-06-10 19:35:00 +08:00
+
+- 操作目标：
+  - 按用户提供的 CUDA 3D 波场模拟重构方案，创建新分支并继续推进优化加速工作。
+  - 将“融合 pressure / velocity / PML、z tiling、CPML 统一、布局/混合精度”方案转为可执行的模型 gate。
+- 修改文件：
+  - 新增 `tools/fused_wave_step_refactor_gate.py`
+  - 新增 `docs/day_20260610/fused_wave_step_refactor_gate.md`
+  - 新增 `reports/day_20260610/fused_wave_step_refactor_gate.json`
+  - 更新 `AGENTS.md`
+  - 追加本 `AGENT_LOG.md` 条目。
+- 执行命令摘要：
+  - 新建分支：`git switch -c codex/refactor-fused-wave-step`。
+  - 读取用户粘贴方案：`E:/latex&skills/skills/.codex/attachments/86eac348-5c3d-43f7-ada2-72a5b475117e/pasted-text.txt`。
+  - 定位 wave-step launch 顺序：`src/rem_fd.cu`。
+  - 定位核心 kernel：`src/single_solver.cu`。
+  - 读取既有正式 benchmark 和 gate：
+    - `reports/day_20260608/formal_vpmlen16_table_20260608_2359/summary.json`
+    - `reports/day_20260608/ownership_frontier_gate.json`
+    - `reports/day_20260608/directfill_scheduling_nsys_summary.json`
+    - `reports/day_20260608/wavestep_async_perf6_repeat_20260608_175407/summary.json`
+    - `reports/day_20260609/cluster_local_ownership_model.json`
+    - `reports/day_20260609/cluster_cooperative_frontier_gate.json`
+  - 运行 gate 工具：
+    - `python tools/fused_wave_step_refactor_gate.py --json-out reports/day_20260610/fused_wave_step_refactor_gate.json --md-out docs/day_20260610/fused_wave_step_refactor_gate.md`
+- 测试结果：
+  - 本轮未修改 CUDA 源码行为，未运行 GPU benchmark。
+  - gate 工具本地运行成功，生成 JSON 与 Markdown 报告。
+- 输出/哈希/误差摘要：
+  - 当前 best 仍为 `current_best_v_pml_len16`。
+  - formal WP speedup vs zmem：`1.222023x`。
+  - max rel L2：`6.384336e-07`。
+  - fused wave-step gate decision：`reject_immediate_fused_wave_step_cuda_prototype`。
+  - pressure outputs per tile：`256`。
+  - `vx` points needed by pressure tile：`704`。
+  - `vy` points needed by pressure tile：`1152`。
+  - x/y component duplication factor：`3.625x`。
+  - modeled fused sampled-main speedup：`0.7568x` conservative / `0.7935x` optimistic。
+  - launch reduction ceiling：Nsight Systems ideal `1.0029x`，async-stream measured `1.0052x`。
+- 风险与下一步：
+  - 普通 exact-FP32 single-kernel fused wave-step prototype 不进入 CUDA 实现，避免重复 shared-VP/fusion 失败路线。
+  - 若继续 exact-FP32 single-GPU，只能先研究新的 persistent/cluster ownership representation，并先证明 `>=5%` repeat speedup ceiling。
+  - 若目标是总体吞吐，应转向 multi-GPU batching；若接受更宽精度，则另开 relaxed-precision branch。

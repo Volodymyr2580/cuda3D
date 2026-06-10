@@ -1,0 +1,130 @@
+{
+  "derived": {
+    "conservative_fused_sampled_main_us": 375.29,
+    "conservative_fused_velocity_equiv_us": 143.44,
+    "optimistic_fused_sampled_main_us": 357.90333333333336,
+    "optimistic_fused_xy_velocity_equiv_us": 126.05333333333333,
+    "pml_halo_duplication_model": {
+      "derivative_halo": {
+        "left": 4,
+        "right": 3
+      },
+      "pressure_outputs_per_tile": 256,
+      "tile_shape": [
+        32,
+        4,
+        2
+      ],
+      "vx_duplication_factor": 2.75,
+      "vx_points_needed_for_pressure_tile": 704,
+      "vy_duplication_factor": 4.5,
+      "vy_points_needed_for_pressure_tile": 1152,
+      "xy_baseline_component_points": 512,
+      "xy_component_duplication_factor": 3.625,
+      "xy_fused_component_points": 1856
+    },
+    "target_saved_us_for_5pct_sampled_main": 13.524285714285725
+  },
+  "gate": {
+    "allowed_cuda_prototypes": [],
+    "cuda_prototype_allowed": false,
+    "decision": "reject_immediate_fused_wave_step_cuda_prototype",
+    "design_only_routes": [
+      "unify_cpml_formula_template",
+      "cluster_or_persistent_fusion"
+    ],
+    "next_allowed": [
+      "If staying exact-FP32 single-GPU, only study a new persistent/cluster ownership representation that first beats the halo/DSM byte gate.",
+      "If the goal is total throughput, move to multi-GPU batching using the current-best kernel stack.",
+      "If the scientific tolerance can change, open a separate relaxed-precision branch with its own correctness policy."
+    ],
+    "reason": "The proposal is directionally ambitious, but the exact-FP32 current-best path already removed the cheap z/global round trips.  The remaining one-kernel fusion needs cross-CTA velocity availability or heavy halo recomputation, while launch reduction, simple z-tiling, CPML templating, and AoS layout do not pass the >=5% modeled repeat-speedup gate.",
+    "target_saved_us": 13.524285714285725,
+    "target_speedup": 1.05
+  },
+  "inputs": {
+    "async_streams": {
+      "all_compare_pass": true,
+      "mean_gradient_speedup": 1.0028553431699685,
+      "mean_wp_speedup": 1.0051828957049918
+    },
+    "cluster": {
+      "best_sampled_main_speedup_estimate": 0.9497814601513969,
+      "cooperative_grid_block_ceiling": 2040,
+      "cooperative_required_blocks_for_previous_k2": 70688,
+      "ideal_no_dup_sampled_main_speedup": 1.131667956667956
+    },
+    "formal_current_best": {
+      "candidate": "current_best_v_pml_len16",
+      "elapsed_speedup_vs_zmem": 1.1182609576488542,
+      "gradient_speedup_vs_zmem": 1.2065883595902978,
+      "max_rel_l2": 6.384336369813099e-07,
+      "mean_gradient_s": 2.1119303333333335,
+      "mean_wp_s": 1.9889053333333333,
+      "wp_speedup_vs_zmem": 1.2220234686933649
+    },
+    "nsys_gap": {
+      "cuda_launch_avg_us": 51.227,
+      "cuda_launch_calls": 36024,
+      "cuda_launch_total_s": 1.845401023,
+      "ideal_gap_elimination_speedup": 1.0028536728992956,
+      "kernel_total_s": 2.232398465,
+      "wp_minus_kernel_total_fraction": 0.002845552622892243,
+      "wp_minus_kernel_total_s": 0.006370534999999844
+    },
+    "sampled_main": {
+      "p_core_share": 0.33002359071863663,
+      "p_core_us": 93.73,
+      "p_pml_total_share": 0.48632090419351426,
+      "p_pml_total_us": 138.12,
+      "total_us": 284.01000000000005,
+      "v_pml_total_share": 0.183655505087849,
+      "v_pml_total_us": 52.160000000000004
+    }
+  },
+  "routes": {
+    "aos_or_soa_layout_rewrite": {
+      "decision": "reject_aos_for_exact_current_best",
+      "modeled_speedup": 1.0,
+      "optimistic_speedup": 1.0,
+      "reason": "The code already uses SoA arrays, which match p_core and PML streaming access.  AoS would make single-field stencil loads stride across unrelated variables unless a new all-field fused ownership model passes first."
+    },
+    "cluster_or_persistent_fusion": {
+      "decision": "design_only_rejected_by_current_cluster_model",
+      "modeled_speedup": 0.9497814601513969,
+      "optimistic_speedup": 1.131667956667956,
+      "reason": "RTX 5090 supports clusters, but the current best DSM tile is slower than baseline (0.9498x); full cooperative K=2 needs 70688 blocks versus a 2040 block resident ceiling."
+    },
+    "mixed_precision_tensor_core": {
+      "decision": "out_of_scope_for_exact_fp32_branch",
+      "modeled_speedup": null,
+      "optimistic_speedup": null,
+      "reason": "This may be a separate relaxed-precision branch, but it changes the tolerance policy and cannot be mixed into the current exact-FP32 line."
+    },
+    "reduce_kernel_launch_count": {
+      "decision": "reject_as_primary_route",
+      "modeled_speedup": 1.0028536728992956,
+      "optimistic_speedup": 1.0051828957049918,
+      "reason": "Nsight Systems shows WP time is already almost fully GPU-kernel time; the visible WP-minus-kernel gap is only 0.28%, and an async scheduling prototype measured only 1.0052x WP speedup."
+    },
+    "single_kernel_fuse_v_p_pml": {
+      "decision": "reject_cuda_prototype",
+      "modeled_speedup": 0.7567747608516082,
+      "optimistic_speedup": 0.7935382924625831,
+      "reason": "Exact pressure update needs updated vx/vy from neighboring x/y positions.  Without a grid-wide barrier, a single kernel cannot safely consume neighbor-block velocity values; computing halo velocities locally duplicates about 3.6250x x/y component work before register/shared-memory overhead.",
+      "utopian_no_dup_speedup": 1.2249730429156782
+    },
+    "unify_cpml_formula_template": {
+      "decision": "documentation_or_cleanup_only",
+      "modeled_speedup": 1.0,
+      "optimistic_speedup": 1.0,
+      "reason": "A formula template can reduce source duplication, but current hot spots are final pressure writeback and recursive CPML state traffic.  A template alone does not remove bytes or synchronization."
+    },
+    "z_direction_loop_tiling_prefetch": {
+      "decision": "reject_current_exact_cuda_prototype",
+      "modeled_speedup": 1.1248,
+      "optimistic_speedup": 1.1248,
+      "reason": "Spatial z reuse is already present in p_core shared z tiles and accepted pressure/v-PML len16 z-line ownership.  True multi-step temporal z-tiling reopens the K=2 p_mid dependency problem, which ordinary CUDA and cluster DSM gates already rejected."
+    }
+  }
+}
